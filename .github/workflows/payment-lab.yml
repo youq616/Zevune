@@ -5,38 +5,60 @@ on:
 permissions:
   contents: read
 jobs:
-  rust:
+  integration:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     outputs:
       fingerprint: ${{ steps.fingerprint.outputs.value }}
     env:
       RAYON_NUM_THREADS: 2
       CARGO_BUILD_JOBS: 2
+      GOTOOLCHAIN: local
+      ZEVUNE_M5_REQUIRE: '1'
     defaults:
       run:
         shell: bash
-        working-directory: integration/payment
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: true
+          cache-dependency-path: integration/cometbft/go.sum
       - run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
-      - run: cargo generate-lockfile && cargo fmt --all
-      - run: cargo test --locked --release -- --nocapture --test-threads=1
-      - run: cargo clippy --locked --release --all-targets -- -D warnings
-      - run: cargo build --locked --release --bin zevune-crypto
+      - name: Canonicalize newly integrated source
+        run: |
+          (cd integration/payment && cargo fmt --all && cargo fetch --locked)
+          gofmt -w integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet
+      - name: Genuine cryptography, wallet encryption and journal tests
+        working-directory: integration/payment
+        run: |
+          cargo test --locked --release -- --nocapture --test-threads=1
+          cargo clippy --locked --release --all-targets -- -D warnings
+          cargo build --locked --release --bin zevune-crypto
+      - name: Real Go/Rust four-node payment and recovery integration
+        working-directory: integration/cometbft
+        run: |
+          executable="$GITHUB_WORKSPACE/integration/payment/target/release/zevune-crypto"
+          if [ "$RUNNER_OS" = Windows ]; then executable="$executable.exe"; fi
+          export ZEVUNE_CRYPTO_BIN="$executable"
+          go mod verify
+          go test -mod=readonly -p 1 ./... -count=1 -timeout=12m -v
+          go vet -mod=readonly ./...
+          go build -mod=readonly ./cmd/zevune-paynet
       - id: fingerprint
         if: runner.os == 'Linux'
         run: |
-          value=$(find src tests -type f -name '*.rs' -print | sort | xargs sha256sum; sha256sum Cargo.lock)
+          value=$({ find integration/payment/src integration/payment/tests integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet -type f \( -name '*.rs' -o -name '*.go' \) -print; echo integration/payment/Cargo.lock; } | sort | xargs sha256sum)
           echo "value=$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
   record-lock:
-    needs: rust
+    needs: integration
     if: github.ref == 'refs/heads/dev/m5-payments' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -46,26 +68,28 @@ jobs:
         with:
           ref: dev/m5-payments
           fetch-depth: 0
-      - name: Record only matching tested formatting and dependency lock
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Record only source with the successfully tested fingerprint
         shell: bash
         env:
           EXPECTED_SHA: ${{ github.sha }}
-          EXPECTED_DIGEST: ${{ needs.rust.outputs.fingerprint }}
+          EXPECTED_DIGEST: ${{ needs.integration.outputs.fingerprint }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           rustup toolchain install 1.98.1 --profile minimal --component rustfmt
-          cd integration/payment
-          cargo generate-lockfile
-          cargo fmt --all
-          value=$(find src tests -type f -name '*.rs' -print | sort | xargs sha256sum; sha256sum Cargo.lock)
+          (cd integration/payment && cargo fmt --all)
+          gofmt -w integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet
+          value=$({ find integration/payment/src integration/payment/tests integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet -type f \( -name '*.rs' -o -name '*.go' \) -print; echo integration/payment/Cargo.lock; } | sort | xargs sha256sum)
           test "$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)" = "$EXPECTED_DIGEST"
-          cd ../..
-          git add integration/payment/Cargo.lock integration/payment/src integration/payment/tests
-          git diff --cached --name-only | grep -vE '^integration/payment/(Cargo.lock|src/.*\.rs|tests/.*\.rs)$' && exit 1 || true
+          git add integration/payment/src integration/payment/tests integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet
+          if git diff --cached --name-only | grep -vE '^integration/(payment/(src|tests)/.*\.rs|cometbft/(paymentapp|paymentnet|cmd/zevune-paynet)/.*\.go)$'; then exit 1; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if ! git diff --cached --quiet; then
-            git commit -m 'Record tested payment laboratory lock and canonical formatting'
+            git commit -m 'Record canonical Go and Rust source verified by integrated payment tests'
             git push origin HEAD:dev/m5-payments
           fi
