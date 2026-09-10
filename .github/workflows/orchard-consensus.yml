@@ -1,0 +1,106 @@
+name: orchard-consensus-integration
+on:
+  push:
+    branches: [main, 'dev/m7-durable-consensus']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  integrated:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Bootstrap source formatting only
+        run: |
+          gofmt -w internal/poolbridge integration/cometbft/poolapp
+          cargo fmt --manifest-path integration/orchard/Cargo.toml --all
+          cargo metadata --manifest-path integration/orchard/Cargo.toml --locked --format-version=1 > /dev/null
+          git diff --exit-code -- integration/orchard/Cargo.lock
+      - name: Prepare only public zero-value fixture path
+        run: |
+          python - <<'PY'
+          import os, tempfile
+          d = tempfile.mkdtemp(prefix='zevune-m7-', dir=os.environ['RUNNER_TEMP'])
+          worker = os.path.abspath('integration/orchard/target/release/zevune-pool-worker' + ('.exe' if os.name == 'nt' else ''))
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write('ZEVUNE_POOL_FIXTURE=' + os.path.join(d, 'zero-value.bin') + '\n')
+              f.write('ZEVUNE_POOL_WORKER=' + worker + '\n')
+          PY
+      - name: Real cryptography, pool replay and worker codec tests
+        working-directory: integration/orchard
+        run: |
+          cargo test --locked --release -- --test-threads=1
+          cargo clippy --locked --release --all-targets -- -D warnings
+          cargo build --locked --release --bin zevune-pool-worker
+      - name: Root Go regression
+        run: |
+          go test ./... -count=1
+          go vet ./...
+      - name: Four-process Orchard consensus and restart
+        working-directory: integration/cometbft
+        run: |
+          go mod download
+          go mod verify
+          go mod tidy -diff
+          go test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v
+          go test -mod=readonly ./... -count=1 -timeout=8m
+          go vet -mod=readonly -tags=pool_e2e ./...
+      - name: Local IPC race and bounded fuzz
+        if: runner.os == 'Linux'
+        run: |
+          go test -race ./internal/poolbridge -count=1 -timeout=2m
+          go test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2
+  record-format:
+    needs: integrated
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m7-durable-consensus'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: dev/m7-durable-consensus
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Record formatting only on unchanged development head
+        env:
+          TESTED_HEAD: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TESTED_HEAD"
+          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+          gofmt -w internal/poolbridge integration/cometbft/poolapp
+          cargo fmt --manifest-path integration/orchard/Cargo.toml --all
+          python - <<'PY'
+          import subprocess
+          allowed = {'internal/poolbridge/client.go', 'internal/poolbridge/client_test.go', 'integration/cometbft/poolapp/app.go', 'integration/cometbft/poolapp/e2e_test.go', 'integration/orchard/src/bin/zevune-pool-worker.rs', 'integration/orchard/tests/pool_network.rs'}
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
+          assert changed <= allowed, changed - allowed
+          PY
+          git add internal/poolbridge integration/cometbft/poolapp integration/orchard/src/bin/zevune-pool-worker.rs integration/orchard/tests/pool_network.rs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record tested M7 source formatting on development branch'
+            git push origin HEAD:refs/heads/dev/m7-durable-consensus
+          fi
