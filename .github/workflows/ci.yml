@@ -1,0 +1,33 @@
+name: scaffold-tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0; review before production
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0; review before production
+        with:
+          go-version: stable
+          cache: false
+      - name: Format
+        shell: bash
+        run: test -z "$(gofmt -l ./cmd ./internal)"
+      - run: go test ./... -count=1
+      - run: go vet ./...
+      - name: Race detector
+        if: runner.os == 'Linux'
+        run: go test -race ./... -count=1
+      - name: Bounded decoder fuzz smoke test
+        if: runner.os == 'Linux'
+        run: go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2

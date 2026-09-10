@@ -1,35 +1,64 @@
 # Zevune · 澄隐
 
-**规则可验证，支付保持私密。** 这是项目目标，不是已实现的匿名保证。
+**v0.1.0-dev：单机状态机工程骨架，不是已上线的区块链。没有真实零知识证明、钱包或共识；所有付款禁用，不得存入真实资产。**
 
-中文名称：澄隐。英文名称：Zevune。网络名称：Zevune Network。节点程序名称：`zevuned`。Go 模块：`github.com/youq616/Zevune`。
+中文名称：澄隐；英文名称：Zevune；节点程序：`zevuned`；Go 模块：`github.com/youq616/Zevune`。
 
-## 当前发布状态
+## 发布进度
 
-**本仓库已经初始化并完成命名资料提交，但完整工程源码尚未成功写入主分支。当前不能仅凭 git clone 构建或运行节点。**
+本次提交补入完整的原型运行源码、测试源码、测试脚本、合成样本和 GitHub Actions 工作流。不是仅有 README 的空工程。
 
-已更名的 `v0.1.0-dev` 完整本地源码包另行交付给项目负责人。本地版本是单机状态机骨架，不是已部署的隐私链。真实零知识证明、钱包、P2P、共识、持久化及网络隐私未实现；所有付款禁用，不得接收真实资产。
+**整个交付包仍未全部发布：6 份技术文档的上传请求被执行平台安全检查拦截，未纳入本次提交。** 它们不参与 Go 编译；缺失名单见 [发布状态](docs/PUBLICATION_STATUS.zh-CN.md)。不要把代码上传、工作流存在或单元测试通过当作安全审计、真实付款能力或已确认的网络性能。
 
-| 项目 | 状态 |
-|---|---|
-| 名称确认 | 澄隐 · Zevune |
-| GitHub 写入权限 | 已通过实际提交确认 |
-| 远程完整源码 | **尚未成功发布** |
-| 本地更名和导入路径更新 | 已完成 |
-| 本地单元测试 | 50 项通过，0 失败 |
-| 本地竞态检测、go vet、短时 fuzz | 通过 |
-| Windows | 已交叉编译；未实机运行 |
-| 远程 CI | 未配置／未运行 |
-| 实际转账速度、TPS、安全审计 | 未测量／未进行 |
+源码回读校验与 CI 运行结果分别记录，不因工作流文件存在就宣称 CI 通过。`reports/validation.md` 和 `reports/local-validation.md` 是之前阶段的本地记录，不代表这次 GitHub Actions 运行结果。
 
-查看 [品牌说明](docs/BRANDING.zh-CN.md)、[本地验证摘要](reports/local-validation.md)、[发布状态与未完成事项](docs/PUBLICATION_STATUS.zh-CN.md) 和 [机器可读状态](PROJECT_STATUS.json)。本地测试结果不能冒充远程 CI 结果。
+## 已实现的原型范围
 
-## 设计方向
+- 有边界的二进制交易信封与链/版本检查。
+- 内存状态机、重复标识检查、整块原子更新和确定性摘要。
+- 缺少真实验证器时拒绝付款的验证边界。
+- 仅本机诊断接口、带合成数据标识的延迟统计工具及测试。
 
-优先评估原生隐私支付 L1：公开验证账本规则，不设置全网查看密钥，避免让用户秘密集中到项目服务器。真正的隐私 Rollup 保留为架构比较选项。当前尚未锁定或集成正式密码学协议与共识后端。
+真实证明系统、钱包、多节点共识、持久化和网络隐私均未实现。不得使用模拟验证器开启实际支付。
 
-速度目标暂定为：在已同步的参考桌面钱包、正常网络和明确负载下，网络接收到本链最终确认 p95 不超过 3 秒，端到端 p95 不超过 5 秒。**这只是待验证目标，不是实测结果或保证。**
+## 本地运行
 
-本次品牌更名不改变历史 v0 协议字节与合成状态摘要；本地已增加两项兼容性回归测试。不能用修改名称代替协议设计、实现或独立审查。
+安装 Go 后，在项目根目录运行；当前 Go 代码没有第三方依赖，不需要 Docker。
 
-仓库目前公开可读；尚未选定开源许可证。币种代码、商标、域名和发行规则仍未确定。本项目与现有 Veil 加密货币项目无关联，不承诺绝对匿名或不受任何现实约束。
+```powershell
+go test ./... -count=1
+go vet ./...
+go run ./cmd/zevuned
+```
+
+另开 PowerShell：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8080/v1/status
+```
+
+`payments_enabled=false`、`finality_available=false` 和 `/readyz` 返回 503 均为预期结果。不要把本机诊断接口暴露到公网。
+
+```powershell
+go run ./cmd/latency-report -input ./examples/latency-SYNTHETIC.jsonl
+```
+
+该输出是合成示例，不是实际转账速度。
+
+## 目录
+
+```text
+cmd/zevuned/          仅本机诊断程序
+cmd/latency-report/   样本统计命令
+internal/protocol/   临时交易信封与编码
+internal/ledger/     内存状态机与拒绝式验证边界
+internal/merkle/     原型公共 SHA-256 树
+internal/api/        无付款能力的诊断 API
+internal/latency/    样本校验和统计
+scripts/             本地测试脚本
+.github/workflows/   自动测试配置
+```
+
+历史 v0 链标识和域分离字节保留，由更名兼容性测试检查；它们不是主网参数。见 [品牌说明](docs/BRANDING.zh-CN.md)。
+
+参见 [安全状态](SECURITY.md) 和 [许可证待定说明](LICENSE-STATUS.md)。公开可读不等于已经选择开源许可证。
