@@ -1,0 +1,71 @@
+name: payment-integration-laboratory
+on:
+  push:
+    branches: ['dev/m5-*']
+permissions:
+  contents: read
+jobs:
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    outputs:
+      fingerprint: ${{ steps.fingerprint.outputs.value }}
+    env:
+      RAYON_NUM_THREADS: 2
+      CARGO_BUILD_JOBS: 2
+    defaults:
+      run:
+        shell: bash
+        working-directory: integration/payment
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - run: cargo generate-lockfile && cargo fmt --all
+      - run: cargo test --locked --release -- --nocapture --test-threads=1
+      - run: cargo clippy --locked --release --all-targets -- -D warnings
+      - run: cargo build --locked --release --bin zevune-crypto
+      - id: fingerprint
+        if: runner.os == 'Linux'
+        run: |
+          value=$(find src tests -type f -name '*.rs' -print | sort | xargs sha256sum; sha256sum Cargo.lock)
+          echo "value=$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+  record-lock:
+    needs: rust
+    if: github.ref == 'refs/heads/dev/m5-payments' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: dev/m5-payments
+          fetch-depth: 0
+      - name: Record only matching tested formatting and dependency lock
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_DIGEST: ${{ needs.rust.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+          cd integration/payment
+          cargo generate-lockfile
+          cargo fmt --all
+          value=$(find src tests -type f -name '*.rs' -print | sort | xargs sha256sum; sha256sum Cargo.lock)
+          test "$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)" = "$EXPECTED_DIGEST"
+          cd ../..
+          git add integration/payment/Cargo.lock integration/payment/src integration/payment/tests
+          git diff --cached --name-only | grep -vE '^integration/payment/(Cargo.lock|src/.*\.rs|tests/.*\.rs)$' && exit 1 || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record tested payment laboratory lock and canonical formatting'
+            git push origin HEAD:dev/m5-payments
+          fi
