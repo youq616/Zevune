@@ -1,63 +1,61 @@
 # Zevune · 澄隐
 
-**开发中，禁止真实资金。尚未实现真实隐私支付、钱包、发行规则或网络匿名，未经独立安全审计。**
+**开发中，禁止真实资金。尚未形成可用隐私支付网络，没有完整钱包、发行规则或网络匿名，未经独立安全审计。**
 
-项目包含两个明确分离的程序：M2 单机诊断原型 `zevuned`（0.1.2-dev），以及新增的 M3 CometBFT 四节点空区块实验模块（0.2.0-consensus-dev）。后者不是已完成的隐私主链，也不会替换前者的数据目录。
+项目分成三个独立模块，不能将其中一个模块测试通过理解为整条链已经完成：
 
-## 当前进展
+| 模块 | 状态与范围 |
+|---|---|
+| M1/M2 根 Go 模块 `zevuned`，0.1.2-dev | 单机状态机、预执行、校验提交、可选日志与重启恢复；付款关闭 |
+| M3 `integration/cometbft`，0.2.0-consensus-dev | 实际四进程 CometBFT 签名共识、空块推进与故障恢复；交易全部拒绝 |
+| M4 `integration/orchard`，0.1.0 | 真实 Orchard/Halo 2 证明、RedPallas 授权签名、收款解密与连续两段转移测试；仅独立进程内实验，未接入共识 |
 
-M1/M2 根模块包含有边界的二进制信封、链/版本检查、重复标识检查、整块验证、确定性状态摘要、仅本机诊断 API、可选追加日志、重启重放和操作系统文件锁。`PreviewBlock` 在副本上执行，`CommitPreview` 重新检查并提交；流式摘要保持旧摘要及日志格式兼容。测试替身不进入可执行程序。
+## M4：真实密码学集成
 
-M3 位于 [integration/cometbft](integration/cometbft/README.md)，接入固定版本 CometBFT v0.38.26，通过内部 ABCI 驱动原账本。包含四个独立进程的本机网络启动器、提案检查、FinalizeBlock/Commit 分离、持久化握手、真实提交签名验证和故障恢复测试。**只允许空区块，所有交易仍拒绝。** 四节点均由同一台测试机控制，不代表独立运营者或跨地域去中心化。
+[integration/orchard](integration/orchard/README.md) 锁定 Orchard 0.15.5，使用已修复的 V2 电路，明确拒绝不安全的历史 V1。没有自写证明系统，没有接受假证明的开关，没有向中心服务上传见证、花费密钥或查看密钥。
 
-真实证明、钱包、支付、经济规则、生产存储、网络隐私和独立审计尚未完成。源码公开、CI 成功和空块高度增长不能替代这些工作，也不能证明真实到账速度。
+自动化测试在内存中生成一次性的无价值初始票据，完成 A→B（含找零）→C：第二笔实际花费 B 从第一笔密文解出的票据。检查真实证明、花费签名、绑定签名、受信任历史根、重复花费标识、输出重复、费用与过期高度。包含能够被上游电路证明但在无外部注资规则下必须拒绝的负余额变化，避免把“证明有效”误认为“发行合法”。
 
-## 验收安排
+当前签名上下文是带独立域的实验格式，不是最终网络协议或 ZIP-244。验证函数只读取调用方提供的可信账本视图，不负责落盘。网络字节编码、节点可信状态绑定、跨语言边界、钱包存储与同步、经济规则等均未完成。旧 Go 占位树和密文格式不能直接当作 Orchard 格式；本次没有迁移旧数据。
 
-用户已完成 Windows 基础环境与 M1/M2 验证。后续以开发者回归测试和 GitHub CI 为主，不要求用户对每个小版本重复手工测试。整合支付版本的交付门槛见 [整体验收标准](docs/INTEGRATION_ACCEPTANCE.zh-CN.md)。
+真实密码学测试和单项耗时不等于匿名性认证、网络最终性、端到端延迟或 TPS。整个网络的付款入口仍然关闭。
 
-根模块与嵌套共识模块有不同的 CI。根目录 `go test ./...` 不会自动运行嵌套模块测试。每次验收按明确提交查看对应 Actions，不能用旧记录替代当前结果。
+## 既有模块
 
-## 单机原型（原有方式保留）
+M1/M2 根模块包含有边界的二进制信封、链/版本检查、重复标识检查、整块验证、确定性摘要、仅本机诊断 API、追加日志、重放与操作系统文件锁。`PreviewBlock` 不改变已提交状态；`CommitPreview` 重新检查后提交。
 
-根模块仍无第三方依赖，不需要 Docker。以下是操作文档，不是要求用户本轮再验证：
+M3 使用 CometBFT v0.38.26，通过内部 ABCI 驱动原型账本。四个独立进程在同机 loopback 网络进行真实签名共识，测试节点离线、追赶、异常终止与全体重启。只允许空区块；不等于跨地域部署或独立运营者网络。两部分数据目录不混用，签名状态不重置。
+
+## 验收方式
+
+用户已验证 Windows 基础环境与 M1/M2。开发以自动回归和 CI 为主，不要求每个小版本重复手工验证。完整交付标准见 [整体验收要求](docs/INTEGRATION_ACCEPTANCE.zh-CN.md)，当前尚未达到。
+
+根 Go 模块、嵌套 CometBFT Go 模块和独立 Rust 模块分别测试。根目录 `go test ./...` 不运行另外两个模块。CI 结论须对应明确提交，不能以旧版本结果替代当前结果。M4 构建使用提交的 Cargo.lock、固定工具链和 `--locked`；常规 CI 只读仓库，不自动改源码。
+
+## 已有单机程序操作文档（无需本轮重测）
+
+根模块仍无第三方依赖，不需要 Docker：
 
 ```powershell
 go test ./... -count=1
-go vet ./...
 go run ./cmd/zevuned -version
 go run ./cmd/zevuned -data-dir "$env:LOCALAPPDATA\Zevune\devnet"
 ```
 
-不带 `-data-dir` 时为内存模式。启动后可在另一终端查询：
+状态查询：
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8080/v1/status" | ConvertTo-Json -Depth 6
 ```
 
-该单机程序继续显示 `software_version=0.1.2-dev`、`height=0`、付款/最终确认为 false；不会自动出块。M3 实验网络是单独程序和链标识，需要新目录，不能拿旧日志直接当作共识数据库。M3 的具体命令和容量限制见其 README。
+根程序依然显示 `software_version=0.1.2-dev`、`height=0`、付款和最终确认为 false。它不会自动变为 M3/M4 网络。不要把诊断接口公开到互联网；不要删除旧日志或防重复签名状态来“升级”。
 
-## 自动化测试与资料
+## 资料
 
-- [M1 存储说明](docs/LOCAL_STORAGE.zh-CN.md) 与 [本地记录](reports/m1-local-validation.md)。
-- [M2 预执行接口](docs/BLOCK_PREVIEW.zh-CN.md)、[本地测试与摘要基准](reports/m2-local-validation.md)、[远程核验](reports/m2-remote-validation.md)。
-- [M3 共识模块](integration/cometbft/README.md)：锁定依赖、两平台真实四进程测试、恢复验证及限制。
-- [历史发布核验](reports/publication-retry-2026-09-10.md) 与 [历史缺失文档名单](docs/PUBLICATION_STATUS.zh-CN.md)。
+- [M1 存储](docs/LOCAL_STORAGE.zh-CN.md)。
+- [M2 预执行](docs/BLOCK_PREVIEW.zh-CN.md) 与 [测试](reports/m2-remote-validation.md)。
+- [M3 共识集成](integration/cometbft/README.md) 与 [验收](reports/m3-remote-validation.md)。
+- [M4 密码学集成范围与测试](integration/orchard/README.md)。
+- [历史缺失文档清单](docs/PUBLICATION_STATUS.zh-CN.md)。六份原始技术文档仍未重新提交，新模块说明不替代完整隐私协议规范。
 
-原始交付包中六份技术文档此前未成功发布，仍未在本次重新提交。M3 文档不替代完整隐私协议规范。合成摘要基准不是支付延迟或 TPS；本轮没有测量实际隐私转账速度。
-
-## 目录
-
-```text
-cmd/zevuned/          原有单机诊断程序
-cmd/latency-report/   合成样本统计，不是网络测速
-internal/ledger/     状态机、预执行、校验提交、本地日志
-internal/protocol/   临时信封与编码
-internal/merkle/     原型公共 SHA-256 树
-internal/api/        无付款能力的诊断接口
-internal/latency/    样本统计
-integration/cometbft/ 独立 Go 模块，真实共识/空块实验与启动器
-.github/workflows/   根模块与共识模块各自的跨平台测试
-```
-
-历史 v0 链标识与固定字节不随品牌修改，见 [品牌说明](docs/BRANDING.zh-CN.md)。不要上传运行时生成的验证者密钥、签名状态、钱包数据或日志目录。参见 [安全状态](SECURITY.md) 与 [许可证待定说明](LICENSE-STATUS.md)；公开可读不等于已选择开源许可证。
+不要上传运行时生成的私钥、种子、钱包数据、付款明文或节点签名状态。参见 [安全说明](SECURITY.md)、[许可证状态](LICENSE-STATUS.md) 与 [M4 第三方声明](integration/orchard/NOTICE.md)。源码公开不等于选择了整个项目的开源许可证，也不等于安全审计。
