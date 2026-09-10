@@ -154,8 +154,7 @@ impl Verifier {
         if context.expiry_height < state.height.saturating_add(1) || state.height == u64::MAX {
             return Err(Error::Expired);
         }
-        if state.anchors.len() > MAX_ANCHORS
-            || !state.anchors.contains(&bundle.anchor().to_bytes())
+        if state.anchors.len() > MAX_ANCHORS || !state.anchors.contains(&bundle.anchor().to_bytes())
         {
             return Err(Error::Anchor);
         }
@@ -173,15 +172,25 @@ impl Verifier {
         }
         let digest = signing_digest(bundle, context)?;
         let mut batch = BatchValidator::new(&self.key);
-        batch.add_bundle(bundle, digest).map_err(|_| Error::Authorization)?;
+        batch
+            .add_bundle(bundle, digest)
+            .map_err(|_| Error::Authorization)?;
         if !batch.validate(OsRng) {
             return Err(Error::Authorization);
         }
         // Preserve consensus-relevant action order; BTreeSets above only detect
         // duplicates. Never append notes in set/sorted order instead of wire order.
         Ok(Effects {
-            nullifiers: bundle.actions().iter().map(|a| a.nullifier().to_bytes()).collect(),
-            commitments: bundle.actions().iter().map(|a| a.cmx().to_bytes()).collect(),
+            nullifiers: bundle
+                .actions()
+                .iter()
+                .map(|a| a.nullifier().to_bytes())
+                .collect(),
+            commitments: bundle
+                .actions()
+                .iter()
+                .map(|a| a.cmx().to_bytes())
+                .collect(),
             fee: context.fee,
         })
     }
