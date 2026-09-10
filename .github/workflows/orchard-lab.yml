@@ -1,0 +1,76 @@
+name: orchard-cryptography-laboratory
+on:
+  push:
+    branches: [main, 'dev/m4-orchard']
+    paths: ['integration/orchard/**', '.github/workflows/orchard-lab.yml', '.gitattributes']
+  pull_request:
+    paths: ['integration/orchard/**', '.github/workflows/orchard-lab.yml', '.gitattributes']
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    outputs:
+      digest: ${{ steps.digest.outputs.value }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: integration/orchard
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Bootstrap canonical source and dependency lock
+        run: |
+          cargo generate-lockfile
+          cargo fmt --all
+      - name: Real proofs, signatures, decryption and negative cases
+        run: cargo test --locked --release -- --nocapture --test-threads=1
+      - name: Static checks
+        run: cargo clippy --locked --release --all-targets -- -D warnings
+      - name: Fingerprint the tested source and lock
+        id: digest
+        run: |
+          value=$(git hash-object Cargo.toml Cargo.lock rust-toolchain.toml src/lib.rs tests/real_bundle.rs | sha256sum | cut -d ' ' -f1)
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+  record-lock:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m4-orchard'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.sha }}
+      - name: Record only matching canonical source and lock on development branch
+        shell: bash
+        env:
+          EXPECTED: ${{ needs.tests.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cd integration/orchard
+          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+          cargo generate-lockfile
+          cargo fmt --all
+          actual=$(git hash-object Cargo.toml Cargo.lock rust-toolchain.toml src/lib.rs tests/real_bundle.rs | sha256sum | cut -d ' ' -f1)
+          test -n "$EXPECTED" && test "$actual" = "$EXPECTED"
+          test "$(git ls-remote origin refs/heads/dev/m4-orchard | cut -f1)" = "$GITHUB_SHA"
+          cd ../..
+          git add integration/orchard/Cargo.lock integration/orchard/src/lib.rs integration/orchard/tests/real_bundle.rs
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Record tested Orchard lockfile and canonical Rust formatting'
+          git push origin HEAD:refs/heads/dev/m4-orchard
