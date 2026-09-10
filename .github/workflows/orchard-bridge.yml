@@ -1,0 +1,105 @@
+name: orchard-bridge
+on:
+  push:
+    branches: [main, 'dev/m5-*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  boundary:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    outputs:
+      linux: ${{ steps.canonical.outputs.linux }}
+      windows: ${{ steps.canonical.outputs.windows }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: 2
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: One-time canonicalization with unchanged third-party locks
+        id: canonical
+        run: python scripts/canonicalize-bridge.py
+      - name: Reserve public-fixture directory
+        run: |
+          fixture="$RUNNER_TEMP/zevune-public-fixture"
+          mkdir "$fixture"
+          if [ "$RUNNER_OS" = "Windows" ]; then fixture=$(cygpath -w "$fixture"); fi
+          echo "ZEVUNE_PUBLIC_FIXTURE_DIR=$fixture" >> "$GITHUB_ENV"
+      - name: Real cryptography and Rust framing tests
+        working-directory: integration/orchard
+        run: cargo test --locked --release -- --nocapture --test-threads=1
+      - name: Static checks and build actual worker
+        working-directory: integration/orchard
+        run: |
+          cargo clippy --locked --release --all-targets -- -D warnings
+          cargo build --locked --release --bin zevune-orchard-worker
+          worker="$(pwd)/target/release/zevune-orchard-worker"
+          fixture="$ZEVUNE_PUBLIC_FIXTURE_DIR/authorized.bin"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            worker=$(cygpath -w "$worker.exe")
+            fixture=$(cygpath -w "$fixture")
+          fi
+          echo "ZEVUNE_REAL_WORKER=$worker" >> "$GITHUB_ENV"
+          echo "ZEVUNE_PUBLIC_FIXTURE=$fixture" >> "$GITHUB_ENV"
+      - name: Go regression and static checks
+        run: |
+          test -z "$(gofmt -l internal/orchardbridge)"
+          go test ./... -count=1 -timeout=4m
+          go vet ./...
+      - name: Actual Go to Rust proof verification
+        run: go test -tags=orchard_e2e ./internal/orchardbridge -run '^TestGenuineRustWorkerAuthorization$' -count=1 -timeout=2m -v
+      - name: Boundary race checks
+        if: runner.os == 'Linux'
+        run: go test -race ./internal/orchardbridge -count=1 -timeout=2m
+      - name: Bounded decoder fuzz checks
+        if: runner.os == 'Linux'
+        run: |
+          GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzDecodeEnvelope$' -fuzztime=10s -parallel=2
+          GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzReadFrame$' -fuzztime=10s -parallel=2
+  record-canonical:
+    needs: boundary
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m5-bridge-integration'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 8
+    env:
+      LINUX_DIGEST: ${{ needs.boundary.outputs.linux }}
+      WINDOWS_DIGEST: ${{ needs.boundary.outputs.windows }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.sha }}
+      - name: Record only normalized files tested on both platforms
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$LINUX_DIGEST"
+          test "$LINUX_DIGEST" = "$WINDOWS_DIGEST"
+          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+          output=$(python scripts/canonicalize-bridge.py)
+          echo "$output"
+          test "$output" = "CANONICAL_SOURCE_SHA256=$LINUX_DIGEST"
+          test "$(git ls-remote origin refs/heads/dev/m5-bridge-integration | cut -f1)" = "$GITHUB_SHA"
+          git add integration/orchard/Cargo.lock integration/orchard/src integration/orchard/tests
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Record cross-platform tested bridge formatting and unchanged third-party dependency locks'
+          git push origin HEAD:refs/heads/dev/m5-bridge-integration

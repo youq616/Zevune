@@ -1,9 +1,12 @@
 //! Isolated, NO-FUNDS integration of upstream Orchard proofs and signatures.
 //!
 //! This is NOT the Zevune network transaction format or a consensus verifier.
-//! Only a fixed, patched Orchard V2 circuit is accepted. No RPC, key store,
-//! arbitrary witness service, serialization protocol, or payment launcher exists.
+//! Only a fixed, patched Orchard V2 circuit is accepted. The local worker only
+//! verifies public authorization data. No wallet or payment listener is enabled.
 #![forbid(unsafe_code)]
+
+pub mod wire;
+pub mod worker;
 
 use std::collections::BTreeSet;
 use std::fmt;
