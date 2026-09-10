@@ -1,0 +1,89 @@
+name: consensus-laboratory
+on:
+  push:
+    branches: [main, 'dev/m3-*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    outputs:
+      canonical_digest: ${{ steps.canonical.outputs.digest }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: integration/cometbft
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: stable
+          cache: false
+      - name: Resolve and verify pinned laboratory dependency
+        run: |
+          go version
+          go mod tidy
+          go mod verify
+          gofmt -w app devnet cmd
+      - name: Adapter and four independent process integration tests
+        run: go test ./... -count=1 -timeout=8m -v
+      - name: Static analysis
+        run: go vet ./...
+      - name: Adapter race checks
+        if: runner.os == 'Linux'
+        run: go test -race ./app -count=1 -timeout=3m
+      - name: Build local launcher
+        run: |
+          go build ./cmd/zevune-devnet
+      - name: Digest tested canonical source and locks
+        id: canonical
+        if: runner.os == 'Linux'
+        run: |
+          digest=$(find app devnet cmd -name '*.go' -type f -print; printf '%s\n' go.mod go.sum)
+          digest=$(printf '%s\n' "$digest" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "TESTED_CANONICAL_DIGEST=$digest"
+  record-locks:
+    needs: integration
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m3-consensus'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: dev/m3-consensus
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: stable
+          cache: false
+      - name: Publish only tested formatting and dependency locks to development branch
+        env:
+          EXPECTED_SOURCE: ${{ github.sha }}
+          EXPECTED_DIGEST: ${{ needs.integration.outputs.canonical_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
+          cd integration/cometbft
+          go mod tidy
+          gofmt -w app devnet cmd
+          files=$(find app devnet cmd -name '*.go' -type f -print; printf '%s\n' go.mod go.sum)
+          digest=$(printf '%s\n' "$files" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+          test "$digest" = "$EXPECTED_DIGEST"
+          git add go.mod go.sum app devnet cmd
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Record tested CometBFT dependency locks and canonical Go formatting'
+            git push origin HEAD:dev/m3-consensus
+          fi
