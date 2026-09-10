@@ -1,72 +1,63 @@
 # Zevune · 澄隐
 
-**v0.1.2-dev：单机状态机与可选本地日志工程骨架，不是已上线的区块链。没有真实零知识证明、钱包或共识；所有付款禁用，不得存入真实资产。**
+**开发中，禁止真实资金。尚未实现真实隐私支付、钱包、发行规则或网络匿名，未经独立安全审计。**
 
-中文名称：澄隐；英文名称：Zevune；节点程序：`zevuned`；Go 模块：`github.com/youq616/Zevune`。
+项目包含两个明确分离的程序：M2 单机诊断原型 `zevuned`（0.1.2-dev），以及新增的 M3 CometBFT 四节点空区块实验模块（0.2.0-consensus-dev）。后者不是已完成的隐私主链，也不会替换前者的数据目录。
 
 ## 当前进展
 
-原型包含有边界的二进制交易信封、链/版本检查、重复标识检查、整块验证、确定性状态摘要和仅本机诊断 API。测试替身不进入可执行程序。
+M1/M2 根模块包含有边界的二进制信封、链/版本检查、重复标识检查、整块验证、确定性状态摘要、仅本机诊断 API、可选追加日志、重启重放和操作系统文件锁。`PreviewBlock` 在副本上执行，`CommitPreview` 重新检查并提交；流式摘要保持旧摘要及日志格式兼容。测试替身不进入可执行程序。
 
-M1 提供可选本地追加日志：保存后同步、启动时重新验证并重放、操作系统文件锁，以及损坏日志拒绝。详细故障边界见 [本地存储说明](docs/LOCAL_STORAGE.zh-CN.md)。
+M3 位于 [integration/cometbft](integration/cometbft/README.md)，接入固定版本 CometBFT v0.38.26，通过内部 ABCI 驱动原账本。包含四个独立进程的本机网络启动器、提案检查、FinalizeBlock/Commit 分离、持久化握手、真实提交签名验证和故障恢复测试。**只允许空区块，所有交易仍拒绝。** 四节点均由同一台测试机控制，不代表独立运营者或跨地域去中心化。
 
-M2 第一部分增加 `PreviewBlock` 与 `CommitPreview`：先在副本上验证候选区块，不修改已提交状态；真正提交时重新验证，并拒绝过期或被修改的候选。状态摘要改为流式编码，同时保持旧摘要与日志格式兼容。见 [接口说明与下一步共识要求](docs/BLOCK_PREVIEW.zh-CN.md) 和 [本地验证及基准](reports/m2-local-validation.md)。这还不是完整 ABCI 适配器，未接入 CometBFT。
+真实证明、钱包、支付、经济规则、生产存储、网络隐私和独立审计尚未完成。源码公开、CI 成功和空块高度增长不能替代这些工作，也不能证明真实到账速度。
 
-真实证明系统、钱包、多节点共识和网络隐私仍未实现。不得使用模拟验证器开启实际支付。源码公开和测试通过不等于安全审计或真实转账能力。
+## 验收安排
 
-## 本地运行
+用户已完成 Windows 基础环境与 M1/M2 验证。后续以开发者回归测试和 GitHub CI 为主，不要求用户对每个小版本重复手工测试。整合支付版本的交付门槛见 [整体验收标准](docs/INTEGRATION_ACCEPTANCE.zh-CN.md)。
 
-安装 Go 后，在项目根目录运行。当前代码仍无第三方依赖，不需要 Docker。
+根模块与嵌套共识模块有不同的 CI。根目录 `go test ./...` 不会自动运行嵌套模块测试。每次验收按明确提交查看对应 Actions，不能用旧记录替代当前结果。
+
+## 单机原型（原有方式保留）
+
+根模块仍无第三方依赖，不需要 Docker。以下是操作文档，不是要求用户本轮再验证：
 
 ```powershell
 go test ./... -count=1
 go vet ./...
 go run ./cmd/zevuned -version
-go run ./cmd/zevuned
-```
-
-上面是纯内存模式。Windows 的可选持久模式：
-
-```powershell
 go run ./cmd/zevuned -data-dir "$env:LOCALAPPDATA\Zevune\devnet"
 ```
 
-更新时先 Ctrl+C 停止旧进程，执行 `git pull --ff-only` 并重新测试；无需删除原日志。两种模式不能同时占用同一监听端口。另开 PowerShell 查询：
+不带 `-data-dir` 时为内存模式。启动后可在另一终端查询：
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8080/v1/status" | ConvertTo-Json -Depth 6
 ```
 
-新增 `software_version=0.1.2-dev`。`payments_enabled=false`、`finality_available=false`、`height=0` 和 `/readyz` 返回 503 仍是预期结果。程序不会自动出块；没有提供 HTTP 区块预执行或提交入口。不要把本机接口暴露到公网。持久模式首次创建日志时 `storage.recovered=false`，同目录再次启动时为 `true`；不指定目录时 `storage.mode=memory`。
+该单机程序继续显示 `software_version=0.1.2-dev`、`height=0`、付款/最终确认为 false；不会自动出块。M3 实验网络是单独程序和链标识，需要新目录，不能拿旧日志直接当作共识数据库。M3 的具体命令和容量限制见其 README。
 
-## 测试与性能口径
+## 自动化测试与资料
 
-[M1 本地记录](reports/m1-local-validation.md)、[M2 本地记录](reports/m2-local-validation.md) 与远程 CI 分开记录。GitHub Actions 必须按源码提交核对，不能用旧提交的成功结果替代。
+- [M1 存储说明](docs/LOCAL_STORAGE.zh-CN.md) 与 [本地记录](reports/m1-local-validation.md)。
+- [M2 预执行接口](docs/BLOCK_PREVIEW.zh-CN.md)、[本地测试与摘要基准](reports/m2-local-validation.md)、[远程核验](reports/m2-remote-validation.md)。
+- [M3 共识模块](integration/cometbft/README.md)：锁定依赖、两平台真实四进程测试、恢复验证及限制。
+- [历史发布核验](reports/publication-retry-2026-09-10.md) 与 [历史缺失文档名单](docs/PUBLICATION_STATUS.zh-CN.md)。
 
-```powershell
-go test ./internal/ledger -run '^$' -bench '^BenchmarkSummaryEncoding$' -benchmem -benchtime=200ms -count=3 -cpu=1
-```
-
-该基准仅比较合成状态的摘要计算，**不是转账延迟、TPS 或证明系统性能**。M2 的预执行和提交都会验证证明，目前没有省略验证的加速选项。
-
-历史源码提交 `a56492d91e874919cf10a6f59d80c6c42c150a61` 的发布记录见 [历史核验](reports/publication-retry-2026-09-10.md)。历史报告只描述相应阶段。
-
-原始交付包中六份技术文档此前未完成发布，本次未重新提交它们，名单见 [历史发布状态](docs/PUBLICATION_STATUS.zh-CN.md)。本次接口文档不替代缺失的隐私协议规范；缺失文档不参与当前 Go 编译。
+原始交付包中六份技术文档此前未成功发布，仍未在本次重新提交。M3 文档不替代完整隐私协议规范。合成摘要基准不是支付延迟或 TPS；本轮没有测量实际隐私转账速度。
 
 ## 目录
 
 ```text
-cmd/zevuned/          本机诊断程序，支持 -data-dir 与 -version
-cmd/latency-report/   合成样本统计命令，不是实测网络延迟
-internal/protocol/   临时交易信封与编码
-internal/ledger/     状态机、候选预执行、校验提交、可选本地日志
+cmd/zevuned/          原有单机诊断程序
+cmd/latency-report/   合成样本统计，不是网络测速
+internal/ledger/     状态机、预执行、校验提交、本地日志
+internal/protocol/   临时信封与编码
 internal/merkle/     原型公共 SHA-256 树
-internal/api/        无付款能力的诊断 API
-internal/latency/    样本校验与统计
-scripts/             本地测试脚本
-.github/workflows/   Ubuntu/Windows 自动测试
+internal/api/        无付款能力的诊断接口
+internal/latency/    样本统计
+integration/cometbft/ 独立 Go 模块，真实共识/空块实验与启动器
+.github/workflows/   根模块与共识模块各自的跨平台测试
 ```
 
-历史 v0 链标识和域分离字节由兼容性测试保护；它们不是主网参数，不随品牌文字修改。见 [品牌说明](docs/BRANDING.zh-CN.md)。
-
-参见 [安全状态](SECURITY.md) 和 [许可证待定说明](LICENSE-STATUS.md)。公开可读不等于已经选择开源许可证。
+历史 v0 链标识与固定字节不随品牌修改，见 [品牌说明](docs/BRANDING.zh-CN.md)。不要上传运行时生成的验证者密钥、签名状态、钱包数据或日志目录。参见 [安全状态](SECURITY.md) 与 [许可证待定说明](LICENSE-STATUS.md)；公开可读不等于已选择开源许可证。
