@@ -17,7 +17,12 @@ func run() (runErr error) {
 	listen := flag.String("listen", "127.0.0.1:8080", "numeric loopback address only")
 	chain := flag.String("chain-id", "veil-local-devnet-1", "local prototype chain id")
 	dataDir := flag.String("data-dir", "", "optional local journal directory; empty uses memory")
+	showVersion := flag.Bool("version", false, "print software version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("Zevune " + api.SoftwareVersion)
+		return nil
+	}
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil {
 		return err

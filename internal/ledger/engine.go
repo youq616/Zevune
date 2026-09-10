@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/youq616/Zevune/internal/merkle"
 	"github.com/youq616/Zevune/internal/protocol"
+	"io"
 	"math"
 	"sort"
 	"sync"
@@ -164,35 +165,45 @@ func (e *Engine) CheckTx(t protocol.Envelope) error {
 func (e *Engine) ApplyBlock(height uint64, txs []protocol.Envelope) (Summary, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if err := e.usableLocked(); err != nil {
+	staged, owned, err := e.stageBlockLocked(height, txs)
+	if err != nil {
 		return Summary{}, err
 	}
+	return e.commitStateLocked(height, owned, staged)
+}
+
+// stageBlockLocked is the single validation path for preview, direct apply and
+// checked commit. The caller holds e.mu; neither e.s nor the journal is changed.
+func (e *Engine) stageBlockLocked(height uint64, txs []protocol.Envelope) (state, []protocol.Envelope, error) {
+	if err := e.usableLocked(); err != nil {
+		return state{}, nil, err
+	}
 	if e.s.height == math.MaxUint64 || height != e.s.height+1 {
-		return Summary{}, ErrHeight
+		return state{}, nil, ErrHeight
 	}
 	if len(txs) > MaxBlockTransactions {
-		return Summary{}, ErrBlockLimit
+		return state{}, nil, ErrBlockLimit
 	}
 	size := 0
 	owned := make([]protocol.Envelope, len(txs))
 	for i, t := range txs {
 		b, err := t.MarshalBinary()
 		if err != nil {
-			return Summary{}, err
+			return state{}, nil, err
 		}
 		size += len(b)
 		if size > MaxBlockBytes {
-			return Summary{}, ErrBlockLimit
+			return state{}, nil, ErrBlockLimit
 		}
 		owned[i] = t.Clone()
 	}
 	staged := e.s.clone()
 	for i, t := range owned {
 		if err := e.cheapChecks(&staged, t, height); err != nil {
-			return Summary{}, fmt.Errorf("transaction %d: %w", i, err)
+			return state{}, nil, fmt.Errorf("transaction %d: %w", i, err)
 		}
 		if err := e.verifier.Verify(t.Clone()); err != nil {
-			return Summary{}, fmt.Errorf("transaction %d: %w", i, err)
+			return state{}, nil, fmt.Errorf("transaction %d: %w", i, err)
 		}
 		for _, n := range t.Nullifiers {
 			staged.spent[n] = struct{}{}
@@ -208,6 +219,12 @@ func (e *Engine) ApplyBlock(height uint64, txs []protocol.Envelope) (Summary, er
 	if len(staged.roots) > RootWindow {
 		staged.roots = append([]RootRecord(nil), staged.roots[len(staged.roots)-RootWindow:]...)
 	}
+	return staged, owned, nil
+}
+
+// commitStateLocked is reached only after validation and optional preview checks.
+// A sync failure has an uncertain disk outcome; memory must not advance.
+func (e *Engine) commitStateLocked(height uint64, owned []protocol.Envelope, staged state) (Summary, error) {
 	if e.journal != nil {
 		if err := e.journal.appendBlock(height, owned); err != nil {
 			e.storageErr = err // No further writes after an uncertain disk outcome.
@@ -217,34 +234,37 @@ func (e *Engine) ApplyBlock(height uint64, txs []protocol.Envelope) (Summary, er
 	e.s = staged
 	return e.summaryLocked(), nil
 }
-func (e *Engine) Summary() Summary { e.mu.RLock(); defer e.mu.RUnlock(); return e.summaryLocked() }
-func (e *Engine) summaryLocked() Summary {
-	s := &e.s
-	var b bytes.Buffer
-	b.WriteString("VEIL-PROTOTYPE-APPHASH\x00")
-	b.WriteByte(byte(len(e.chainID)))
-	b.WriteString(e.chainID)
-	_ = binary.Write(&b, binary.BigEndian, protocol.Version)
-	b.WriteString(protocol.CircuitID)
-	_ = binary.Write(&b, binary.BigEndian, s.height)
-	_ = binary.Write(&b, binary.BigEndian, s.fees)
-	_ = binary.Write(&b, binary.BigEndian, uint64(len(s.commitments)))
+func (e *Engine) Summary() Summary       { e.mu.RLock(); defer e.mu.RUnlock(); return e.summaryLocked() }
+func (e *Engine) summaryLocked() Summary { return summarizeState(e.chainID, &e.s) }
+
+func summarizeState(chain string, s *state) Summary {
+	h := sha256.New()
+	io.WriteString(h, "VEIL-PROTOTYPE-APPHASH\x00")
+	h.Write([]byte{byte(len(chain))})
+	io.WriteString(h, chain)
+	_ = binary.Write(h, binary.BigEndian, protocol.Version)
+	io.WriteString(h, protocol.CircuitID)
+	_ = binary.Write(h, binary.BigEndian, s.height)
+	_ = binary.Write(h, binary.BigEndian, s.fees)
+	_ = binary.Write(h, binary.BigEndian, uint64(len(s.commitments)))
 	for _, c := range s.commitments {
-		b.Write(c[:])
+		h.Write(c[:])
 	}
 	sorted := make([]protocol.Hash, 0, len(s.spent))
 	for n := range s.spent {
 		sorted = append(sorted, n)
 	}
 	sort.Slice(sorted, func(i, j int) bool { return bytes.Compare(sorted[i][:], sorted[j][:]) < 0 })
-	_ = binary.Write(&b, binary.BigEndian, uint64(len(sorted)))
+	_ = binary.Write(h, binary.BigEndian, uint64(len(sorted)))
 	for _, n := range sorted {
-		b.Write(n[:])
+		h.Write(n[:])
 	}
-	_ = binary.Write(&b, binary.BigEndian, uint64(len(s.roots)))
+	_ = binary.Write(h, binary.BigEndian, uint64(len(s.roots)))
 	for _, r := range s.roots {
-		_ = binary.Write(&b, binary.BigEndian, r.Height)
-		b.Write(r.Root[:])
+		_ = binary.Write(h, binary.BigEndian, r.Height)
+		h.Write(r.Root[:])
 	}
-	return Summary{ChainID: e.chainID, Height: s.height, Root: s.roots[len(s.roots)-1].Root, AppHash: sha256.Sum256(b.Bytes()), CommitmentCount: len(s.commitments), SpentCount: len(s.spent), PublicFees: s.fees}
+	var appHash protocol.Hash
+	copy(appHash[:], h.Sum(nil))
+	return Summary{ChainID: chain, Height: s.height, Root: s.roots[len(s.roots)-1].Root, AppHash: appHash, CommitmentCount: len(s.commitments), SpentCount: len(s.spent), PublicFees: s.fees}
 }

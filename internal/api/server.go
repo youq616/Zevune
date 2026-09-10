@@ -10,6 +10,9 @@ import (
 	"net/http"
 )
 
+// SoftwareVersion describes the software build, not the wire protocol version.
+const SoftwareVersion = "0.1.2-dev"
+
 func reply(w http.ResponseWriter, code int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -46,7 +49,7 @@ func newHandler(engine *ledger.Engine) http.Handler {
 		reply(w, 503, map[string]any{"ready": false, "zk_backend": "not_implemented", "consensus": "not_implemented"})
 	})
 	mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"stage": "state_machine_scaffold", "network": "local_only", "payments_enabled": false, "finality_available": false, "ledger": engine.Summary(), "storage": engine.StorageStatus()})
+		reply(w, 200, map[string]any{"software_version": SoftwareVersion, "stage": "state_machine_scaffold", "network": "local_only", "payments_enabled": false, "finality_available": false, "ledger": engine.Summary(), "storage": engine.StorageStatus()})
 	})
 	mux.HandleFunc("POST /v1/transactions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/octet-stream" {
