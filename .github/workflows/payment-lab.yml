@@ -36,16 +36,26 @@ jobs:
         run: |
           (cd integration/payment && cargo fmt --all && cargo fetch --locked)
           gofmt -w integration/cometbft/paymentapp integration/cometbft/paymentnet integration/cometbft/cmd/zevune-paynet
-      - name: Genuine cryptography, wallet encryption and journal tests
+      - name: Genuine cryptography, encryption, IPC boundaries and journal tests
         working-directory: integration/payment
         run: |
           cargo test --locked --release -- --nocapture --test-threads=1
           cargo clippy --locked --release --all-targets -- -D warnings
-          cargo build --locked --release --bin zevune-crypto
-      - name: Real Go/Rust four-node payment and recovery integration
+          cargo build --locked --release --bins
+      - name: Exercise consolidated build and parse PowerShell entry points
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($file in @('scripts/Build-PaymentLab.ps1','scripts/Start-PaymentLab.ps1','scripts/Wallet-PaymentLab.ps1')) {
+            $tokens = $null; $errors = $null
+            [Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file),[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count -ne 0) { throw "PowerShell parse failed: $file" }
+          }
+          & ./scripts/Build-PaymentLab.ps1
+      - name: Real Go/Rust four-node payments, recovery and warm wallet session
         working-directory: integration/cometbft
         run: |
-          executable="$GITHUB_WORKSPACE/integration/payment/target/release/zevune-crypto"
+          executable="$GITHUB_WORKSPACE/bin/zevune-crypto"
           if [ "$RUNNER_OS" = Windows ]; then executable="$executable.exe"; fi
           export ZEVUNE_CRYPTO_BIN="$executable"
           go mod verify
