@@ -13,9 +13,10 @@ import (
 	"time"
 )
 
-func run() error {
+func run() (runErr error) {
 	listen := flag.String("listen", "127.0.0.1:8080", "numeric loopback address only")
 	chain := flag.String("chain-id", "veil-local-devnet-1", "local prototype chain id")
+	dataDir := flag.String("data-dir", "", "optional local journal directory; empty uses memory")
 	flag.Parse()
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil {
@@ -25,9 +26,18 @@ func run() error {
 	if ip == nil || !ip.IsLoopback() {
 		return errors.New("this prototype refuses non-loopback listeners")
 	}
-	handler, err := api.New(*chain)
+	var handler http.Handler
+	var closeStore func() error
+	if *dataDir == "" {
+		handler, err = api.New(*chain)
+	} else {
+		handler, closeStore, err = api.NewPersistent(*chain, *dataDir)
+	}
 	if err != nil {
 		return err
+	}
+	if closeStore != nil {
+		defer func() { runErr = errors.Join(runErr, closeStore()) }()
 	}
 	srv := &http.Server{Addr: *listen, Handler: handler, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 15 * time.Second, MaxHeaderBytes: 8 * 1024}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

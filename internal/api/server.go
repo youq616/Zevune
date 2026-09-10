@@ -24,6 +24,20 @@ func New(chain string) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	return newHandler(engine), nil
+}
+
+// NewPersistent uses the same rejecting verifier as New. Only local state storage
+// changes; no payment or block-submission endpoint is enabled.
+func NewPersistent(chain, dir string) (http.Handler, func() error, error) {
+	engine, err := ledger.OpenPersistent(chain, dir, nil, ledger.UnavailableVerifier{})
+	if err != nil {
+		return nil, nil, err
+	}
+	return newHandler(engine), engine.Close, nil
+}
+
+func newHandler(engine *ledger.Engine) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		reply(w, 200, map[string]any{"process_running": true, "payments_enabled": false})
@@ -32,7 +46,7 @@ func New(chain string) (http.Handler, error) {
 		reply(w, 503, map[string]any{"ready": false, "zk_backend": "not_implemented", "consensus": "not_implemented"})
 	})
 	mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"stage": "state_machine_scaffold", "network": "local_only", "payments_enabled": false, "finality_available": false, "ledger": engine.Summary()})
+		reply(w, 200, map[string]any{"stage": "state_machine_scaffold", "network": "local_only", "payments_enabled": false, "finality_available": false, "ledger": engine.Summary(), "storage": engine.StorageStatus()})
 	})
 	mux.HandleFunc("POST /v1/transactions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/octet-stream" {
@@ -68,5 +82,5 @@ func New(chain string) (http.Handler, error) {
 		// diagnostic endpoint into an unaudited payment/mempool service by accident.
 		reply(w, 503, map[string]string{"error": "payment admission is intentionally disabled in this scaffold"})
 	})
-	return mux, nil
+	return mux
 }

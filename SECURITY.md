@@ -2,7 +2,7 @@
 
 **NOT AUDITED. NO REAL FUNDS. NO REAL ZERO-KNOWLEDGE BACKEND. NO CONSENSUS.**
 
-This is an in-memory, local-only specification scaffold. Its executable refuses all payments. It cannot provide anonymity, correct issuance, asset custody, durable storage, network finality or censorship resistance.
+This is a local-only specification scaffold with optional bounded journal storage. Its executable refuses all payments. It cannot provide anonymity, correct issuance, asset custody, production storage durability, network finality or censorship resistance.
 
 Test-only checksums are deliberately forgeable. No `*_test.go` file is a payment verification implementation. The SHA-256 tree and fixed ciphertext size are provisional modeling tools, not a final shielded protocol. The engine's full-state cloning is not production storage.
 
@@ -15,3 +15,5 @@ The current API only listens on a numeric loopback address. It has no authentica
 Private security reporting channel and response process are not configured. Do not post secrets in public issues. The repository is publicly visible. Configure an owner-approved private reporting channel before a public testnet or any funds-related use.
 
 Mainnet deployment and accepting funds are blocked until all release gates in docs/ROADMAP.md have been explicitly reviewed. There is no promise of absolute anonymity or immunity from investigation or regulation.
+
+M1 storage scope and limits are documented in docs/LOCAL_STORAGE.zh-CN.md. Journal checksums are not authentication or encryption. Complete-prefix rollback by a local writer is not detected. Corrupt or partial files are not silently reset. File synchronization and process-exit tests do not certify power-loss durability.

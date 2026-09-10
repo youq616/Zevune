@@ -31,3 +31,6 @@ jobs:
       - name: Bounded decoder fuzz smoke test
         if: runner.os == 'Linux'
         run: go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2
+      - name: Bounded journal decoder fuzz smoke test
+        if: runner.os == 'Linux'
+        run: go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2

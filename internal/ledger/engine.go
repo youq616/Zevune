@@ -1,4 +1,4 @@
-// Package ledger is a single-process, in-memory state-machine prototype.
+// Package ledger is a single-process state-machine prototype with optional local journaling.
 // ApplyBlock is NOT a consensus protocol and does not establish economic finality.
 package ledger
 
@@ -60,10 +60,13 @@ func (s state) clone() state {
 }
 
 type Engine struct {
-	mu       sync.RWMutex
-	chainID  string
-	verifier Verifier
-	s        state
+	mu         sync.RWMutex
+	chainID    string
+	verifier   Verifier
+	s          state
+	journal    *journal
+	closed     bool
+	storageErr error
 }
 type Summary struct {
 	ChainID         string        `json:"chain_id"`
@@ -142,6 +145,9 @@ func (e *Engine) CheckTx(t protocol.Envelope) error {
 	t = t.Clone()
 	e.mu.RLock()
 	defer e.mu.RUnlock()
+	if err := e.usableLocked(); err != nil {
+		return err
+	}
 	if e.s.height == math.MaxUint64 {
 		return ErrHeight
 	}
@@ -151,12 +157,16 @@ func (e *Engine) CheckTx(t protocol.Envelope) error {
 	return e.verifier.Verify(t.Clone())
 }
 
-// ApplyBlock atomically validates an already-ordered block in memory.
-// It is NOT an RPC, mempool, durable commit, validator signature, or finality certificate.
+// ApplyBlock validates an already-ordered block. When opened with OpenPersistent,
+// the journal is synced before exposing the new in-memory state. This is not
+// an RPC, mempool, validator signature, or finality certificate.
 // The full-state copy is deliberately simple and O(history); it is NOT scalable storage.
 func (e *Engine) ApplyBlock(height uint64, txs []protocol.Envelope) (Summary, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.usableLocked(); err != nil {
+		return Summary{}, err
+	}
 	if e.s.height == math.MaxUint64 || height != e.s.height+1 {
 		return Summary{}, ErrHeight
 	}
@@ -197,6 +207,12 @@ func (e *Engine) ApplyBlock(height uint64, txs []protocol.Envelope) (Summary, er
 	staged.roots = append(staged.roots, RootRecord{Height: height, Root: merkle.Root(staged.commitments)})
 	if len(staged.roots) > RootWindow {
 		staged.roots = append([]RootRecord(nil), staged.roots[len(staged.roots)-RootWindow:]...)
+	}
+	if e.journal != nil {
+		if err := e.journal.appendBlock(height, owned); err != nil {
+			e.storageErr = err // No further writes after an uncertain disk outcome.
+			return Summary{}, fmt.Errorf("%w: %v", ErrStorageUnavailable, err)
+		}
 	}
 	e.s = staged
 	return e.summaryLocked(), nil
