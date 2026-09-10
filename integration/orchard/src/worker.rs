@@ -1,8 +1,8 @@
 //! Private child-process protocol. No listener, wallet RPC or arbitrary command.
 //! Success reports stateless cryptographic authorization, never ledger validity.
-use std::io::{self, Read, Write};
-use sha2::{Digest, Sha256};
 use crate::wire::{payload_digest, AuthorizationVerifier, MAX_ENVELOPE_SIZE};
+use sha2::{Digest, Sha256};
+use std::io::{self, Read, Write};
 
 pub const MAX_FRAME: usize = MAX_ENVELOPE_SIZE + 20;
 pub const HELLO_MAGIC: &[u8; 8] = b"ZVOH0001";
@@ -17,7 +17,9 @@ fn protocol_error() -> io::Error {
 }
 
 pub fn read_frame<R: Read>(reader: &mut R, limit: usize) -> io::Result<Option<Vec<u8>>> {
-    if limit == 0 || limit > MAX_FRAME { return Err(protocol_error()); }
+    if limit == 0 || limit > MAX_FRAME {
+        return Err(protocol_error());
+    }
     let mut prefix = [0u8; 4];
     loop {
         match reader.read(&mut prefix[..1]) {
@@ -29,13 +31,17 @@ pub fn read_frame<R: Read>(reader: &mut R, limit: usize) -> io::Result<Option<Ve
     }
     reader.read_exact(&mut prefix[1..])?;
     let len = u32::from_be_bytes(prefix) as usize;
-    if len == 0 || len > limit { return Err(protocol_error()); }
+    if len == 0 || len > limit {
+        return Err(protocol_error());
+    }
     let mut body = vec![0; len];
     reader.read_exact(&mut body)?;
     Ok(Some(body))
 }
 pub fn write_frame<W: Write>(writer: &mut W, body: &[u8]) -> io::Result<()> {
-    if body.is_empty() || body.len() > MAX_FRAME { return Err(protocol_error()); }
+    if body.is_empty() || body.len() > MAX_FRAME {
+        return Err(protocol_error());
+    }
     writer.write_all(&(body.len() as u32).to_be_bytes())?;
     writer.write_all(body)?;
     writer.flush()
@@ -55,7 +61,8 @@ pub fn serve<R: Read, W: Write>(reader: &mut R, writer: &mut W) -> io::Result<()
             return Err(protocol_error());
         }
         let id = u64::from_be_bytes(request[8..16].try_into().map_err(|_| protocol_error())?);
-        let len = u32::from_be_bytes(request[16..20].try_into().map_err(|_| protocol_error())?) as usize;
+        let len =
+            u32::from_be_bytes(request[16..20].try_into().map_err(|_| protocol_error())?) as usize;
         if id == 0 || id <= last_id || len > MAX_ENVELOPE_SIZE || len != request.len() - 20 {
             return Err(protocol_error());
         }
@@ -80,19 +87,34 @@ mod tests {
 
     #[test]
     fn fingerprint_matches_go_vector() {
-        assert_eq!(fingerprint(), [0x30,0x12,0xf3,0xed,0xe4,0x9b,0x55,0x1c,0xd1,0x31,0xe8,0xba,0xe0,0x49,0xd6,0x6f,0x37,0x74,0x0a,0x5c,0xb0,0x84,0x05,0x23,0x94,0x92,0x9f,0x9b,0x23,0xe4,0x3a,0xb6]);
+        assert_eq!(
+            fingerprint(),
+            [
+                0x30, 0x12, 0xf3, 0xed, 0xe4, 0x9b, 0x55, 0x1c, 0xd1, 0x31, 0xe8, 0xba, 0xe0, 0x49,
+                0xd6, 0x6f, 0x37, 0x74, 0x0a, 0x5c, 0xb0, 0x84, 0x05, 0x23, 0x94, 0x92, 0x9f, 0x9b,
+                0x23, 0xe4, 0x3a, 0xb6
+            ]
+        );
     }
     #[test]
     fn bounded_frame_rejections() {
-        assert!(read_frame(&mut Cursor::new([255;4]), MAX_FRAME).is_err());
-        assert!(read_frame(&mut Cursor::new([0;4]), MAX_FRAME).is_err());
-        assert!(read_frame(&mut Cursor::new([0,0,0,4,1]), MAX_FRAME).is_err());
+        assert!(read_frame(&mut Cursor::new([255; 4]), MAX_FRAME).is_err());
+        assert!(read_frame(&mut Cursor::new([0; 4]), MAX_FRAME).is_err());
+        assert!(read_frame(&mut Cursor::new([0, 0, 0, 4, 1]), MAX_FRAME).is_err());
         assert!(read_frame(&mut Cursor::new([0]), MAX_FRAME).is_err());
-        assert!(read_frame(&mut Cursor::new(Vec::<u8>::new()), MAX_FRAME).unwrap().is_none());
+        assert!(read_frame(&mut Cursor::new(Vec::<u8>::new()), MAX_FRAME)
+            .unwrap()
+            .is_none());
     }
     #[test]
     fn frame_roundtrip() {
-        let mut bytes=Vec::new();write_frame(&mut bytes,b"public").unwrap();
-        assert_eq!(read_frame(&mut Cursor::new(bytes),MAX_FRAME).unwrap().unwrap(),b"public");
+        let mut bytes = Vec::new();
+        write_frame(&mut bytes, b"public").unwrap();
+        assert_eq!(
+            read_frame(&mut Cursor::new(bytes), MAX_FRAME)
+                .unwrap()
+                .unwrap(),
+            b"public"
+        );
     }
 }

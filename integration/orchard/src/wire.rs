@@ -18,10 +18,8 @@ pub const MAGIC: &[u8; 8] = b"ZVORLAB1";
 pub const HEADER_SIZE: usize = 66;
 pub const ACTION_SIZE: usize = 884;
 pub const TAIL_SIZE: usize = 68;
-pub const MAX_ENVELOPE_SIZE: usize = HEADER_SIZE
-    + MAX_ACTIONS * ACTION_SIZE
-    + Proof::expected_proof_size(MAX_ACTIONS)
-    + TAIL_SIZE;
+pub const MAX_ENVELOPE_SIZE: usize =
+    HEADER_SIZE + MAX_ACTIONS * ACTION_SIZE + Proof::expected_proof_size(MAX_ACTIONS) + TAIL_SIZE;
 
 pub type SignedBundle = Bundle<Authorized, i64>;
 
@@ -103,7 +101,9 @@ pub fn encode(bundle: &SignedBundle, context: &Context) -> Result<Vec<u8>, WireE
     let proof = bundle.authorization().proof().as_ref();
     out.extend_from_slice(&(proof.len() as u32).to_be_bytes());
     out.extend_from_slice(proof);
-    out.extend_from_slice(&<[u8; 64]>::from(bundle.authorization().binding_signature()));
+    out.extend_from_slice(&<[u8; 64]>::from(
+        bundle.authorization().binding_signature(),
+    ));
     Ok(out)
 }
 
@@ -137,7 +137,12 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     if !(2..=MAX_ACTIONS).contains(&n) {
         return Err(WireError::Bounds);
     }
-    if raw[65] != VERSION.default_flags().to_byte(VERSION).ok_or(WireError::Policy)? {
+    if raw[65]
+        != VERSION
+            .default_flags()
+            .to_byte(VERSION)
+            .ok_or(WireError::Policy)?
+    {
         return Err(WireError::Policy);
     }
     if raw.len() != size(n) {
@@ -150,8 +155,8 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     if expiry == 0 || fee > i64::MAX as u64 || balance < 0 || balance as u64 != fee {
         return Err(WireError::Policy);
     }
-    let anchor = Option::<Anchor>::from(Anchor::from_bytes(r.array()?))
-        .ok_or(WireError::Element)?;
+    let anchor =
+        Option::<Anchor>::from(Anchor::from_bytes(r.array()?)).ok_or(WireError::Element)?;
     r.slice(2)?;
     let mut actions = Vec::with_capacity(n);
     for _ in 0..n {
@@ -161,16 +166,20 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
             .ok_or(WireError::Element)?;
         let rk = VerificationKey::<SpendAuth>::try_from(r.array::<32>()?)
             .map_err(|_| WireError::Element)?;
-        let cm = Option::<ExtractedNoteCommitment>::from(ExtractedNoteCommitment::from_bytes(&r.array()?))
-            .ok_or(WireError::Element)?;
+        let cm = Option::<ExtractedNoteCommitment>::from(ExtractedNoteCommitment::from_bytes(
+            &r.array()?,
+        ))
+        .ok_or(WireError::Element)?;
         let ciphertext = TransmittedNoteCiphertext {
             epk_bytes: r.array()?,
             enc_ciphertext: r.array()?,
             out_ciphertext: r.array()?,
         };
         let signature = Signature::<SpendAuth>::from(r.array::<64>()?);
-        actions.push(Action::from_parts(nf, rk, cm, ciphertext, cv, signature)
-            .map_err(|_| WireError::Element)?);
+        actions.push(
+            Action::from_parts(nf, rk, cm, ciphertext, cv, signature)
+                .map_err(|_| WireError::Element)?,
+        );
     }
     let proof_len = u32::from_be_bytes(r.array()?) as usize;
     if proof_len != Proof::expected_proof_size(n) {
@@ -188,8 +197,13 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
         anchor,
         Authorized::from_parts(proof, binding),
         VERSION,
-    ).map_err(|_| WireError::Encoding)?;
-    let context = Context { network: NETWORK.into(), expiry_height: expiry, fee };
+    )
+    .map_err(|_| WireError::Encoding)?;
+    let context = Context {
+        network: NETWORK.into(),
+        expiry_height: expiry,
+        fee,
+    };
     policy(&bundle, &context)?;
     if encode(&bundle, &context)? != raw {
         return Err(WireError::Encoding);
@@ -210,24 +224,35 @@ pub struct AuthorizationVerifier {
     key: VerifyingKey,
 }
 impl Default for AuthorizationVerifier {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl AuthorizationVerifier {
     pub fn new() -> Self {
-        Self { key: VerifyingKey::build(CIRCUIT) }
+        Self {
+            key: VerifyingKey::build(CIRCUIT),
+        }
     }
     pub fn verify(&self, raw: &[u8]) -> Result<[u8; 32], WireError> {
         let decoded = decode(raw)?;
         let digest = signing_digest(&decoded.bundle, &decoded.context)
             .map_err(|_| WireError::Authorization)?;
         for action in decoded.bundle.actions().iter() {
-            action.rk().verify(&digest, action.authorization())
+            action
+                .rk()
+                .verify(&digest, action.authorization())
                 .map_err(|_| WireError::Authorization)?;
         }
-        decoded.bundle.binding_validating_key()
+        decoded
+            .bundle
+            .binding_validating_key()
             .verify(&digest, decoded.bundle.authorization().binding_signature())
             .map_err(|_| WireError::Authorization)?;
-        decoded.bundle.verify_proof(&self.key).map_err(|_| WireError::Authorization)?;
+        decoded
+            .bundle
+            .verify_proof(&self.key)
+            .map_err(|_| WireError::Authorization)?;
         Ok(payload_digest(raw))
     }
 }
