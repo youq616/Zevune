@@ -1,7 +1,7 @@
 name: orchard-cryptography-laboratory
 on:
   push:
-    branches: [main, 'dev/m4-orchard']
+    branches: [main, 'dev/**']
     paths: ['integration/orchard/**', '.github/workflows/orchard-lab.yml', '.gitattributes']
   pull_request:
     paths: ['integration/orchard/**', '.github/workflows/orchard-lab.yml', '.gitattributes']
@@ -34,7 +34,7 @@ jobs:
           cargo fmt --all -- --check
           cargo metadata --locked --format-version=1 > /dev/null
           test -z "$(git status --porcelain --untracked-files=no)"
-      - name: Real proofs, signatures, decryption and negative cases
+      - name: Real proofs, signatures, decryption and pool state replay
         run: cargo test --locked --release -- --nocapture --test-threads=1
       - name: Static checks
         run: cargo clippy --locked --release --all-targets -- -D warnings
