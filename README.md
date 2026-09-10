@@ -1,9 +1,35 @@
 # Zevune · 澄隐
 
-Privacy-payment research and engineering scaffold.
+**规则可验证，支付保持私密。** 这是项目目标，不是已实现的匿名保证。
 
-**Early development only. No real funds.** This repository is being initialized from the previously prepared local prototype. It is not a deployed blockchain, a wallet, or an audited privacy system. Real zero-knowledge verification, consensus, and payments are not yet implemented.
+中文名称：澄隐。英文名称：Zevune。网络名称：Zevune Network。节点程序名称：`zevuned`。Go 模块：`github.com/youq616/Zevune`。
 
-中文名称：澄隐。英文名称：Zevune。
+## 当前发布状态
 
-The project aims to make ledger correctness publicly verifiable while protecting individual payment information. These are design goals, not guarantees of absolute anonymity or current performance.
+**本仓库已经初始化并完成命名资料提交，但完整工程源码尚未成功写入主分支。当前不能仅凭 git clone 构建或运行节点。**
+
+已更名的 `v0.1.0-dev` 完整本地源码包另行交付给项目负责人。本地版本是单机状态机骨架，不是已部署的隐私链。真实零知识证明、钱包、P2P、共识、持久化及网络隐私未实现；所有付款禁用，不得接收真实资产。
+
+| 项目 | 状态 |
+|---|---|
+| 名称确认 | 澄隐 · Zevune |
+| GitHub 写入权限 | 已通过实际提交确认 |
+| 远程完整源码 | **尚未成功发布** |
+| 本地更名和导入路径更新 | 已完成 |
+| 本地单元测试 | 50 项通过，0 失败 |
+| 本地竞态检测、go vet、短时 fuzz | 通过 |
+| Windows | 已交叉编译；未实机运行 |
+| 远程 CI | 未配置／未运行 |
+| 实际转账速度、TPS、安全审计 | 未测量／未进行 |
+
+查看 [品牌说明](docs/BRANDING.zh-CN.md)、[本地验证摘要](reports/local-validation.md)、[发布状态与未完成事项](docs/PUBLICATION_STATUS.zh-CN.md) 和 [机器可读状态](PROJECT_STATUS.json)。本地测试结果不能冒充远程 CI 结果。
+
+## 设计方向
+
+优先评估原生隐私支付 L1：公开验证账本规则，不设置全网查看密钥，避免让用户秘密集中到项目服务器。真正的隐私 Rollup 保留为架构比较选项。当前尚未锁定或集成正式密码学协议与共识后端。
+
+速度目标暂定为：在已同步的参考桌面钱包、正常网络和明确负载下，网络接收到本链最终确认 p95 不超过 3 秒，端到端 p95 不超过 5 秒。**这只是待验证目标，不是实测结果或保证。**
+
+本次品牌更名不改变历史 v0 协议字节与合成状态摘要；本地已增加两项兼容性回归测试。不能用修改名称代替协议设计、实现或独立审查。
+
+仓库目前公开可读；尚未选定开源许可证。币种代码、商标、域名和发行规则仍未确定。本项目与现有 Veil 加密货币项目无关联，不承诺绝对匿名或不受任何现实约束。
