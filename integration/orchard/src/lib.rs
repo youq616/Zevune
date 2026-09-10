@@ -5,6 +5,10 @@
 //! verifies public authorization data. No wallet or payment listener is enabled.
 #![forbid(unsafe_code)]
 
+#[cfg(test)]
+extern crate self as zevune_orchard_lab;
+
+pub mod pool;
 pub mod wire;
 pub mod worker;
 
