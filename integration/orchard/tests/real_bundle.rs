@@ -179,7 +179,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
 
     let decrypt_start = Instant::now();
     let incoming = bfvk.to_ivk(Scope::External);
-    let received = first.decrypt_outputs_with_keys(&[incoming.clone()]);
+    let received = first.decrypt_outputs_with_keys(std::slice::from_ref(&incoming));
     assert_eq!(received.len(), 1);
     assert!(received[0].2.value().inner() == 60_000 && received[0].3 == b_addr);
     let bob_index = received[0].0;
