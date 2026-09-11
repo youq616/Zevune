@@ -1,0 +1,62 @@
+name: funded-wallet-consensus
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+  pull_request:
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+permissions:
+  contents: read
+jobs:
+  funded:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install fixed Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Verify exact source and unchanged locks
+        run: |
+          test -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"
+          cd integration/orchard
+          cargo fmt --all -- --check
+          cargo metadata --locked --format-version=1 > /dev/null
+          cargo clippy --locked --release --features local-funding-lab --all-targets -- -D warnings
+          git diff --exit-code
+      - name: Real cryptography, wallet recovery and bounded public test genesis
+        working-directory: integration/orchard
+        run: |
+          cargo test --locked --release --features local-funding-lab -- --test-threads=1
+          cargo build --locked --release --features local-funding-lab --bins
+      - name: Register only executable paths, never wallet secrets
+        run: |
+          python - <<'PY'
+          import os
+          suffix = '.exe' if os.name == 'nt' else ''
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              for env, name in [('ZEVUNE_POOL_WORKER', 'zevune-pool-worker'), ('ZEVUNE_FUNDED_SCENARIO', 'zevune-funded-scenario')]:
+                  f.write(env + '=' + os.path.abspath('integration/orchard/target/release/' + name + suffix) + '\n')
+          PY
+      - name: Actual funded four-node payments and encrypted wallet recovery
+        working-directory: integration/cometbft
+        run: |
+          go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch)$' -count=1 -timeout=15m -v
+          go vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp
+      - name: Assert unchanged tracked source and dependency locks
+        run: git diff --exit-code
