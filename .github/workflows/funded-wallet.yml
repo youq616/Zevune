@@ -2,9 +2,9 @@ name: funded-wallet-consensus
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
   pull_request:
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
 permissions:
   contents: read
 jobs:
@@ -46,6 +46,13 @@ jobs:
         run: |
           cargo test --locked --release --features local-funding-lab -- --test-threads=1
           cargo build --locked --release --features local-funding-lab --bins
+      - name: Actual Python to Rust local wallet interoperability
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          subprocess.run([sys.executable, 'scripts/check_wallet_backend.py', os.path.abspath('integration/orchard/target/release/zevune-wallet-local' + suffix)], check=True)
+          PY
       - name: Register only executable paths, never wallet secrets
         run: |
           python - <<'PY'

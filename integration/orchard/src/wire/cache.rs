@@ -90,4 +90,23 @@ mod tests {
         );
         assert!(cache.entries.lock().unwrap().is_empty());
     }
+
+    #[test]
+    fn concurrent_success_memoization_preserves_exact_entries_and_bounds() {
+        let cache = VerifiedCache::default();
+        std::thread::scope(|scope| {
+            for index in 0u64..8 {
+                let cache = &cache;
+                scope.spawn(move || {
+                    let raw = index.to_be_bytes();
+                    let digest = [index as u8; 32];
+                    for _ in 0..100 {
+                        cache.remember(&raw, digest).unwrap();
+                        assert!(cache.contains(&raw, digest).unwrap());
+                    }
+                });
+            }
+        });
+        assert_eq!(cache.entries.lock().unwrap().len(), 8);
+    }
 }
