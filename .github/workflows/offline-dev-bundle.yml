@@ -1,0 +1,44 @@
+name: offline-development-bundle
+on:
+  push:
+    branches: ['dev/build-environment']
+    paths: ['.github/workflows/offline-dev-bundle.yml']
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Install fixed minimal compiler
+        shell: bash
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Bundle only tracked source, fixed third-party source and public toolchain
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/zevune-offline"
+          mkdir -p "$root/source" "$root/public" "$root/output"
+          git archive HEAD | tar -x -C "$root/source"
+          cargo vendor --manifest-path integration/orchard/Cargo.toml --locked "$root/public/vendor" > "$root/public/vendor-source.toml"
+          git diff --exit-code
+          rustc +1.98.1 --version > "$root/public/toolchain-version.txt"
+          printf '%s\n' "$SOURCE_SHA" > "$root/public/source-commit.txt"
+          tar -C "$root" -czf "$root/output/source-and-vendor.tar.gz" source public
+          toolchain="$HOME/.rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu"
+          test -x "$toolchain/bin/rustc"
+          tar -C "$toolchain" -czf "$root/output/rust-minimal-linux.tar.gz" bin lib libexec etc share/rust share/doc/rust/COPYRIGHT share/doc/rust/LICENSE-APACHE share/doc/rust/LICENSE-MIT
+          cd "$root/output"
+          sha256sum *.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pinned-offline-development-bundle
+          path: ${{ runner.temp }}/zevune-offline/output/
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0
