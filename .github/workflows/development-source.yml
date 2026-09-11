@@ -1,0 +1,34 @@
+name: development-source
+on:
+  push:
+    branches: ['dev/**']
+    paths: ['.github/workflows/development-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Archive tracked source only, with exact Git object identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/zevune-source-review"
+          mkdir "$out"
+          git diff --exit-code
+          git archive --format=tar.gz HEAD > "$out/source.tar.gz"
+          git rev-parse HEAD > "$out/COMMIT"
+          git ls-tree -rz HEAD > "$out/TREE"
+          cd "$out"
+          sha256sum source.tar.gz COMMIT TREE > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zevune-tracked-source
+          path: ${{ runner.temp }}/zevune-source-review/
+          if-no-files-found: error
+          retention-days: 2
