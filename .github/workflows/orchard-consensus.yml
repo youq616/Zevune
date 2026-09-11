@@ -1,7 +1,7 @@
 name: orchard-consensus-integration
 on:
   push:
-    branches: [main, 'dev/m7-durable-consensus']
+    branches: [main, 'dev/**']
   pull_request:
 permissions:
   contents: read
@@ -29,12 +29,12 @@ jobs:
           cache-dependency-path: integration/cometbft/go.sum
       - name: Install pinned Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
-      - name: Bootstrap source formatting only
+      - name: Check committed source and unchanged dependency locks
         run: |
-          gofmt -w internal/poolbridge integration/cometbft/poolapp
-          cargo fmt --manifest-path integration/orchard/Cargo.toml --all
+          test -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"
+          cargo fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
           cargo metadata --manifest-path integration/orchard/Cargo.toml --locked --format-version=1 > /dev/null
-          git diff --exit-code -- integration/orchard/Cargo.lock
+          git diff --exit-code
       - name: Prepare only public zero-value fixture path
         run: |
           python - <<'PY'
@@ -64,43 +64,14 @@ jobs:
           go test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v
           go test -mod=readonly ./... -count=1 -timeout=8m
           go vet -mod=readonly -tags=pool_e2e ./...
+      - name: Real adapter race checks
+        if: runner.os == 'Linux'
+        working-directory: integration/cometbft
+        run: go test -mod=readonly -race -tags=pool_e2e ./poolapp -run '^TestReal(FinalizationCommitAndRestart|ProposalSelectionAndAtomicRejection)$' -count=1 -timeout=3m
       - name: Local IPC race and bounded fuzz
         if: runner.os == 'Linux'
         run: |
           go test -race ./internal/poolbridge -count=1 -timeout=2m
           go test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2
-  record-format:
-    needs: integrated
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m7-durable-consensus'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
-        with:
-          ref: dev/m7-durable-consensus
-      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
-        with:
-          go-version: '1.27.1'
-          cache-dependency-path: integration/cometbft/go.sum
-      - name: Record formatting only on unchanged development head
-        env:
-          TESTED_HEAD: ${{ github.sha }}
-        run: |
-          test "$(git rev-parse HEAD)" = "$TESTED_HEAD"
-          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
-          gofmt -w internal/poolbridge integration/cometbft/poolapp
-          cargo fmt --manifest-path integration/orchard/Cargo.toml --all
-          python - <<'PY'
-          import subprocess
-          allowed = {'internal/poolbridge/client.go', 'internal/poolbridge/client_test.go', 'integration/cometbft/poolapp/app.go', 'integration/cometbft/poolapp/e2e_test.go', 'integration/orchard/src/bin/zevune-pool-worker.rs', 'integration/orchard/tests/pool_network.rs'}
-          changed = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
-          assert changed <= allowed, changed - allowed
-          PY
-          git add internal/poolbridge integration/cometbft/poolapp integration/orchard/src/bin/zevune-pool-worker.rs integration/orchard/tests/pool_network.rs
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if ! git diff --cached --quiet; then
-            git commit -m 'Record tested M7 source formatting on development branch'
-            git push origin HEAD:refs/heads/dev/m7-durable-consensus
-          fi
+      - name: Assert no tracked source or dependency drift
+        run: git diff --exit-code

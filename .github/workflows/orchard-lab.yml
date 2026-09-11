@@ -34,7 +34,7 @@ jobs:
           cargo fmt --all -- --check
           cargo metadata --locked --format-version=1 > /dev/null
           test -z "$(git status --porcelain --untracked-files=no)"
-      - name: Real proofs, signatures, decryption and pool state replay
+      - name: Real proofs, pool replay, durable worker codec and zero-value fixture
         run: cargo test --locked --release -- --nocapture --test-threads=1
       - name: Static checks
         run: cargo clippy --locked --release --all-targets -- -D warnings
