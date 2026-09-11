@@ -448,15 +448,32 @@ func (p *falseStatePeer) BroadcastTxSync(context.Context, types.Tx) (*ctypes.Res
 func TestQuorumSignedWrongPostStateNeverPersists(t *testing.T) {
 	worker := requiredExecutable(t, "ZEVUNE_POOL_WORKER")
 	path := filepath.Join(t.TempDir(), "reference.journal")
-	store, e := poolbridge.Start(context.Background(), poolbridge.Options{Executable: worker, ExpectedSHA256: executablePin(t, worker), Journal: path, Create: true})
+	options := poolbridge.Options{Executable: worker, ExpectedSHA256: executablePin(t, worker), Journal: path, Create: true}
+	store, e := poolbridge.Start(context.Background(), options)
+	if e != nil {
+		t.Fatal(e)
+	}
+	initial, e := store.Status(context.Background())
+	if e != nil {
+		store.Close()
+		t.Fatal(e)
+	}
+	// Windows enforces the real worker's exclusive byte-range lock even against
+	// a read from this test process. Read the baseline only after releasing it,
+	// then reopen the SAME journal and retain the lock during the adversarial call.
+	if e = store.Close(); e != nil {
+		t.Fatal(e)
+	}
+	before, e := os.ReadFile(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	options.Create = false
+	store, e = poolbridge.Start(context.Background(), options)
 	if e != nil {
 		t.Fatal(e)
 	}
 	defer store.Close()
-	initial, e := store.Status(context.Background())
-	if e != nil {
-		t.Fatal(e)
-	}
 	n, keys := signingNetwork(t)
 	n.genesis.AppHash = bytes.Clone(initial.AppHash[:])
 	b := types.MakeBlock(1, nil, &types.Commit{}, nil)
@@ -480,20 +497,19 @@ func TestQuorumSignedWrongPostStateNeverPersists(t *testing.T) {
 	nextHeader.Time = b.Time.Add(time.Millisecond)
 	next := signHeader(t, n, keys, nextHeader, parts.Header(), 4)
 	remote := &falseStatePeer{first: first, next: next, block: b}
-	before, e := os.ReadFile(path)
-	if e != nil {
-		t.Fatal(e)
-	}
 	_, e = n.synchronize(context.Background(), remote, store, 128)
 	if !errors.Is(e, ErrCertificate) {
 		t.Fatal("wrong post-state was not rejected", e)
 	}
-	after, e := os.ReadFile(path)
-	if e != nil || !bytes.Equal(before, after) {
-		t.Fatal("untrusted state contaminated journal")
-	}
 	status, e := store.Status(context.Background())
 	if e != nil || status != initial {
 		t.Fatal("untrusted state changed memory")
+	}
+	if e = store.Close(); e != nil {
+		t.Fatal(e)
+	}
+	after, e := os.ReadFile(path)
+	if e != nil || !bytes.Equal(before, after) {
+		t.Fatal("untrusted state contaminated journal")
 	}
 }
