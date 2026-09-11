@@ -14,6 +14,8 @@ use sha2::{Digest, Sha256};
 
 use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 
+mod cache;
+
 pub const MAGIC: &[u8; 8] = b"ZVORLAB1";
 pub const HEADER_SIZE: usize = 66;
 pub const ACTION_SIZE: usize = 884;
@@ -215,13 +217,16 @@ pub fn payload_digest(raw: &[u8]) -> [u8; 32] {
     Sha256::digest(raw).into()
 }
 
-/// Reuses a fixed public verifying key. This is STATELESS authorization only.
+/// Reuses a fixed public verifying key. This is ledger-independent authorization
+/// only. A bounded, process-local cache remembers ONLY fully checked exact bytes.
+/// Canonical decoding still runs on every call; no cache entries are imported.
 /// The caller must separately validate expiry, trusted roots, prior spends,
 /// issuance, fees and atomic state updates against a committed ledger snapshot.
 /// Individual upstream signature verification and SingleVerifier avoid a new
 /// randomized signature-batch acceptance decision at this process boundary.
 pub struct AuthorizationVerifier {
     key: VerifyingKey,
+    verified: cache::VerifiedCache,
 }
 impl Default for AuthorizationVerifier {
     fn default() -> Self {
@@ -232,10 +237,15 @@ impl AuthorizationVerifier {
     pub fn new() -> Self {
         Self {
             key: VerifyingKey::build(CIRCUIT),
+            verified: cache::VerifiedCache::default(),
         }
     }
     pub fn verify(&self, raw: &[u8]) -> Result<[u8; 32], WireError> {
         let decoded = decode(raw)?;
+        let payload = payload_digest(raw);
+        if self.verified.contains(raw, payload)? {
+            return Ok(payload);
+        }
         let digest = signing_digest(&decoded.bundle, &decoded.context)
             .map_err(|_| WireError::Authorization)?;
         for action in decoded.bundle.actions().iter() {
@@ -253,6 +263,7 @@ impl AuthorizationVerifier {
             .bundle
             .verify_proof(&self.key)
             .map_err(|_| WireError::Authorization)?;
-        Ok(payload_digest(raw))
+        self.verified.remember(raw, payload)?;
+        Ok(payload)
     }
 }
