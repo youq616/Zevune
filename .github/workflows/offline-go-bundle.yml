@@ -1,0 +1,45 @@
+name: offline-go-development-bundle
+on:
+  push:
+    branches: ['dev/offline-go-tooling']
+    paths: ['.github/workflows/offline-go-bundle.yml']
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Package only official compiler and locked public Go module sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GOTOOLCHAIN=local
+          root="$RUNNER_TEMP/zevune-go-offline"
+          mkdir -p "$root/output"
+          go version > "$root/go-version.txt"
+          git rev-parse HEAD > "$root/source-commit.txt"
+          cd integration/cometbft
+          go mod vendor
+          git diff --exit-code -- go.mod go.sum
+          tar -czf "$root/output/cometbft-go-vendor.tar.gz" vendor
+          cd ../..
+          git diff --exit-code
+          tar -C "$(go env GOROOT)" -czf "$root/output/go-toolchain-linux.tar.gz" .
+          cp "$root/go-version.txt" "$root/source-commit.txt" "$root/output/"
+          cd "$root/output"
+          sha256sum *.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pinned-offline-go-development-bundle
+          path: ${{ runner.temp }}/zevune-go-offline/output/
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0
