@@ -2,9 +2,9 @@ name: funded-wallet-consensus
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
   pull_request:
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
 permissions:
   contents: read
 jobs:
@@ -31,6 +31,8 @@ jobs:
           cache-dependency-path: integration/cometbft/go.sum
       - name: Install fixed Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Local console request and hidden-password boundary tests
+        run: python -m unittest discover -s scripts/tests -v
       - name: Verify exact source and unchanged locks
         run: |
           test -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"
