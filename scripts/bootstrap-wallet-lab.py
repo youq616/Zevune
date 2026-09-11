@@ -20,8 +20,11 @@ def append_exact(path, expected, suffix):
 
 append_exact(module / "src/lib.rs", "77500071118939b7182705fb85222a224ea6632f", "\npub mod wallet;\n")
 append_exact(module / "src/pool.rs", "1cbb6bfc51f6144710bbd530965bc03ae6c3d490", '\n#[path = "wallet_history.rs"]\npub mod history;\n\n#[cfg(test)]\n#[path = "wallet_flow_tests.rs"]\nmod wallet_flow_tests;\n')
-subprocess.run(["git", "apply", "--check", "scripts/m8-source.patch"], cwd=root, check=True)
-subprocess.run(["git", "apply", "scripts/m8-source.patch"], cwd=root, check=True)
+# Git checkout can give *.patch CRLF while *.rs is pinned to LF. Decode text
+# once and pass canonical LF bytes; no whitespace-ignore or partial application.
+patch = (root / "scripts/m8-source.patch").read_text(encoding="utf-8").encode("utf-8")
+subprocess.run(["git", "apply", "--check", "-"], cwd=root, input=patch, check=True)
+subprocess.run(["git", "apply", "-"], cwd=root, input=patch, check=True)
 manifest = module / "Cargo.toml"
 old = manifest.read_text(encoding="utf-8")
 needle = 'incrementalmerkletree = "=0.8.1"\n'
