@@ -132,15 +132,28 @@ fn encrypted_backup_restore_addresses_and_wrong_password() {
     assert_eq!(address.len(), 101);
     let original = fs::read(&wallet).unwrap();
     rejects(&request(0, PASSWORD, &[&wallet], None));
-    rejects(&request(1, b"synthetic-wrong-password", &[&wallet, "17"], None));
+    rejects(&request(
+        1,
+        b"synthetic-wrong-password",
+        &[&wallet, "17"],
+        None,
+    ));
     rejects(&request(1, PASSWORD, &[&wallet, "01"], None));
-    rejects(&request(1, PASSWORD, &[&wallet, "17"], Some(&"00".repeat(72))));
+    rejects(&request(
+        1,
+        PASSWORD,
+        &[&wallet, "17"],
+        Some(&"00".repeat(72)),
+    ));
     assert_eq!(fs::read(&wallet).unwrap(), original);
     call(2, &[&wallet, &backup], Some(&receipt));
     call(6, &[&backup, &restored], Some(&receipt));
     assert_eq!(fs::read(&backup).unwrap(), original);
     assert_eq!(fs::read(&restored).unwrap(), original);
-    assert_eq!(text_field(&call(1, &[&restored, "17"], None), "address"), address);
+    assert_eq!(
+        text_field(&call(1, &[&restored, "17"], None), "address"),
+        address
+    );
     rejects(&request(2, PASSWORD, &[&wallet, &backup], None));
     rejects(&request(6, PASSWORD, &[&backup, &wallet], None));
     assert_eq!(fs::read(&wallet).unwrap(), original);
@@ -161,11 +174,8 @@ fn operator_processes_prepare_resume_and_confirm_two_real_payments() {
     let carol_address = text_field(&call(1, &[&carol, "0"], None), "address");
     let init = call(7, &[&alice, &journal, &manifest], None);
     let digest = text_field(&init, "genesis_sha256");
-    let genesis = TestGenesis::read_pinned(
-        Path::new(&manifest),
-        unhex(&digest).try_into().unwrap(),
-    )
-    .unwrap();
+    let genesis =
+        TestGenesis::read_pinned(Path::new(&manifest), unhex(&digest).try_into().unwrap()).unwrap();
     let initial = call(3, &[&alice, &journal, &manifest, &digest], None);
     assert!(has_number(&initial, "balance", 100_000));
     let before = fs::read(&alice).unwrap();
@@ -177,14 +187,34 @@ fn operator_processes_prepare_resume_and_confirm_two_real_payments() {
     rejects(&request(
         4,
         PASSWORD,
-        &[&alice, &journal, &manifest, &digest, &bad_address, "60000", "1000", "20", &first],
+        &[
+            &alice,
+            &journal,
+            &manifest,
+            &digest,
+            &bad_address,
+            "60000",
+            "1000",
+            "20",
+            &first,
+        ],
         None,
     ));
     assert_eq!(fs::read(&alice).unwrap(), before);
     assert!(!Path::new(&first).exists());
     let prepared = call(
         4,
-        &[&alice, &journal, &manifest, &digest, &bob_address, "60000", "1000", "20", &first],
+        &[
+            &alice,
+            &journal,
+            &manifest,
+            &digest,
+            &bob_address,
+            "60000",
+            "1000",
+            "20",
+            &first,
+        ],
         None,
     );
     let tx1 = fs::read(&first).unwrap();
@@ -198,28 +228,62 @@ fn operator_processes_prepare_resume_and_confirm_two_real_payments() {
     call(2, &[&alice, &backup], Some(&receipt));
     call(6, &[&backup, &restored], Some(&receipt));
     let resumed = dir.path("resumed.tx");
-    let resumed_status = call(5, &[&restored, &journal, &manifest, &digest, &resumed], None);
+    let resumed_status = call(
+        5,
+        &[&restored, &journal, &manifest, &digest, &resumed],
+        None,
+    );
     assert_eq!(fs::read(&resumed).unwrap(), tx1);
-    assert_eq!(text_field(&prepared, "txid"), text_field(&resumed_status, "txid"));
-    rejects(&request(5, PASSWORD, &[&restored, &journal, &manifest, &digest, &resumed], None));
+    assert_eq!(
+        text_field(&prepared, "txid"),
+        text_field(&resumed_status, "txid")
+    );
+    rejects(&request(
+        5,
+        PASSWORD,
+        &[&restored, &journal, &manifest, &digest, &resumed],
+        None,
+    ));
     assert_eq!(fs::read(&resumed).unwrap(), tx1);
     {
         let mut pool = genesis.open_pool(Path::new(&journal)).unwrap();
-        let plan = pool.prepare(1, [1; 32], std::slice::from_ref(&tx1)).unwrap();
+        let plan = pool
+            .prepare(1, [1; 32], std::slice::from_ref(&tx1))
+            .unwrap();
         pool.commit(plan).unwrap();
     }
-    assert!(has_number(&call(3, &[&restored, &journal, &manifest, &digest], None), "balance", 39_000));
-    assert!(has_number(&call(3, &[&bob, &journal, &manifest, &digest], None), "balance", 60_000));
+    assert!(has_number(
+        &call(3, &[&restored, &journal, &manifest, &digest], None),
+        "balance",
+        39_000
+    ));
+    assert!(has_number(
+        &call(3, &[&bob, &journal, &manifest, &digest], None),
+        "balance",
+        60_000
+    ));
     let second = dir.path("second.tx");
     call(
         4,
-        &[&bob, &journal, &manifest, &digest, &carol_address, "40000", "1000", "20", &second],
+        &[
+            &bob,
+            &journal,
+            &manifest,
+            &digest,
+            &carol_address,
+            "40000",
+            "1000",
+            "20",
+            &second,
+        ],
         None,
     );
     let tx2 = fs::read(&second).unwrap();
     {
         let mut pool = genesis.open_pool(Path::new(&journal)).unwrap();
-        let plan = pool.prepare(2, [2; 32], std::slice::from_ref(&tx2)).unwrap();
+        let plan = pool
+            .prepare(2, [2; 32], std::slice::from_ref(&tx2))
+            .unwrap();
         let final_state = pool.commit(plan).unwrap();
         assert_eq!(final_state.fees, 2_000);
         assert!(matches!(

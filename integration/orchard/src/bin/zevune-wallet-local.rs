@@ -7,10 +7,10 @@ use std::error::Error;
 use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::Path;
+use zeroize::Zeroizing;
 use zevune_orchard_lab::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use zevune_orchard_lab::wallet::vault::store::{StoreReceipt, WalletStore};
 use zevune_orchard_lab::wallet::{Payment, WalletProver};
-use zeroize::Zeroizing;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const MAX_REQUEST: usize = 16_384;
@@ -218,7 +218,8 @@ fn execute(request: Request<'_>) -> Result<String> {
             unused_output(journal)?;
             unused_output(manifest)?;
             ensure(journal != manifest)?;
-            let genesis = TestGenesis::generate(&[(wallet.view()?.receive_address(0)?, TEST_SUPPLY)])?;
+            let genesis =
+                TestGenesis::generate(&[(wallet.view()?.receive_address(0)?, TEST_SUPPLY)])?;
             genesis.write_new(manifest)?;
             let mut pool = genesis.create_pool(journal)?;
             wallet.sync(&genesis.wallet_history(&mut pool)?)?;
