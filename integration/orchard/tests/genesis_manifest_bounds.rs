@@ -5,11 +5,12 @@
 use zevune_orchard_lab::pool::testnet::{TestGenesis, MAX_GENESIS_BYTES, TEST_SUPPLY};
 use zevune_orchard_lab::wallet::Wallet;
 
+const _: () = assert!(TEST_SUPPLY > 1 && TEST_SUPPLY < u64::MAX);
+
 #[test]
 fn generation_requires_exact_supply_and_checked_arithmetic() {
     let first = Wallet::create().unwrap().receive_address(0).unwrap();
     let second = Wallet::create().unwrap().receive_address(0).unwrap();
-    assert!(TEST_SUPPLY > 1 && TEST_SUPPLY < u64::MAX);
     assert!(TestGenesis::generate(&[]).is_err());
     assert!(TestGenesis::generate(&[(first, TEST_SUPPLY - 1)]).is_err());
     assert!(TestGenesis::generate(&[(first, TEST_SUPPLY + 1)]).is_err());
