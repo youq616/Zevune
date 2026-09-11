@@ -34,14 +34,18 @@ fn warm_authorization_still_checks_atomicity_spends_expiry_and_roots() {
     let genesis = TestGenesis::generate(&[(destination, TEST_SUPPLY)]).unwrap();
     let path = dir.0.join("state.journal");
     let mut pool = genesis.create_pool(&path).unwrap();
-    sender.sync(&genesis.wallet_history(&mut pool).unwrap()).unwrap();
+    sender
+        .sync(&genesis.wallet_history(&mut pool).unwrap())
+        .unwrap();
     let tx = sender
         .build_payment(receiver, 10_000, 1_000, 3, &WalletProver::new())
         .unwrap();
     let raw = tx.bytes().to_vec();
     let before = pool.summary().unwrap();
     let length = fs::metadata(&path).unwrap().len();
-    let prepared = pool.prepare(1, [1; 32], std::slice::from_ref(&raw)).unwrap();
+    let prepared = pool
+        .prepare(1, [1; 32], std::slice::from_ref(&raw))
+        .unwrap();
     // The first preview has warmed the actual authorization cache.
     assert!(matches!(
         pool.prepare(1, [2; 32], &[raw.clone(), raw.clone()]),
@@ -62,7 +66,9 @@ fn warm_authorization_still_checks_atomicity_spends_expiry_and_roots() {
     ));
     let mut expired = genesis.create_pool(&dir.0.join("expired.journal")).unwrap();
     // Warm another cache, but do not commit the payment.
-    expired.prepare(1, [1; 32], std::slice::from_ref(&raw)).unwrap();
+    expired
+        .prepare(1, [1; 32], std::slice::from_ref(&raw))
+        .unwrap();
     for height in 1..=3 {
         let prepared = expired.prepare(height, [height as u8; 32], &[]).unwrap();
         expired.commit(prepared).unwrap();
