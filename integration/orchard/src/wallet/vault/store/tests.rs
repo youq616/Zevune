@@ -69,15 +69,24 @@ fn create_sync_backup_reopen_and_exact_source_protection() {
         Err(StoreError::Wallet(WalletError::Authentication))
     ));
     let mut restored = WalletStore::open(&backup, PASSWORD, Some(receipt)).unwrap();
-    assert_eq!(restored.view().unwrap().receive_address(9).unwrap(), address);
-    assert_eq!(restored.view().unwrap().balance(), Err(WalletError::NotSynced));
+    assert_eq!(
+        restored.view().unwrap().receive_address(9).unwrap(),
+        address
+    );
+    assert_eq!(
+        restored.view().unwrap().balance(),
+        Err(WalletError::NotSynced)
+    );
     restored.sync(&history).unwrap();
     assert_eq!(restored.view().unwrap().balance().unwrap(), 0);
     assert_eq!(restored.receipt().unwrap(), receipt);
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
     }
 }
 
@@ -139,10 +148,16 @@ fn partial_write_poison_preserves_failure_and_never_truncates_on_reopen() {
     let before = store.receipt().unwrap();
     let mut pool = PoolStore::create(&dir.path("pool.journal")).unwrap();
     store.fault = 1;
-    assert_eq!(store.sync(&pool.wallet_history().unwrap()), Err(StoreError::Io));
+    assert_eq!(
+        store.sync(&pool.wallet_history().unwrap()),
+        Err(StoreError::Io)
+    );
     assert_eq!(store.receipt(), Err(StoreError::Unavailable));
     assert!(matches!(store.view(), Err(StoreError::Unavailable)));
-    assert!(matches!(store.pending_payment(), Err(StoreError::Unavailable)));
+    assert!(matches!(
+        store.pending_payment(),
+        Err(StoreError::Unavailable)
+    ));
     drop(store);
     let damaged = fs::read(&path).unwrap();
     assert!(WalletStore::open(&path, PASSWORD, Some(before)).is_err());
@@ -157,13 +172,22 @@ fn lost_acknowledgement_is_uncertain_and_reopen_reconciles_complete_record() {
     let before = store.receipt().unwrap();
     let mut pool = PoolStore::create(&dir.path("pool.journal")).unwrap();
     store.fault = 2;
-    assert_eq!(store.sync(&pool.wallet_history().unwrap()), Err(StoreError::Io));
+    assert_eq!(
+        store.sync(&pool.wallet_history().unwrap()),
+        Err(StoreError::Io)
+    );
     assert_eq!(store.receipt(), Err(StoreError::Unavailable));
     drop(store);
     let recovered = WalletStore::open(&path, PASSWORD, Some(before)).unwrap();
-    assert_eq!(recovered.receipt().unwrap().generation, before.generation + 1);
+    assert_eq!(
+        recovered.receipt().unwrap().generation,
+        before.generation + 1
+    );
     assert_eq!(recovered.view().unwrap().height(), Some(0));
-    assert_eq!(recovered.view().unwrap().balance(), Err(WalletError::NotSynced));
+    assert_eq!(
+        recovered.view().unwrap().balance(),
+        Err(WalletError::NotSynced)
+    );
 }
 
 #[test]
@@ -298,6 +322,9 @@ fn legacy_snapshot_import_preserves_missing_outbox_reservation() {
     );
     store.sync(&history).unwrap();
     assert_eq!(store.view().unwrap().pending_id(), Some([11; 32]));
-    assert!(matches!(store.pending_payment(), Err(StoreError::MissingOutbox)));
+    assert!(matches!(
+        store.pending_payment(),
+        Err(StoreError::MissingOutbox)
+    ));
     assert!(WalletStore::import_snapshot_new(&path, &old, PASSWORD).is_err());
 }

@@ -268,8 +268,8 @@ fn durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement()
     let ifvk = FullViewingKey::from(&issuer);
     let initial = fixtures::genesis_note(ifvk.address_at(0u32, Scope::External));
     let cm = ExtractedNoteCommitment::from(initial.commitment());
-    let mut pool = PoolStore::create_with_genesis(&dir.path("funded.journal"), &[cm.to_bytes()])
-        .unwrap();
+    let mut pool =
+        PoolStore::create_with_genesis(&dir.path("funded.journal"), &[cm.to_bytes()]).unwrap();
     let pk = ProvingKey::build(crate::CIRCUIT);
     let (witness, _) = fixtures::witness(&[MerkleHashOrchard::from_cmx(&cm)], 0);
     let funding = fixtures::prove(
@@ -288,7 +288,9 @@ fn durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement()
     let h1 = pool.wallet_history().unwrap();
     bob.sync(&h1).unwrap();
     let prover = WalletProver::new();
-    let payment = bob.prepare_payment(destination, 50_000, 1_000, 20, &prover).unwrap();
+    let payment = bob
+        .prepare_payment(destination, 50_000, 1_000, 20, &prover)
+        .unwrap();
     let receipt = bob.receipt().unwrap();
     assert_eq!(bob.view().unwrap().available_balance().unwrap(), 0);
     bob.backup_new(&backup).unwrap();
@@ -321,7 +323,10 @@ fn durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement()
         bob.prepare_payment(destination, 4_000, 1_000, 20, &prover),
         Err(StoreError::Io)
     ));
-    assert!(matches!(bob.pending_payment(), Err(StoreError::Unavailable)));
+    assert!(matches!(
+        bob.pending_payment(),
+        Err(StoreError::Unavailable)
+    ));
     drop(bob);
     let mut bob = WalletStore::open(&backup, password.as_ref(), Some(before)).unwrap();
     bob.sync(&h2).unwrap();

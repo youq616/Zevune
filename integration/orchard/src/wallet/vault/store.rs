@@ -236,9 +236,9 @@ fn scan(file: &mut File, expected: Option<StoreReceipt>) -> Result<Chain, StoreE
         {
             return Err(StoreError::Corrupt);
         }
-        if expected.is_some_and(|e| {
-            e.journal_id == id && e.generation == generation && e.digest == digest
-        }) {
+        if expected
+            .is_some_and(|e| e.journal_id == id && e.generation == generation && e.digest == digest)
+        {
             matched = true;
         }
         previous = digest;
