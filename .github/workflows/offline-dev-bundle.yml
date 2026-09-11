@@ -32,7 +32,7 @@ jobs:
           tar -C "$root" -czf "$root/output/source-and-vendor.tar.gz" source public
           toolchain="$HOME/.rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu"
           test -x "$toolchain/bin/rustc"
-          tar -C "$toolchain" -czf "$root/output/rust-minimal-linux.tar.gz" bin lib libexec etc share/rust share/doc/rust/COPYRIGHT share/doc/rust/LICENSE-APACHE share/doc/rust/LICENSE-MIT
+          tar -C "$toolchain" -czf "$root/output/rust-minimal-linux.tar.gz" .
           cd "$root/output"
           sha256sum *.tar.gz > SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
