@@ -79,7 +79,7 @@
 +            let positions: Vec<_> = (0..count).step_by((count / MAX_ACTIONS).max(1)).take(MAX_ACTIONS).collect();
 +            let paths = witnesses(&leaves, &positions).unwrap();
 +            for (path, position) in paths.iter().zip(positions) {
-+                assert_eq!(path.root(leaves[position]).to_bytes(), tree_root(&leaves).unwrap());
++                assert_eq!(path.root(Option::<orchard::note::ExtractedNoteCommitment>::from(orchard::note::ExtractedNoteCommitment::from_bytes(&leaves[position].to_bytes())).unwrap()).to_bytes(), tree_root(&leaves).unwrap());
 +            }
 +        }
 +        assert!(witnesses(&[], &[0]).is_err());
