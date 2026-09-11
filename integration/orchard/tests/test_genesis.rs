@@ -76,10 +76,14 @@ fn genesis_cannot_be_submitted_as_a_later_mint_transaction() {
     let genesis = TestGenesis::generate(&[(addr, TEST_SUPPLY)]).unwrap();
     let mut pool = genesis.create_pool(&dir.0.join("state.journal")).unwrap();
     let initial = pool.summary().unwrap();
-    assert!(pool.prepare(1, [1; 32], &[genesis.bytes().to_vec()]).is_err());
+    assert!(pool
+        .prepare(1, [1; 32], &[genesis.bytes().to_vec()])
+        .is_err());
     assert_eq!(pool.summary().unwrap(), initial);
     let next = pool.prepare(1, [2; 32], &[]).unwrap();
     pool.commit(next).unwrap();
-    assert!(pool.prepare(2, [3; 32], &[genesis.bytes().to_vec()]).is_err());
+    assert!(pool
+        .prepare(2, [3; 32], &[genesis.bytes().to_vec()])
+        .is_err());
     assert_eq!(pool.summary().unwrap().height, 1);
 }
