@@ -539,3 +539,10 @@ impl Record {
 #[cfg(test)]
 #[path = "pool_tests.rs"]
 mod tests;
+
+#[path = "wallet_history.rs"]
+pub mod history;
+
+#[cfg(test)]
+#[path = "wallet_flow_tests.rs"]
+mod wallet_flow_tests;

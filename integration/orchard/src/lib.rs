@@ -202,3 +202,5 @@ impl Verifier {
         })
     }
 }
+
+pub mod wallet;

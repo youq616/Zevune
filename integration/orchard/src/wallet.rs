@@ -111,16 +111,22 @@ impl Payment {
 impl Wallet {
     pub fn create() -> Result<Self, WalletError> {
         let mut seed = Zeroizing::new([0; 32]);
-        OsRng.try_fill_bytes(seed.as_mut()).map_err(|_| WalletError::Entropy)?;
-        let result = Self { seed, checkpoint: None, scanned: None, pending: None };
+        OsRng
+            .try_fill_bytes(seed.as_mut())
+            .map_err(|_| WalletError::Entropy)?;
+        let result = Self {
+            seed,
+            checkpoint: None,
+            scanned: None,
+            pending: None,
+        };
         result.spending_key()?;
         Ok(result)
     }
     fn spending_key(&self) -> Result<SpendingKey, WalletError> {
         // Test coin type 1, account 0. NOT an allocated Zevune mainnet coin type.
         let account = zip32::AccountId::try_from(0u32).map_err(|_| WalletError::Key)?;
-        SpendingKey::from_zip32_seed(self.seed.as_ref(), 1, account)
-            .map_err(|_| WalletError::Key)
+        SpendingKey::from_zip32_seed(self.seed.as_ref(), 1, account).map_err(|_| WalletError::Key)
     }
     pub fn receive_address(&self, index: u32) -> Result<Address, WalletError> {
         Ok(FullViewingKey::from(&self.spending_key()?).address_at(index, Scope::External))
@@ -132,13 +138,32 @@ impl Wallet {
         self.pending.as_ref().map(|p| p.txid)
     }
     pub fn balance(&self) -> Result<u64, WalletError> {
-        self.scanned.as_ref().ok_or(WalletError::NotSynced)?.notes.values()
-            .try_fold(0u64, |v, n| v.checked_add(n.note.value().inner()).ok_or(WalletError::Bounds))
+        self.scanned
+            .as_ref()
+            .ok_or(WalletError::NotSynced)?
+            .notes
+            .values()
+            .try_fold(0u64, |v, n| {
+                v.checked_add(n.note.value().inner())
+                    .ok_or(WalletError::Bounds)
+            })
     }
     pub fn available_balance(&self) -> Result<u64, WalletError> {
-        self.scanned.as_ref().ok_or(WalletError::NotSynced)?.notes.iter()
-            .filter(|(nf, _)| !self.pending.as_ref().is_some_and(|p| p.nullifiers.contains(nf)))
-            .try_fold(0u64, |v, (_, n)| v.checked_add(n.note.value().inner()).ok_or(WalletError::Bounds))
+        self.scanned
+            .as_ref()
+            .ok_or(WalletError::NotSynced)?
+            .notes
+            .iter()
+            .filter(|(nf, _)| {
+                !self
+                    .pending
+                    .as_ref()
+                    .is_some_and(|p| p.nullifiers.contains(nf))
+            })
+            .try_fold(0u64, |v, (_, n)| {
+                v.checked_add(n.note.value().inner())
+                    .ok_or(WalletError::Bounds)
+            })
     }
 
     /// Full bounded rescan. The input can only be produced by a locally locked,
@@ -155,19 +180,28 @@ impl Wallet {
         }
         let fvk = FullViewingKey::from(&self.spending_key()?);
         let keys = [fvk.to_ivk(Scope::External), fvk.to_ivk(Scope::Internal)];
-        let mut leaves = history.initial.iter().map(|cm| {
-            let cmx = Option::<orchard::note::ExtractedNoteCommitment>::from(
-                orchard::note::ExtractedNoteCommitment::from_bytes(cm))
+        let mut leaves = history
+            .initial
+            .iter()
+            .map(|cm| {
+                let cmx = Option::<orchard::note::ExtractedNoteCommitment>::from(
+                    orchard::note::ExtractedNoteCommitment::from_bytes(cm),
+                )
                 .ok_or(WalletError::History)?;
-            Ok(MerkleHashOrchard::from_cmx(&cmx))
-        }).collect::<Result<Vec<_>, WalletError>>()?;
+                Ok(MerkleHashOrchard::from_cmx(&cmx))
+            })
+            .collect::<Result<Vec<_>, WalletError>>()?;
         let mut notes = BTreeMap::new();
         let mut spent = BTreeSet::new();
         for block in &history.blocks {
             for raw in &block.transactions {
                 let tx = decode(raw).map_err(|_| WalletError::History)?;
                 let start = leaves.len();
-                if start.checked_add(tx.bundle.actions().len()).ok_or(WalletError::Bounds)? > MAX_COMMITMENTS {
+                if start
+                    .checked_add(tx.bundle.actions().len())
+                    .ok_or(WalletError::Bounds)?
+                    > MAX_COMMITMENTS
+                {
                     return Err(WalletError::Bounds);
                 }
                 for a in tx.bundle.actions().iter() {
@@ -181,8 +215,18 @@ impl Wallet {
                         continue;
                     }
                     let nf = note.nullifier(&fvk).to_bytes();
-                    if action >= tx.bundle.actions().len() || spent.contains(&nf)
-                        || notes.insert(nf, OwnedNote { note, position: start + action }).is_some() {
+                    if action >= tx.bundle.actions().len()
+                        || spent.contains(&nf)
+                        || notes
+                            .insert(
+                                nf,
+                                OwnedNote {
+                                    note,
+                                    position: start + action,
+                                },
+                            )
+                            .is_some()
+                    {
                         return Err(WalletError::History);
                     }
                 }
@@ -198,7 +242,11 @@ impl Wallet {
             tip.height <= p.expiry && !p.nullifiers.iter().any(|nf| spent.contains(nf))
         });
         self.scanned = Some(Scanned { leaves, notes });
-        self.checkpoint = Some(Checkpoint { genesis: history.genesis, height: tip.height, app_hash: tip.app_hash });
+        self.checkpoint = Some(Checkpoint {
+            genesis: history.genesis,
+            height: tip.height,
+            app_hash: tip.app_hash,
+        });
         self.pending = pending;
         Ok(())
     }
@@ -206,76 +254,202 @@ impl Wallet {
     /// Build and locally validate a real payment. No network broadcast occurs.
     /// One pending payment at a time; save the encrypted wallet before handing
     /// bytes to a network broadcaster. Reserving funds is not chain confirmation.
-    pub fn build_payment(&mut self, destination: Address, amount: u64, fee: u64,
-        expiry: u64, prover: &WalletProver) -> Result<Payment, WalletError> {
+    pub fn build_payment(
+        &mut self,
+        destination: Address,
+        amount: u64,
+        fee: u64,
+        expiry: u64,
+        prover: &WalletProver,
+    ) -> Result<Payment, WalletError> {
         if self.pending.is_some() {
             return Err(WalletError::Pending);
         }
         let cp = self.checkpoint.ok_or(WalletError::NotSynced)?;
         let scanned = self.scanned.as_ref().ok_or(WalletError::NotSynced)?;
         let target = amount.checked_add(fee).ok_or(WalletError::Bounds)?;
-        if amount == 0 || fee == 0 || target > i64::MAX as u64 || expiry <= cp.height
-            || expiry > cp.height.checked_add(100).ok_or(WalletError::Bounds)? {
+        if amount == 0
+            || fee == 0
+            || target > i64::MAX as u64
+            || expiry <= cp.height
+            || expiry > cp.height.checked_add(100).ok_or(WalletError::Bounds)?
+        {
             return Err(WalletError::Bounds);
         }
         let mut ordered: Vec<_> = scanned.notes.iter().collect();
-        ordered.sort_by_key(|(_, n)| n.position);
+        // Largest-first minimizes the number of inputs under this bounded policy.
+        // This is a laboratory coin-selection policy, not a privacy optimum.
+        ordered.sort_by_key(|(_, n)| (std::cmp::Reverse(n.note.value().inner()), n.position));
         let mut chosen = Vec::new();
         let mut total = 0u64;
         for (nf, n) in ordered.into_iter().take(MAX_ACTIONS) {
-            total = total.checked_add(n.note.value().inner()).ok_or(WalletError::Bounds)?;
-            if total > i64::MAX as u64 { return Err(WalletError::Bounds); }
+            total = total
+                .checked_add(n.note.value().inner())
+                .ok_or(WalletError::Bounds)?;
+            if total > i64::MAX as u64 {
+                return Err(WalletError::Bounds);
+            }
             chosen.push((*nf, n));
-            if total >= target { break; }
+            if total >= target {
+                break;
+            }
         }
-        if total < target { return Err(WalletError::InsufficientFunds); }
+        if total < target {
+            return Err(WalletError::InsufficientFunds);
+        }
         let sk = self.spending_key()?;
         let fvk = FullViewingKey::from(&sk);
         let first = chosen.first().ok_or(WalletError::InsufficientFunds)?.1;
-        let path = witness(&scanned.leaves, first.position)?;
-        let mut builder = Builder::new(BundleType::DEFAULT, VERSION, VERSION.default_flags(),
-            path.root(first.note.commitment().into())).map_err(|_| WalletError::Proof)?;
-        for (_, owned) in &chosen {
-            builder.add_spend(fvk.clone(), owned.note, witness(&scanned.leaves, owned.position)?)
+        let positions: Vec<_> = chosen.iter().map(|(_, n)| n.position).collect();
+        let paths = witnesses(&scanned.leaves, &positions)?;
+        let path = paths.first().ok_or(WalletError::History)?;
+        let mut builder = Builder::new(
+            BundleType::DEFAULT,
+            VERSION,
+            VERSION.default_flags(),
+            path.root(first.note.commitment().into()),
+        )
+        .map_err(|_| WalletError::Proof)?;
+        for ((_, owned), path) in chosen.iter().zip(paths) {
+            builder
+                .add_spend(fvk.clone(), owned.note, path)
                 .map_err(|_| WalletError::Proof)?;
         }
-        builder.add_output(None, destination, NoteValue::from_raw(amount), [0; 512])
+        builder
+            .add_output(None, destination, NoteValue::from_raw(amount), [0; 512])
             .map_err(|_| WalletError::Proof)?;
         if total > target {
-            builder.add_output(None, fvk.address_at(0u32, Scope::Internal),
-                NoteValue::from_raw(total - target), [0; 512]).map_err(|_| WalletError::Proof)?;
+            builder
+                .add_output(
+                    None,
+                    fvk.address_at(0u32, Scope::Internal),
+                    NoteValue::from_raw(total - target),
+                    [0; 512],
+                )
+                .map_err(|_| WalletError::Proof)?;
         }
-        let ctx = Context { network: NETWORK.into(), expiry_height: expiry, fee };
-        let unsigned = builder.build::<i64>(OsRng).map_err(|_| WalletError::Proof)?
-            .ok_or(WalletError::Proof)?.0;
+        let ctx = Context {
+            network: NETWORK.into(),
+            expiry_height: expiry,
+            fee,
+        };
+        let unsigned = builder
+            .build::<i64>(OsRng)
+            .map_err(|_| WalletError::Proof)?
+            .ok_or(WalletError::Proof)?
+            .0;
         let digest = signing_digest(&unsigned, &ctx).map_err(|_| WalletError::Proof)?;
-        let signed = unsigned.create_proof(&prover.key, OsRng).map_err(|_| WalletError::Proof)?
+        let signed = unsigned
+            .create_proof(&prover.key, OsRng)
+            .map_err(|_| WalletError::Proof)?
             .apply_signatures(OsRng, digest, &[SpendAuthorizingKey::from(&sk)])
             .map_err(|_| WalletError::Proof)?;
         let raw = encode(&signed, &ctx).map_err(|_| WalletError::Proof)?;
-        prover.verifier.verify(&raw).map_err(|_| WalletError::Proof)?;
+        prover
+            .verifier
+            .verify(&raw)
+            .map_err(|_| WalletError::Proof)?;
         let txid = Sha256::digest(&raw).into();
-        self.pending = Some(Pending { expiry, txid, nullifiers: chosen.iter().map(|(nf, _)| *nf).collect() });
+        self.pending = Some(Pending {
+            expiry,
+            txid,
+            nullifiers: chosen.iter().map(|(nf, _)| *nf).collect(),
+        });
         Ok(Payment { bytes: raw, txid })
     }
 }
 
 fn tree_root(leaves: &[MerkleHashOrchard]) -> Result<Hash, WalletError> {
     let mut frontier = incrementalmerkletree::frontier::Frontier::<MerkleHashOrchard, 32>::empty();
-    for leaf in leaves { if !frontier.append(*leaf) { return Err(WalletError::Bounds); } }
+    for leaf in leaves {
+        if !frontier.append(*leaf) {
+            return Err(WalletError::Bounds);
+        }
+    }
     Ok(frontier.root().to_bytes())
 }
-fn witness(leaves: &[MerkleHashOrchard], position: usize) -> Result<MerklePath, WalletError> {
-    if position >= leaves.len() || leaves.len() > MAX_COMMITMENTS { return Err(WalletError::History); }
-    let mut nodes = leaves.to_vec();
-    let mut index = position;
-    let mut path = [MerkleHashOrchard::empty_leaf(); 32];
-    for (level, sibling) in path.iter_mut().enumerate() {
-        let l = Level::from(level as u8);
-        *sibling = nodes.get(index ^ 1).copied().unwrap_or_else(|| MerkleHashOrchard::empty_root(l));
-        nodes = nodes.chunks(2).map(|p| MerkleHashOrchard::combine(l, &p[0],
-            &p.get(1).copied().unwrap_or_else(|| MerkleHashOrchard::empty_root(l)))).collect();
-        index >>= 1;
+// Construct all selected authentication paths with one shared tree reduction,
+// instead of rebuilding the entire history tree for every selected input.
+fn witnesses(
+    leaves: &[MerkleHashOrchard],
+    positions: &[usize],
+) -> Result<Vec<MerklePath>, WalletError> {
+    if positions.is_empty()
+        || positions.len() > MAX_ACTIONS
+        || leaves.len() > MAX_COMMITMENTS
+        || positions.iter().any(|p| *p >= leaves.len())
+    {
+        return Err(WalletError::History);
     }
-    Ok(MerklePath::from_parts(position as u32, path))
+    let mut nodes = leaves.to_vec();
+    let mut indices = positions.to_vec();
+    let mut paths = vec![[MerkleHashOrchard::empty_leaf(); 32]; positions.len()];
+    for (level, l) in (0u8..32).map(Level::from).enumerate() {
+        for (index, path) in indices.iter_mut().zip(paths.iter_mut()) {
+            path[level] = nodes
+                .get(*index ^ 1)
+                .copied()
+                .unwrap_or_else(|| MerkleHashOrchard::empty_root(l));
+            *index >>= 1;
+        }
+        nodes = nodes
+            .chunks(2)
+            .map(|p| {
+                MerkleHashOrchard::combine(
+                    l,
+                    &p[0],
+                    &p.get(1)
+                        .copied()
+                        .unwrap_or_else(|| MerkleHashOrchard::empty_root(l)),
+                )
+            })
+            .collect();
+    }
+    Ok(positions
+        .iter()
+        .zip(paths)
+        .map(|(p, path)| MerklePath::from_parts(*p as u32, path))
+        .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn shared_witnesses_match_upstream_frontier_for_odd_and_even_trees() {
+        for count in [1, 2, 3, 9, 17, 33] {
+            let leaves: Vec<_> = (0..count)
+                .map(|n| {
+                    let mut raw = [0; 32];
+                    raw[0] = n as u8;
+                    let cm = Option::<orchard::note::ExtractedNoteCommitment>::from(
+                        orchard::note::ExtractedNoteCommitment::from_bytes(&raw),
+                    )
+                    .unwrap();
+                    MerkleHashOrchard::from_cmx(&cm)
+                })
+                .collect();
+            let positions: Vec<_> = (0..count)
+                .step_by((count / MAX_ACTIONS).max(1))
+                .take(MAX_ACTIONS)
+                .collect();
+            let paths = witnesses(&leaves, &positions).unwrap();
+            for (path, position) in paths.iter().zip(positions) {
+                assert_eq!(
+                    path.root(
+                        Option::<orchard::note::ExtractedNoteCommitment>::from(
+                            orchard::note::ExtractedNoteCommitment::from_bytes(
+                                &leaves[position].to_bytes()
+                            )
+                        )
+                        .unwrap()
+                    )
+                    .to_bytes(),
+                    tree_root(&leaves).unwrap()
+                );
+            }
+        }
+        assert!(witnesses(&[], &[0]).is_err());
+        assert!(witnesses(&[MerkleHashOrchard::empty_leaf()], &[]).is_err());
+    }
 }
