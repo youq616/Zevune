@@ -212,7 +212,7 @@ fn scan(file: &mut File, expected: Option<StoreReceipt>) -> Result<Chain, StoreE
     let length = meta.len();
     if !meta.is_file()
         || !(FILE_HEADER as u64 + RECORD as u64..=MAX_FILE_BYTES).contains(&length)
-        || (length - FILE_HEADER as u64) % RECORD as u64 != 0
+        || !(length - FILE_HEADER as u64).is_multiple_of(RECORD as u64)
     {
         return Err(StoreError::Corrupt);
     }

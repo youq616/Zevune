@@ -205,7 +205,7 @@ fn authenticated_predecessor_rejects_rewritten_hash_chain_and_other_journal() {
         changed[index] ^= 1;
         let mut prev: Hash = Sha256::digest(&changed[..FILE_HEADER]).into();
         // Recompute every unkeyed checksum, not just a one-byte checksum failure.
-        for chunk in changed[FILE_HEADER..].chunks_exact_mut(RECORD) {
+        for chunk in changed[FILE_HEADER..].as_chunks_mut::<RECORD>().0 {
             chunk[8..PREFIX].copy_from_slice(&prev);
             prev = Sha256::digest(&chunk[..RECORD - 32]).into();
             chunk[RECORD - 32..].copy_from_slice(&prev);
