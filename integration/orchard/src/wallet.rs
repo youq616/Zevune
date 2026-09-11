@@ -192,6 +192,28 @@ impl Wallet {
             })
             .collect::<Result<Vec<_>, WalletError>>()?;
         let mut notes = BTreeMap::new();
+        #[cfg(feature = "local-funding-lab")]
+        for (position, note) in history.genesis_notes.iter().enumerate() {
+            let cm = orchard::note::ExtractedNoteCommitment::from(note.commitment()).to_bytes();
+            if history.initial.get(position) != Some(&cm) {
+                return Err(WalletError::History);
+            }
+            if fvk.scope_for_address(&note.recipient()).is_some() {
+                let nf = note.nullifier(&fvk).to_bytes();
+                if notes
+                    .insert(
+                        nf,
+                        OwnedNote {
+                            note: *note,
+                            position,
+                        },
+                    )
+                    .is_some()
+                {
+                    return Err(WalletError::History);
+                }
+            }
+        }
         let mut spent = BTreeSet::new();
         for block in &history.blocks {
             for raw in &block.transactions {

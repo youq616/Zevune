@@ -52,12 +52,14 @@ func (s Summary) Checkpoint(height uint64, hash Hash) error {
 }
 
 type Options struct {
-	Executable     string
-	ExpectedSHA256 Hash
-	Journal        string
-	Create         bool // Reopen NEVER creates missing files.
-	StartupTimeout time.Duration
-	RequestTimeout time.Duration
+	Executable        string
+	ExpectedSHA256    Hash
+	TestGenesis       string
+	TestGenesisSHA256 Hash
+	Journal           string
+	Create            bool // Reopen NEVER creates missing files.
+	StartupTimeout    time.Duration
+	RequestTimeout    time.Duration
 }
 type Client struct {
 	cmd     *exec.Cmd
@@ -109,7 +111,11 @@ func Start(ctx context.Context, o Options) (*Client, error) {
 	if o.Create {
 		mode = "create"
 	}
-	cmd := exec.Command(o.Executable, mode, o.Journal)
+	args, err := o.workerArgs(mode)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(o.Executable, args...)
 	cmd.Dir = filepath.Dir(o.Executable)
 	cmd.Env = []string{"RAYON_NUM_THREADS=2"}
 	for _, entry := range os.Environ() {

@@ -6,6 +6,8 @@ use std::io::Seek;
 pub struct WalletHistory {
     pub(crate) genesis: Hash,
     pub(crate) initial: Vec<Hash>,
+    #[cfg(feature = "local-funding-lab")]
+    pub(crate) genesis_notes: Vec<orchard::Note>,
     origin: Summary,
     pub(crate) blocks: Vec<WalletBlock>,
 }
@@ -136,6 +138,8 @@ impl PoolStore {
             return Err(PoolError::Corrupt);
         }
         Ok(WalletHistory {
+            #[cfg(feature = "local-funding-lab")]
+            genesis_notes: Vec::new(),
             genesis: state.genesis,
             initial,
             origin,

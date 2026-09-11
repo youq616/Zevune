@@ -170,20 +170,58 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
     }
     Ok(())
 }
+fn requested_store(args: &[std::ffi::OsString]) -> Result<PoolStore, PoolError> {
+    if ![3, 5].contains(&args.len()) || !Path::new(&args[2]).is_absolute() {
+        return Err(PoolError::Bounds);
+    }
+    let create = if args[1] == "create" {
+        true
+    } else if args[1] == "open" {
+        false
+    } else {
+        return Err(PoolError::Bounds);
+    };
+    let path = Path::new(&args[2]);
+    if args.len() == 3 {
+        return if create {
+            PoolStore::create(path)
+        } else {
+            PoolStore::open(path)
+        };
+    }
+    #[cfg(feature = "local-funding-lab")]
+    {
+        use zevune_orchard_lab::pool::testnet::TestGenesis;
+        let manifest = Path::new(&args[3]);
+        if !manifest.is_absolute() {
+            return Err(PoolError::Genesis);
+        }
+        let text = args[4].to_str().ok_or(PoolError::Genesis)?;
+        if text.len() != 64
+            || !text
+                .bytes()
+                .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+        {
+            return Err(PoolError::Genesis);
+        }
+        let mut digest = [0; 32];
+        for (i, item) in digest.iter_mut().enumerate() {
+            *item =
+                u8::from_str_radix(&text[i * 2..i * 2 + 2], 16).map_err(|_| PoolError::Genesis)?;
+        }
+        let genesis = TestGenesis::read_pinned(manifest, digest)?;
+        if create {
+            genesis.create_pool(path)
+        } else {
+            genesis.open_pool(path)
+        }
+    }
+    #[cfg(not(feature = "local-funding-lab"))]
+    Err(PoolError::Genesis)
+}
 fn run() -> io::Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
-    if args.len() != 3 || !Path::new(&args[2]).is_absolute() {
-        return Err(bad());
-    }
-    let path = Path::new(&args[2]);
-    let store = if args[1] == "create" {
-        PoolStore::create(path)
-    } else if args[1] == "open" {
-        PoolStore::open(path)
-    } else {
-        return Err(bad());
-    }
-    .map_err(|_| io::Error::other("pool could not be opened"))?;
+    let store = requested_store(&args).map_err(|_| io::Error::other("pool could not be opened"))?;
     serve(
         Session {
             store,

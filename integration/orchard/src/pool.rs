@@ -546,3 +546,6 @@ pub mod history;
 #[cfg(test)]
 #[path = "wallet_flow_tests.rs"]
 mod wallet_flow_tests;
+
+#[cfg(feature = "local-funding-lab")]
+pub mod testnet;

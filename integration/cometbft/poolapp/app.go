@@ -13,13 +13,14 @@ import (
 )
 
 const ChainID = poolbridge.Network
-const Version = "0.3.0-orchard-consensus-lab"
+const Version = "0.3.1-funded-consensus-lab"
 const AppVersion uint64 = 2
 
 type Application struct {
 	abci.BaseApplication
 	mu      sync.Mutex
 	client  *poolbridge.Client
+	genesis poolbridge.Hash
 	pending *candidate
 	failed  bool
 }
@@ -36,7 +37,7 @@ func Open(ctx context.Context, o poolbridge.Options) (*Application, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Application{client: c}, nil
+	return &Application{client: c, genesis: o.TestGenesisSHA256}, nil
 }
 func (a *Application) Close() error {
 	a.mu.Lock()
@@ -78,7 +79,7 @@ func (a *Application) InitChain(ctx context.Context, r *abci.RequestInitChain) (
 	if e := a.ready(); e != nil {
 		return nil, e
 	}
-	if r == nil || r.ChainId != ChainID || r.InitialHeight != 1 || len(r.AppStateBytes) != 0 || len(r.Validators) != 4 || r.ConsensusParams == nil {
+	if r == nil || r.ChainId != ChainID || r.InitialHeight != 1 || !validGenesisState(r.AppStateBytes, a.genesis) || len(r.Validators) != 4 || r.ConsensusParams == nil {
 		return nil, poolbridge.ErrRejected
 	}
 	if r.ConsensusParams.Abci != nil && r.ConsensusParams.Abci.VoteExtensionsEnableHeight != 0 {
@@ -252,13 +253,17 @@ func (a *Application) Query(ctx context.Context, r *abci.RequestQuery) (*abci.Re
 	if r.Height != 0 && r.Height != int64(s.Height) {
 		return &abci.ResponseQuery{Code: 1}, nil
 	}
+	mode := "local_zero_value_orchard_consensus"
+	if a.genesis != (poolbridge.Hash{}) {
+		mode = "local_fixed_supply_funded_orchard_lab"
+	}
 	b, e := json.Marshal(struct {
 		Version  string             `json:"software_version"`
 		Mode     string             `json:"mode"`
 		Payments bool               `json:"payments_enabled"`
 		Privacy  bool               `json:"network_privacy_implemented"`
 		Ledger   poolbridge.Summary `json:"ledger"`
-	}{Version, "local_zero_value_orchard_consensus", false, false, s})
+	}{Version, mode, false, false, s})
 	return &abci.ResponseQuery{Code: 0, Height: int64(s.Height), Value: b}, e
 }
 func (a *Application) VerifyVoteExtension(_ context.Context, r *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {

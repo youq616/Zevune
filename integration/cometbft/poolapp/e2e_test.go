@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,7 +38,16 @@ func options(path string, create bool) (poolbridge.Options, error) {
 	if e != nil {
 		return poolbridge.Options{}, e
 	}
-	return poolbridge.Options{Executable: worker, ExpectedSHA256: sha256.Sum256(b), Journal: path, Create: create, StartupTimeout: 90 * time.Second}, nil
+	o := poolbridge.Options{Executable: worker, ExpectedSHA256: sha256.Sum256(b), Journal: path, Create: create, StartupTimeout: 90 * time.Second}
+	if manifest := os.Getenv("ZEVUNE_TEST_GENESIS"); manifest != "" {
+		digest, err := hex.DecodeString(os.Getenv("ZEVUNE_TEST_GENESIS_SHA256"))
+		if err != nil || len(digest) != 32 {
+			return poolbridge.Options{}, poolbridge.ErrBounds
+		}
+		o.TestGenesis = manifest
+		copy(o.TestGenesisSHA256[:], digest)
+	}
+	return o, nil
 }
 func fixture(t *testing.T) []byte {
 	t.Helper()
@@ -281,6 +291,15 @@ func setup(t *testing.T, home string) *types.GenesisDoc {
 			t.Fatal(e)
 		}
 		a := open(t, filepath.Join(c.RootDir, "pool.journal"), true)
+		if a.genesis != (poolbridge.Hash{}) {
+			state := info(t, a)
+			if i == 0 {
+				g.AppState = testGenesisState(a.genesis)
+				g.AppHash = bytes.Clone(state.LastBlockAppHash)
+			} else if !bytes.Equal(g.AppHash, state.LastBlockAppHash) || !validGenesisState(g.AppState, a.genesis) {
+				t.Fatal("genesis states differ")
+			}
+		}
 		if e = a.Close(); e != nil {
 			t.Fatal(e)
 		}

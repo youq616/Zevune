@@ -16,6 +16,14 @@ chacha20poly1305 = "=0.10.1"
 zeroize = "=1.9.0"
 zip32 = "=0.2.1"
 
+[features]
+local-funding-lab = []
+
+[[bin]]
+name = "zevune-funded-scenario"
+path = "src/bin/zevune-funded-scenario.rs"
+required-features = ["local-funding-lab"]
+
 [workspace]
 
 [profile.release]
