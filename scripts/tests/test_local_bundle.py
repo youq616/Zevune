@@ -33,8 +33,9 @@ class BundleManifestTests(unittest.TestCase):
         paths = ["local-data/config/priv_validator_key.json",
                  "local-data/data/priv_validator_state.json",
                  "local-data/config/node_key.json", "local-data/payment.tx"]
-        result = subprocess.run(["git", "check-ignore", "--no-index", "--stdin"],
-                                input="\n".join(paths) + "\n", text=True, cwd=root,
-                                capture_output=True, check=False)
+        # Binary NUL framing avoids Windows text-mode CRLF changing filenames.
+        payload = ("\0".join(paths) + "\0").encode("utf-8")
+        result = subprocess.run(["git", "check-ignore", "--no-index", "--stdin", "-z"],
+                                input=payload, cwd=root, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.splitlines(), paths)
+        self.assertEqual(result.stdout, payload)
