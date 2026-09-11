@@ -22,6 +22,10 @@ pub const SEALED_BYTES: usize = HEADER + PLAIN + 16;
 const MEMORY_KIB: u32 = 65_536;
 const PASSES: u32 = 3;
 const LANES: u32 = 1;
+const MAX_PAYLOAD: usize = 32 * 1024;
+const MAX_BINDING: usize = 128;
+
+pub mod store;
 
 fn derive(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, WalletError> {
     if !(16..=1024).contains(&password.len()) {
@@ -39,8 +43,33 @@ fn derive(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>, WalletErr
 /// The entire header is authenticated. Parameters are fixed and checked before
 /// invoking the KDF, so an imported file cannot request unbounded memory/work.
 pub fn seal(wallet: &Wallet, password: &[u8]) -> Result<Vec<u8>, WalletError> {
-    let plaintext = snapshot(wallet)?;
-    let mut out = Vec::with_capacity(SEALED_BYTES);
+    encrypt_payload(snapshot(wallet)?.as_ref(), password, &[])
+}
+
+// Private shared primitive for fixed snapshots and authenticated journal records.
+// Empty binding preserves the existing ZVWLT001 backup format byte-for-byte.
+fn associated_data(header: &[u8], binding: &[u8]) -> Result<Vec<u8>, WalletError> {
+    if header.len() != HEADER || binding.len() > MAX_BINDING {
+        return Err(WalletError::Bounds);
+    }
+    let mut aad = header.to_vec();
+    if !binding.is_empty() {
+        aad.extend_from_slice(b"ZEVUNE-WALLET-RECORD\x00\x01");
+        aad.extend_from_slice(&(binding.len() as u16).to_be_bytes());
+        aad.extend_from_slice(binding);
+    }
+    Ok(aad)
+}
+
+fn encrypt_payload(
+    plaintext: &[u8],
+    password: &[u8],
+    binding: &[u8],
+) -> Result<Vec<u8>, WalletError> {
+    if plaintext.len() > MAX_PAYLOAD || binding.len() > MAX_BINDING {
+        return Err(WalletError::Bounds);
+    }
+    let mut out = Vec::with_capacity(HEADER + plaintext.len() + 16);
     out.extend_from_slice(MAGIC);
     out.extend_from_slice(&Sha256::digest(NETWORK.as_bytes()));
     for v in [MEMORY_KIB, PASSES, LANES] {
@@ -56,8 +85,8 @@ pub fn seal(wallet: &Wallet, password: &[u8]) -> Result<Vec<u8>, WalletError> {
         .encrypt(
             XNonce::from_slice(&out[68..92]),
             Payload {
-                msg: plaintext.as_ref(),
-                aad: &out,
+                msg: plaintext,
+                aad: &associated_data(&out, binding)?,
             },
         )
         .map_err(|_| WalletError::Authentication)?;
@@ -66,7 +95,19 @@ pub fn seal(wallet: &Wallet, password: &[u8]) -> Result<Vec<u8>, WalletError> {
 }
 
 pub fn open(data: &[u8], password: &[u8]) -> Result<Wallet, WalletError> {
-    if data.len() != SEALED_BYTES
+    if data.len() != SEALED_BYTES {
+        return Err(WalletError::Backup);
+    }
+    restore(&decrypt_payload(data, password, &[])?)
+}
+
+fn decrypt_payload(
+    data: &[u8],
+    password: &[u8],
+    binding: &[u8],
+) -> Result<Zeroizing<Vec<u8>>, WalletError> {
+    if !(HEADER + 16..=HEADER + MAX_PAYLOAD + 16).contains(&data.len())
+        || binding.len() > MAX_BINDING
         || &data[..8] != MAGIC
         || data[8..40] != Sha256::digest(NETWORK.as_bytes())[..]
     {
@@ -85,12 +126,12 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Wallet, WalletError> {
                 XNonce::from_slice(&data[68..92]),
                 Payload {
                     msg: &data[HEADER..],
-                    aad: &data[..HEADER],
+                    aad: &associated_data(&data[..HEADER], binding)?,
                 },
             )
             .map_err(|_| WalletError::Authentication)?,
     );
-    restore(&plaintext)
+    Ok(plaintext)
 }
 
 /// Create-only: never replace an existing backup, follow a final symlink, or

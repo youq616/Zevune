@@ -252,3 +252,91 @@ fn wallet_history_replay_keeps_append_cursor_and_rejects_disk_drift() {
     assert!(matches!(pool.wallet_history(), Err(PoolError::Corrupt)));
     assert!(matches!(pool.summary(), Err(PoolError::Unavailable)));
 }
+
+#[test]
+fn durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement() {
+    use crate::wallet::vault::store::{StoreError, WalletStore};
+    let dir = Dir::new();
+    let path = dir.path("durable.zwallet");
+    let backup = dir.path("pending-copy.zwallet");
+    let mut password = zeroize::Zeroizing::new([0; 32]);
+    OsRng.fill_bytes(password.as_mut());
+    let mut bob = WalletStore::create(&path, password.as_ref()).unwrap();
+    let mut carol = Wallet::create().unwrap();
+    let destination = carol.receive_address(0).unwrap();
+    let issuer = fixtures::key();
+    let ifvk = FullViewingKey::from(&issuer);
+    let initial = fixtures::genesis_note(ifvk.address_at(0u32, Scope::External));
+    let cm = ExtractedNoteCommitment::from(initial.commitment());
+    let mut pool = PoolStore::create_with_genesis(&dir.path("funded.journal"), &[cm.to_bytes()])
+        .unwrap();
+    let pk = ProvingKey::build(crate::CIRCUIT);
+    let (witness, _) = fixtures::witness(&[MerkleHashOrchard::from_cmx(&cm)], 0);
+    let funding = fixtures::prove(
+        &pk,
+        &issuer,
+        initial,
+        witness,
+        &[
+            (bob.view().unwrap().receive_address(0).unwrap(), 60_000),
+            (ifvk.address_at(0u32, Scope::External), 39_000),
+        ],
+        &fixtures::context(),
+    );
+    let raw = crate::wire::encode(&funding, &fixtures::context()).unwrap();
+    commit(&mut pool, 1, &[raw]);
+    let h1 = pool.wallet_history().unwrap();
+    bob.sync(&h1).unwrap();
+    let prover = WalletProver::new();
+    let payment = bob.prepare_payment(destination, 50_000, 1_000, 20, &prover).unwrap();
+    let receipt = bob.receipt().unwrap();
+    assert_eq!(bob.view().unwrap().available_balance().unwrap(), 0);
+    bob.backup_new(&backup).unwrap();
+    drop(bob);
+    // Recover the backup, not an in-memory copy. Its outbox is still encrypted.
+    let mut bob = WalletStore::open(&backup, password.as_ref(), Some(receipt)).unwrap();
+    assert!(matches!(
+        bob.pending_payment(),
+        Err(StoreError::Wallet(WalletError::NotSynced))
+    ));
+    bob.sync(&h1).unwrap();
+    let resumed = bob.pending_payment().unwrap().unwrap();
+    assert_eq!(resumed.id(), payment.id());
+    assert_eq!(resumed.bytes(), payment.bytes());
+    assert!(matches!(
+        bob.prepare_payment(destination, 1, 1_000, 20, &prover),
+        Err(StoreError::Wallet(WalletError::Pending))
+    ));
+    commit(&mut pool, 2, &[resumed.bytes().to_vec()]);
+    let h2 = pool.wallet_history().unwrap();
+    bob.sync(&h2).unwrap();
+    carol.sync(&h2).unwrap();
+    assert!(bob.pending_payment().unwrap().is_none());
+    assert_eq!(bob.view().unwrap().balance().unwrap(), 9_000);
+    assert_eq!(carol.balance().unwrap(), 50_000);
+    let before = bob.receipt().unwrap();
+    bob.lose_next_sync_acknowledgement_for_test();
+    // A genuine proof is made, but NO Payment value is returned to the caller.
+    assert!(matches!(
+        bob.prepare_payment(destination, 4_000, 1_000, 20, &prover),
+        Err(StoreError::Io)
+    ));
+    assert!(matches!(bob.pending_payment(), Err(StoreError::Unavailable)));
+    drop(bob);
+    let mut bob = WalletStore::open(&backup, password.as_ref(), Some(before)).unwrap();
+    bob.sync(&h2).unwrap();
+    let recovered = bob.pending_payment().unwrap().unwrap();
+    let end = commit(&mut pool, 3, &[recovered.bytes().to_vec()]);
+    let h3 = pool.wallet_history().unwrap();
+    bob.sync(&h3).unwrap();
+    carol.sync(&h3).unwrap();
+    assert_eq!(bob.view().unwrap().balance().unwrap(), 4_000);
+    assert_eq!(carol.balance().unwrap(), 54_000);
+    assert_eq!(end.fees, 3_000);
+    assert!(bob.pending_payment().unwrap().is_none());
+    assert_eq!(39_000 + 4_000 + 54_000 + end.fees, 100_000);
+    assert!(matches!(
+        pool.prepare(4, [4; 32], &[recovered.bytes().to_vec()]),
+        Err(PoolError::DoubleSpend)
+    ));
+}
