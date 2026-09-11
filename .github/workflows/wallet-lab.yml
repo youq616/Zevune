@@ -54,7 +54,7 @@ jobs:
           rustup toolchain install 1.98.1 --profile minimal --component rustfmt
           python scripts/bootstrap-wallet-lab.py
           test "$(git ls-remote origin refs/heads/dev/m8-wallet-local | cut -f1)" = "$EXPECTED_HEAD"
-          git add integration/orchard/Cargo.toml integration/orchard/Cargo.lock integration/orchard/src/lib.rs integration/orchard/src/pool.rs integration/orchard/src/wallet.rs integration/orchard/src/wallet/vault.rs integration/orchard/src/wallet_history.rs integration/orchard/src/wallet_flow_tests.rs
+          git add integration/orchard/Cargo.toml integration/orchard/Cargo.lock integration/orchard/src/lib.rs integration/orchard/src/pool.rs integration/orchard/src/pool_tests.rs integration/orchard/src/wallet.rs integration/orchard/src/wallet/vault.rs integration/orchard/src/wallet_history.rs integration/orchard/src/wallet_flow_tests.rs
           git diff --cached --stat
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

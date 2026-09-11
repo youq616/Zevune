@@ -1,0 +1,131 @@
+--- a/integration/orchard/src/wallet.rs
++++ b/integration/orchard/src/wallet.rs
+@@ -219,7 +219,9 @@
+             return Err(WalletError::Bounds);
+         }
+         let mut ordered: Vec<_> = scanned.notes.iter().collect();
+-        ordered.sort_by_key(|(_, n)| n.position);
++        // Largest-first minimizes the number of inputs under this bounded policy.
++        // This is a laboratory coin-selection policy, not a privacy optimum.
++        ordered.sort_by_key(|(_, n)| (std::cmp::Reverse(n.note.value().inner()), n.position));
+         let mut chosen = Vec::new();
+         let mut total = 0u64;
+         for (nf, n) in ordered.into_iter().take(MAX_ACTIONS) {
+@@ -232,11 +234,13 @@
+         let sk = self.spending_key()?;
+         let fvk = FullViewingKey::from(&sk);
+         let first = chosen.first().ok_or(WalletError::InsufficientFunds)?.1;
+-        let path = witness(&scanned.leaves, first.position)?;
++        let positions: Vec<_> = chosen.iter().map(|(_, n)| n.position).collect();
++        let paths = witnesses(&scanned.leaves, &positions)?;
++        let path = paths.first().ok_or(WalletError::History)?;
+         let mut builder = Builder::new(BundleType::DEFAULT, VERSION, VERSION.default_flags(),
+             path.root(first.note.commitment().into())).map_err(|_| WalletError::Proof)?;
+-        for (_, owned) in &chosen {
+-            builder.add_spend(fvk.clone(), owned.note, witness(&scanned.leaves, owned.position)?)
++        for ((_, owned), path) in chosen.iter().zip(paths) {
++            builder.add_spend(fvk.clone(), owned.note, path)
+                 .map_err(|_| WalletError::Proof)?;
+         }
+         builder.add_output(None, destination, NoteValue::from_raw(amount), [0; 512])
+@@ -265,17 +269,46 @@
+     for leaf in leaves { if !frontier.append(*leaf) { return Err(WalletError::Bounds); } }
+     Ok(frontier.root().to_bytes())
+ }
+-fn witness(leaves: &[MerkleHashOrchard], position: usize) -> Result<MerklePath, WalletError> {
+-    if position >= leaves.len() || leaves.len() > MAX_COMMITMENTS { return Err(WalletError::History); }
++// Construct all selected authentication paths with one shared tree reduction,
++// instead of rebuilding the entire history tree for every selected input.
++fn witnesses(leaves: &[MerkleHashOrchard], positions: &[usize]) -> Result<Vec<MerklePath>, WalletError> {
++    if positions.is_empty() || positions.len() > MAX_ACTIONS || leaves.len() > MAX_COMMITMENTS
++        || positions.iter().any(|p| *p >= leaves.len()) {
++        return Err(WalletError::History);
++    }
+     let mut nodes = leaves.to_vec();
+-    let mut index = position;
+-    let mut path = [MerkleHashOrchard::empty_leaf(); 32];
+-    for (level, sibling) in path.iter_mut().enumerate() {
+-        let l = Level::from(level as u8);
+-        *sibling = nodes.get(index ^ 1).copied().unwrap_or_else(|| MerkleHashOrchard::empty_root(l));
++    let mut indices = positions.to_vec();
++    let mut paths = vec![[MerkleHashOrchard::empty_leaf(); 32]; positions.len()];
++    for (level, l) in (0u8..32).map(Level::from).enumerate() {
++        for (index, path) in indices.iter_mut().zip(paths.iter_mut()) {
++            path[level] = nodes.get(*index ^ 1).copied().unwrap_or_else(|| MerkleHashOrchard::empty_root(l));
++            *index >>= 1;
++        }
+         nodes = nodes.chunks(2).map(|p| MerkleHashOrchard::combine(l, &p[0],
+             &p.get(1).copied().unwrap_or_else(|| MerkleHashOrchard::empty_root(l)))).collect();
+-        index >>= 1;
+-    }
+-    Ok(MerklePath::from_parts(position as u32, path))
+-}
++    }
++    Ok(positions.iter().zip(paths).map(|(p, path)| MerklePath::from_parts(*p as u32, path)).collect())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn shared_witnesses_match_upstream_frontier_for_odd_and_even_trees() {
++        for count in [1, 2, 3, 9, 17, 33] {
++            let leaves: Vec<_> = (0..count).map(|n| {
++                let mut raw = [0; 32]; raw[0] = n as u8;
++                let cm = Option::<orchard::note::ExtractedNoteCommitment>::from(
++                    orchard::note::ExtractedNoteCommitment::from_bytes(&raw)).unwrap();
++                MerkleHashOrchard::from_cmx(&cm)
++            }).collect();
++            let positions: Vec<_> = (0..count).step_by((count / MAX_ACTIONS).max(1)).take(MAX_ACTIONS).collect();
++            let paths = witnesses(&leaves, &positions).unwrap();
++            for (path, position) in paths.iter().zip(positions) {
++                assert_eq!(path.root(leaves[position]).to_bytes(), tree_root(&leaves).unwrap());
++            }
++        }
++        assert!(witnesses(&[], &[0]).is_err());
++        assert!(witnesses(&[MerkleHashOrchard::empty_leaf()], &[]).is_err());
++    }
++}
+--- a/integration/orchard/src/wallet/vault.rs
++++ b/integration/orchard/src/wallet/vault.rs
+@@ -198,3 +198,17 @@
+         assert!(matches!(restore(snapshot(&wallet).unwrap().as_ref()), Err(WalletError::Backup)));
+     }
+ }
++
++#[cfg(test)]
++mod independent_kdf_vector {
++    use super::*;
++    #[test]
++    fn argon2id_matches_independent_argon2_cffi_reference() {
++        // Public primitive vector only; no wallet seed, user password or asset.
++        // Reference: argon2-cffi, Type.ID, version=19, m=65536, t=3, p=1.
++        let salt: Vec<u8> = (0..16).collect();
++        let key = derive(b"zevune-public-interop-password", &salt).unwrap();
++        let actual: String = key.iter().map(|b| format!("{b:02x}")).collect();
++        assert_eq!(actual, "8206a50e7b842499349d8c6b93461a0068277af5bfde4d262536d4506c91be02");
++    }
++}
+--- a/integration/orchard/src/wallet_flow_tests.rs
++++ b/integration/orchard/src/wallet_flow_tests.rs
+@@ -7,8 +7,7 @@
+ use rand::{rngs::OsRng, RngCore};
+ use std::path::PathBuf;
+ 
+-#[path = "../tests/support/fixtures.rs"]
+-mod fixtures;
++use super::tests::fixtures;
+ 
+ struct Dir(PathBuf);
+ impl Dir {
+--- a/integration/orchard/src/pool_tests.rs
++++ b/integration/orchard/src/pool_tests.rs
+@@ -5,7 +5,7 @@
+ use std::path::PathBuf;
+ 
+ #[path = "../tests/support/fixtures.rs"]
+-mod fixtures;
++pub(super) mod fixtures;
+ use fixtures::{context, genesis_note, key, prove, witness};
+ 
+ struct TestDir(PathBuf);

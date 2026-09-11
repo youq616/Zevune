@@ -1,8 +1,7 @@
-"""Temporary, development-branch-only module/lock/format bootstrap.
+"""Temporary development bootstrap; removed before final read-only CI.
 
-Only additive module declarations and dependency pins are applied. Existing
-third-party versions/checksums must remain identical; only additive feature edges are allowed. Delete this tool after the
-normalized sources are recorded and require read-only CI on the final commit.
+Applies additive modules, a reviewed source patch and pinned dependencies.
+Pre-existing third-party versions/checksums may not change.
 """
 import hashlib
 import pathlib
@@ -21,6 +20,8 @@ def append_exact(path, expected, suffix):
 
 append_exact(module / "src/lib.rs", "77500071118939b7182705fb85222a224ea6632f", "\npub mod wallet;\n")
 append_exact(module / "src/pool.rs", "1cbb6bfc51f6144710bbd530965bc03ae6c3d490", '\n#[path = "wallet_history.rs"]\npub mod history;\n\n#[cfg(test)]\n#[path = "wallet_flow_tests.rs"]\nmod wallet_flow_tests;\n')
+subprocess.run(["git", "apply", "--check", "scripts/m8-source.patch"], cwd=root, check=True)
+subprocess.run(["git", "apply", "scripts/m8-source.patch"], cwd=root, check=True)
 manifest = module / "Cargo.toml"
 old = manifest.read_text(encoding="utf-8")
 needle = 'incrementalmerkletree = "=0.8.1"\n'
@@ -42,4 +43,4 @@ for p in before["package"]:
     if not set(p.get("dependencies", [])).issubset(q.get("dependencies", [])):
         raise SystemExit("existing dependency edge removed: " + p["name"])
 subprocess.run(["cargo", "fmt", "--all"], cwd=module, check=True)
-print("Additive wallet modules installed; pre-existing third-party versions/checksums unchanged; feature dependency edges may be additive.")
+print("Wallet source prepared; pre-existing third-party versions/checksums unchanged.")
