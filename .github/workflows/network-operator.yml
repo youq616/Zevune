@@ -1,0 +1,75 @@
+name: local-network-operator
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
+  pull_request:
+    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
+permissions:
+  contents: read
+jobs:
+  operator:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install fixed Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Check exact source and build real workers
+        run: |
+          test -z "$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)"
+          python -m unittest discover -s scripts/tests -v
+          cd integration/orchard
+          cargo fmt --all -- --check
+          cargo build --locked --release --features local-funding-lab --bins
+          git diff --exit-code
+      - name: Build create-only operator bundle
+        run: python scripts/build_local_lab.py --output "$RUNNER_TEMP/zevune-local-bundle"
+      - name: Register executable paths only
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          suffix = '.exe' if os.name == 'nt' else ''
+          bundle = Path(os.environ['RUNNER_TEMP']) / 'zevune-local-bundle'
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              for key, path in [('ZEVUNE_NETWORK_OPERATOR', bundle / ('zevune-network' + suffix)), ('ZEVUNE_POOL_WORKER', bundle / ('zevune-pool-worker' + suffix)), ('ZEVUNE_FUNDED_SCENARIO', Path('integration/orchard/target/release').absolute() / ('zevune-funded-scenario' + suffix))]:
+                  f.write(key + '=' + str(path) + '\n')
+          PY
+      - name: Actual operator processes, real payments and rejected false post-state
+        working-directory: integration/cometbft
+        run: |
+          go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v
+          go vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network
+      - name: Race and bounded fuzz checks
+        if: runner.os == 'Linux'
+        working-directory: integration/cometbft
+        run: |
+          go test -mod=readonly -race ./labnet ./cmd/zevune-network -count=1
+          go test -mod=readonly -race -tags=operator_e2e ./labnet -run '^TestQuorumSignedWrongPostStateNeverPersists$' -count=1
+          go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzCanonicalPublicConfiguration$' -fuzztime=3s -parallel=2
+          go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2
+      - name: Check source and dependency locks were not modified
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zevune-local-lab-${{ runner.os }}
+          path: ${{ runner.temp }}/zevune-local-bundle/
+          if-no-files-found: error
+          retention-days: 7

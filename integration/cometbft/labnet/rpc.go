@@ -27,7 +27,7 @@ func ValidateEndpoint(endpoint string) error {
 		return ErrEndpoint
 	}
 	port, err := strconv.Atoi(u.Port())
-	if err != nil || port < 1024 || port > 65535 || strconv.Itoa(port) != u.Port() || u.Host != "127.0.0.1:"+u.Port() {
+	if err != nil || port < 1024 || port > 65535 || strconv.Itoa(port) != u.Port() || u.Host != "127.0.0.1:"+u.Port() || endpoint != "http://127.0.0.1:"+u.Port() {
 		return ErrEndpoint
 	}
 	return nil
@@ -64,7 +64,7 @@ type boundedTransport struct {
 }
 
 func (t *boundedTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	if r.URL.Scheme != "http" || r.URL.Host != t.host || r.URL.User != nil || (r.URL.Path != "" && r.URL.Path != "/") || r.Method != http.MethodPost {
+	if r.URL.Scheme != "http" || r.URL.Host != t.host || r.URL.User != nil || (r.URL.Path != "" && r.URL.Path != "/") || r.Method != http.MethodPost || r.URL.RawQuery != "" || r.URL.ForceQuery || r.URL.Fragment != "" || r.URL.RawPath != "" || r.URL.Opaque != "" || (r.Host != "" && r.Host != t.host) {
 		return nil, ErrEndpoint
 	}
 	response, err := t.base.RoundTrip(r)

@@ -116,9 +116,12 @@ func (n *Network) synchronize(ctx context.Context, remote rpcSource, store *pool
 		if err != nil {
 			return SyncResult{}, err
 		}
-		if !current.Header.LastBlockID.Equals(previous.Commit.BlockID) {
+		if !current.Header.LastBlockID.Equals(previous.Commit.BlockID) || current.Header.Time.Before(previous.Header.Time) {
 			return SyncResult{}, ErrCertificate
 		}
+	}
+	if int64(initial)+1 == tip && !bytes.Equal(current.Header.Hash(), signedTip.Header.Hash()) {
+		return SyncResult{}, ErrCertificate
 	}
 	target := uint64(tip) - 1
 	if target-initial > limit {
@@ -148,6 +151,10 @@ func (n *Network) synchronize(ctx context.Context, remote rpcSource, store *pool
 			return SyncResult{}, err
 		}
 		if !next.Header.LastBlockID.Equals(current.Commit.BlockID) || next.Header.Time.Before(current.Header.Time) {
+			return SyncResult{}, ErrCertificate
+		}
+		// Reject a peer presenting two different quorum-signed tips during this call.
+		if h+1 == tip && !bytes.Equal(next.Header.Hash(), signedTip.Header.Hash()) {
 			return SyncResult{}, ErrCertificate
 		}
 		if len(block.Block.Data.Txs) > poolbridge.MaxTransactions {
