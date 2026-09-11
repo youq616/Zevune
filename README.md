@@ -1,49 +1,52 @@
 # Zevune · 澄隐
 
-**开发中，禁止真实资金。尚无完整钱包、发行规则或网络匿名，未经独立安全审计。M7 的零金额协议交易不是已完成的隐私支付产品。**
+**开发中，禁止真实资金。已实现本地钱包核心，尚无完整网络钱包、发行规则或网络匿名，未经独立安全审计。M8 的非零金额本地付款与 M7 的零金额四节点交易不能混称完整支付网络。**
 
-源码分为根 Go、嵌套 CometBFT Go 和独立 Rust 三个模块。工程进展与范围：
+源码分为根 Go、嵌套 CometBFT Go 和独立 Rust 三个模块。
 
 | 阶段 | 范围 |
 |---|---|
 | M1/M2 根程序 `zevuned`，0.1.2-dev | 原有单机账本、预执行、日志恢复；付款关闭 |
-| M3 `integration/cometbft` 原 `app`，0.2.0-consensus-dev | 原有四进程空块共识实验，运行入口和数据不变 |
-| M4 `integration/orchard`，0.1.0 | 真实 Orchard/Halo 2 证明、授权签名、解密与进程内两段转移测试 |
-| M5 `internal/orchardbridge` | Go 调用真实 Rust 授权验证器，有界本地通信 |
-| M6 Rust `pool` | 真实 Orchard 资产树、原子验证、持久化与密码学重放 |
-| M7 `poolbridge`、`poolapp` 和持久化 worker | 将真实 Orchard 状态与 CometBFT 连接，整合测试使用零金额真实证明交易；不是钱包付款或主网 |
+| M3 原 `integration/cometbft/app`，0.2.0-consensus-dev | 原有四进程空块共识，运行入口和数据不变 |
+| M4 Rust Orchard | 真实 Halo 2 证明、授权签名、解密 |
+| M5 `internal/orchardbridge` | Go 调用真实 Rust 授权验证器 |
+| M6 Rust `pool` | 真实资产树、原子验证、持久化与密码学重放 |
+| M7 `poolbridge`、`poolapp` 和持久化 worker | 四节点真实证明、零金额入块、落盘和整网重启 |
+| M8 Rust `wallet`、`wallet::vault`、`pool::history` | 本地钱包、非零金额付款/找零、待确认预留、加密备份及重扫恢复；未接入非零金额共识付款 |
 
-## M7：不再只是各模块单独运行
+## M8：钱包核心，不再手工拼装后续付款
 
-连接路径：CometBFT → ABCI `poolapp` → Go `poolbridge` → 本机 Rust `zevune-pool-worker` → Orchard `PoolStore`。每个测试节点有自己的进程、Rust worker 和日志。
+钱包本地生成种子，通过上游 ZIP32 派生测试密钥与收款地址，扫描外部收款和内部找零，选择真实未花费票据，生成并验证真实付款证明及签名。多个输入共用一次资产树路径计算，复用公开证明参数。没有伪证明放行、全网查看密钥、明文种子导出、遥测或上传见证。
 
-`Preview` 不持久化；`FinalizeBlock` 固定待提交区块的全部字节和预期状态，仍不落盘；`Commit` 引用相同候选并执行真实验证、写入和同步。`Info` 始终暴露最后已提交高度及状态摘要，以供 CometBFT 恢复握手。回复错配、进程故障和不确定提交不能被当成验证成功，也不会自动重试。
+待确认交易预留输入；加密备份保留种子、同步检查点及预留，恢复后必须重扫经本地完整重放的账本才能得到余额。拒绝较旧历史和祖先不一致的更长历史，过期高度采用包含端点的规则。构造交易不是广播或到账确认。
 
-新网络只通过带 `pool_e2e` 标签的本机测试初始化，没有新增公网支付启动器。公开存储仍只支持空创世，没有发行或注资接口。因此四进程测试使用**真实零知识证明的零金额交易**检查广播、入块、树更新、持久化和整网重启，不声称完成 A 向 B 的非零金额支付。
+备份用锁定的 Argon2id 与 XChaCha20-Poly1305，固定资源参数和 620 字节格式，整个头部认证；错误口令或篡改密文会拒绝导入。创建备份不覆盖旧文件。密码强度、恶意设备、旧备份回滚、多进程协调、Windows ACL 和应用级保存/广播原子性仍需单独处理，不能称为生产钱包。
 
-测试逐个验证真实提交签名、区块 ID、验证者集合以及区块头中上一高度的应用摘要，并通过另一个新 Rust 状态进程独立重放公共块。另测 Finalize 后中断、重新打开、同一候选重放、Commit 后再次打开、重复交易拒绝与提案原子性。当前只有单机 loopback 网络，不是跨地域或独立运营主体。
+自动测试使用私有测试初始票据，真实分配两笔收款；钱包合并付款、识别找零、加密恢复、到期释放后再次付款，关闭并重开账本后余额保持一致。全部余额和累计费用对账，不设置任意增发或充值接口。详见 [本地钱包范围与安全边界](docs/LOCAL_WALLET.zh-CN.md)。
 
-设计、容量、故障边界和未完成项见 [M7 连接说明](docs/ORCHARD_CONSENSUS.zh-CN.md)。测试结果必须查对应源码提交的 Actions，不以旧结果认证新的修改。
+## M7：已有的真实共识连接保持不变
+
+CometBFT → ABCI `poolapp` → Go `poolbridge` → 本机 Rust `zevune-pool-worker` → Orchard `PoolStore`。每个测试节点有自己的进程、worker 和日志。Preview 不落盘；FinalizeBlock 固定完整有序候选；Commit 重新验证、同步日志并核对结果。Info 只返回已提交状态。故障、回复错配或不确定提交不会被当作成功或自动重试。
+
+公开存储仍只支持空创世，无发行或注资接口；非空启动仍限制在私有测试代码。因此四进程路径继续以零金额真实证明交易检查广播、签名共识、入块及恢复，不声称已完成钱包间非零金额网络支付。测试比较真实提交签名和独立重放的应用摘要；网络限同机 loopback，非跨地域或独立运营者。详见 [M7](docs/ORCHARD_CONSENSUS.zh-CN.md)。
 
 ## 密码学与存储边界
 
-Orchard 锁定 0.15.5，使用已修复 V2 电路，拒绝不安全历史 V1。真实证明、逐个花费/绑定签名及收款解密来自上游，没有自写电路、跳过证明开关、全网查看密钥或私密见证服务。实验签名摘要与链标识仍不是经过外部评审的最终协议；不同测试网的 genesis 域绑定与升级策略仍待完成。
+Orchard 锁定 0.15.5，使用修复后的 V2 电路和真实上游加密、证明、签名，不改写密码电路。实验交易摘要、主网/创世域与升级规则仍待外部审查。依赖锁不是漏洞审计。
 
-M6 存储使用真实 Orchard 哈希与增量树，重开逐条重新验证交易。只读检查不等于落盘，日志校验和不等于认证；完整旧日志回滚还需独立可信共识对账。日志和状态有明确容量上限，不自动删除历史绕过限制。实际断电、恶意操作系统、生产级存储和完整恢复策略不在已验证保证中。
+M6 日志重开逐条验证真实授权及状态转换；M8 的历史读取还与已打开账本的已提交摘要比较。校验和不是外部认证，本地完整节点不是轻客户端，回滚与共识必须另行对账。日志、记录和状态有明确容量上限，不自动删除历史绕过限制。任意断电、恶意操作系统及生产存储不在当前保证中。
 
-M1/M2 的旧 Go SHA-256 树和日志没有被重新解释成 Orchard 格式。原有 M3 空块程序也保持独立，不读取新实验的日志。
+原有 Go 占位树与日志未重新解释为 Orchard；M1/M2 和原 M3 的程序、版本、数据路径不迁移。
 
 ## 自动验证与整体交付
 
-用户已验证 Windows 基础环境，开发以自动回归和 CI 为主，不要求每个小版本手工测试。完整交付门槛仍是 [整体验收要求](docs/INTEGRATION_ACCEPTANCE.zh-CN.md)，当前尚未达到。
+用户已验证 Windows 基础环境。开发依赖自动回归及 CI，不要求每个小版本手工测试。整体验收仍依据 [完整验收要求](docs/INTEGRATION_ACCEPTANCE.zh-CN.md)，当前尚未达到。
 
-五套工作流分别覆盖根模块、原共识实验、Rust 密码学、授权连接和新增持久化共识整合。根目录 `go test ./...` 不自动执行嵌套 Go/Rust 模块。常规 CI 使用已提交格式、锁文件和固定工具链，仅有读权限；测试不能改源码或依赖。缺少真实 worker 或真实样本时整合测试失败，不会跳过冒充成功。
+六套工作流分别覆盖根模块、原共识、Rust 密码学、授权连接、持久化共识连接和本地钱包。根目录 `go test ./...` 不运行两个独立嵌套模块。正式 CI 检查已提交源码格式和固定依赖，只有读取权限，不在检查中修改源码。结果必须对应明确提交；缺少真实 worker/证明样本时整合检查失败而不是跳过。
 
-未完成：完整钱包及加密存储、同步/备份/恢复、经过审查的创世发行与费用奖励、正式网络协议、网络隐私与拒绝服务防护、生产存储、端到端性能和独立安全审查。零金额入块、空块时间、单项证明耗时都不能当成完整到账延迟、TPS 或匿名性认证。
+未完成：用户钱包 UI/CLI、分发与安全更新、认证网络同步、多设备和可靠广播、非零金额四节点付款、受审查的发行/奖励规则、正式协议、网络隐私、生产存储、端到端性能及独立安全审计。没有支付 p95/TPS 成绩，不把单项加密耗时、空块间隔或测试时间当到账速度。
 
-## 原有诊断程序（无需本轮重测）
-
-根程序及已有用户数据不迁移，不需要 Docker：
+## 原诊断程序文档（本轮无需操作）
 
 ```powershell
 go test ./... -count=1
@@ -55,14 +58,10 @@ go run ./cmd/zevuned -data-dir "$env:LOCALAPPDATA\Zevune\devnet"
 Invoke-RestMethod "http://127.0.0.1:8080/v1/status" | ConvertTo-Json -Depth 6
 ```
 
-它仍显示 `software_version=0.1.2-dev`、`height=0`、付款和最终确认为 false，不会自动变成 M7 网络。不要开放诊断端口，不要删除日志或防重复签名状态来升级。
+它仍显示 0.1.2-dev、height=0、payments_enabled=false、finality_available=false，不自动变成钱包网络。不要开放诊断接口，不要删除账本或防重复签名状态来升级。
 
 ## 资料
 
-- [M1 存储](docs/LOCAL_STORAGE.zh-CN.md) 与 [M2 预执行](docs/BLOCK_PREVIEW.zh-CN.md)。
-- [M3 共识](integration/cometbft/README.md) 与 [M4 密码学](integration/orchard/README.md)。
-- [M5/M6 连接和资产状态](docs/ORCHARD_STATE.zh-CN.md) 及 [验收报告](reports/m5-m6-remote-validation.md)。
-- [M7 持久化共识连接](docs/ORCHARD_CONSENSUS.zh-CN.md)。
-- [历史缺失文档](docs/PUBLICATION_STATUS.zh-CN.md)：六份原始文档仍未恢复，新说明不是替代副本或完整协议规范。
+[M1 存储](docs/LOCAL_STORAGE.zh-CN.md) · [M2 预执行](docs/BLOCK_PREVIEW.zh-CN.md) · [M3 共识](integration/cometbft/README.md) · [Rust 密码学](integration/orchard/README.md) · [M5/M6](docs/ORCHARD_STATE.zh-CN.md) · [M7](docs/ORCHARD_CONSENSUS.zh-CN.md) · [M8 本地钱包](docs/LOCAL_WALLET.zh-CN.md)。
 
-不要上传私钥、种子、查看密钥、钱包数据、付款明文或节点签名状态。参见 [安全说明](SECURITY.md)、[许可证状态](LICENSE-STATUS.md)、[第三方声明](integration/orchard/NOTICE.md)。源码公开不等于选择了整个项目的开源许可证，也不等于安全审计。
+[六份历史文档](docs/PUBLICATION_STATUS.zh-CN.md)仍未恢复，新说明不是替代副本或完整协议。不要上传种子、私钥、查看密钥、钱包文件、付款明文或验证者签名状态。参见 [安全说明](SECURITY.md)、[许可证状态](LICENSE-STATUS.md)、[上游声明](integration/orchard/NOTICE.md)。源码公开不等于整个项目已确定开源许可证，也不等于独立审计。

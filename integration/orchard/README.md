@@ -1,6 +1,6 @@
-# Orchard laboratory: M4 cryptography, M5 local worker, M6 pool state
+# Orchard laboratory: real cryptography, durable state and local wallet
 
-**NO FUNDS. No wallet application, payment network, public RPC, witness service or issuance API.** This Rust module uses genuine upstream cryptography. Cargo publishing is disabled. M3 network transactions remain disabled.
+**NO FUNDS. No complete wallet application, public payment service, witness service or issuance API.** This Rust module uses genuine upstream cryptography. Cargo publishing is disabled. The original M3 application still rejects transactions; the separate M7 integration tests real zero-value protocol transactions.
 
 ## Fixed cryptographic scope
 
@@ -10,36 +10,44 @@ M4 uses upstream Halo 2, RedPallas signatures, note decryption and Orchard Merkl
 
 The original M4 Verifier reads a caller-supplied trusted StateView and uses upstream batch verification. That remains a laboratory API, not a consensus decision. The M5 worker and M6 pool use individual upstream signature verification and the upstream single-proof verifier. Each still requires version, public-input, resource and state constraints; proof validity alone does not establish authorized issuance or absence of prior spends.
 
-## M5 local process boundary
+## Process boundaries and durable state
 
-`wire` implements bounded canonical local transport (2–8 actions, at most 28,102 bytes), using upstream field and point parsing. `zevune-orchard-worker` accepts only framed public authorization bytes through stdin/stdout. It retains a fixed public verification key, binds responses to monotonic IDs and full-payload hashes, and exposes no wallet, network listener, file-loading command, arbitrary executable command or secret-input service.
+`wire` implements bounded canonical local transport (2–8 actions, at most 28,102 bytes), using upstream field and point parsing. `zevune-orchard-worker` accepts framed public authorization bytes through stdin/stdout. The Go caller in `internal/orchardbridge` checks an expected executable digest, validates framing, separates rejection from worker failure and closes on uncertain exchanges. A self-computed executable hash is not a release signature or sandbox.
 
-The Go caller in `internal/orchardbridge` verifies an expected executable digest, validates framing, separates rejection from worker failure, closes on uncertain exchanges and independently checks a trusted committed-state view. A self-computed executable hash is not a release signature or sandbox. Local OS/filesystem trust and caller ownership assumptions remain explicit.
+`pool` uses `Frontier<MerkleHashOrchard,32>`, ordered commitments, spent-nullifier and output sets, bounded committed roots and a versioned state hash. Public constructors only create/reopen empty-genesis pools. Test-only callers seed nonempty synthetic fixtures; no arbitrary issuance API exists. M7 connects this store through `zevune-pool-worker`, `internal/poolbridge` and the separate CometBFT `poolapp`.
 
-## M6 state and storage
+Prepare uses a private candidate. Commit checks the base, revalidates actual proofs and state, appends a bounded checksummed journal and synchronizes before advancing memory. Open locks and fully replays it. Corrupt journals are never silently repaired/truncated. Write failure poisons the instance, but a whole record can still exist after acknowledgement loss. A valid old prefix requires independent checkpoint comparison.
 
-`pool` uses `Frontier<MerkleHashOrchard,32>`, ordered commitment appends, spent-nullifier and output sets, bounded committed roots and a versioned state hash. Public constructors only create/reopen empty-genesis pools. Test-only callers can seed nonempty synthetic fixtures; there is no arbitrary issuance API. The pool is a Rust library, not yet driven by Go or M3 consensus.
+Limits: 16 transactions/block, 65,536 commitments, 10,000 records and 64 MiB journal. These are not production storage or light-client guarantees. See [state boundaries](../../docs/ORCHARD_STATE.zh-CN.md) and [M7 consensus integration](../../docs/ORCHARD_CONSENSUS.zh-CN.md). The four-node M7 tests are local, zero-value and not a complete wallet payment network.
 
-Prepare executes on a private candidate. Commit checks the base, revalidates actual proofs and state, appends a bounded checksummed journal and synchronizes it before advancing memory. Open locks the file and fully replays authorization and state checks. It never repairs/truncates a corrupt journal or resets signing state. Write failure poisons the live instance; a whole record may nevertheless be recoverable after lost acknowledgement. A valid old journal prefix is detectable only against an independently trusted checkpoint, not from checksums alone.
+## M8 local wallet core
 
-Limits: 16 transactions/block, 65,536 commitments, 10,000 records, 64 MiB journal. Filesystem, directory durability, malicious local administrator and full historical replay costs are not solved by these bounds. This is not production storage or a light-client proof. Full details: [Chinese boundary specification](../../docs/ORCHARD_STATE.zh-CN.md).
+`wallet` derives genuine test ZIP32 keys from local randomness, detects external receipts/internal change, selects actual unspent notes and builds genuine proofs/signatures. Several selected inputs share a single tree reduction for their authentication paths. This is bounded coin selection, not a claim of optimal privacy or measured network speed.
+
+`pool::history` exports public signed history only after full local cryptographic replay against the open store's committed state. Wallet rescanning rebuilds notes and balances. Existing checkpoints must be ancestors of new history; short histories and longer forks are rejected. Local full-node trust is explicit: this is not authentication of a remote server's tip or a light client.
+
+`wallet::vault` uses fixed Argon2id v19 (64 MiB, 3 passes, 1 lane) and XChaCha20-Poly1305. The 620-byte authenticated encrypted snapshot preserves the seed, checkpoint and pending-input reservation, not an authoritative balance. New salt/nonce per snapshot; wrong passwords, modified ciphertext and noncanonical formats are rejected. KDF parameters and file size are checked before expensive work. Password strength, old-backup rollback, multi-device coordination, Windows ACLs and directory durability remain application responsibilities.
+
+One pending payment is allowed. Inputs remain reserved across a current snapshot restore until confirmed spent or a trusted synced height exceeds inclusive expiry. Building does not broadcast: application-level save-before-broadcast atomicity and recovery of complete pending transaction bytes remain incomplete. Only owned seed/key/plaintext buffers are zeroized; no complete upstream-object or operating-system erasure guarantee is made. No master key, witness server, plaintext seed export or telemetry is added.
 
 ## Automated verification
 
-Fixed Rust toolchain 1.98.1, committed Cargo.lock and `--locked`. The ordinary read-only CI runs formatting, metadata lock checks, release tests and strict Clippy, and fails if tracked files change. `orchard-bridge` additionally builds the actual worker and runs Go against public signed bytes produced by actual proof tests. Missing real artifacts cause failure, not skips.
+Fixed Rust toolchain 1.98.1, committed Cargo.lock and `--locked`. Final read-only CI checks formatting, locked metadata, release tests, strict Clippy and tracked-file stability. Additional workflows build actual workers for Go/ABCI integration. Missing real fixture/worker inputs cause integration failure, not a pass via skip.
 
 ```text
 cargo test --locked --release -- --nocapture --test-threads=1
 cargo clippy --locked --release --all-targets -- -D warnings
-cargo build --locked --release --bin zevune-orchard-worker
+cargo build --locked --release --bin zevune-orchard-worker --bin zevune-pool-worker
 ```
 
-M4 tests generate keys and a synthetic note in memory, prove A→B with change, decrypt, and spend the actual received note onward to C. M5 checks canonical wire, individual authorization and framed serving. M6 adds real two-hop commit/reopen/replay, duplicate rejection, atomic candidate failure, write fault injection, corrupted proofs with recomputed outer checksums, and the valid-prefix rollback boundary. Only public commitments and signed envelopes are written in temporary test storage; no keys, seeds, decrypted notes or witnesses are exported. Public cross-language fixtures are not secret-bearing wallet artifacts.
+M8 adds a private-test funded local flow with two receipts, multi-note payment, change, encrypted pending restore, inclusive expiry/release, onward payment and final balance/fee reconciliation. It tests checkpoint ancestry, journal cursor/append integrity, backup tampering, shared paths against upstream Frontier and an independent public Argon2 reference vector. The initial funded bootstrap remains inaccessible to public constructors.
 
-Random malformed-input and truncation tests are not coverage-guided Rust fuzzing. Linux Go race/fuzz coverage is not a Windows race result. Tiny phase timings and a warm worker do not establish p95, TPS, WAN performance or anonymous end-to-end payment speed. No secure-memory-erasure or side-channel audit is claimed. Users need not repeat micro-validation.
+Temporary M8 backup files contain encrypted test secrets and must not be published. Cross-language fixtures remain public signed envelopes only. No plaintext keys, seeds, decrypted notes or witnesses are logged or exported. Secret-bearing wallet objects have no Debug serialization. Random malformed input tests and single KDF vectors are not a cryptographic or side-channel audit.
 
 ## Remaining work
 
-M5 stateless IPC, M6 local state and M3 consensus are not connected into a wallet/payment service. Consensus recovery/checkpoint binding, wallet storage/sync/recovery, canonical final network protocol, issuance and economics, network privacy, production persistence and independent audit remain incomplete. Old Go tree/ciphertext/journal formats are not reinterpreted or migrated. Original missing project documents remain missing; these notes do not replace them.
+M8 local nonzero payments are NOT the same test as M7 four-node zero-value consensus. Nonzero multi-node wallet integration, constrained issuance/fee economics, user CLI/UI, authenticated network sync, atomic wallet persistence/broadcast, final protocol domains, network privacy, production persistence and independent audit remain incomplete. No end-to-end p95 or TPS is reported.
 
-Primary sources: https://github.com/zcash/orchard/tree/0.15.5 ; https://docs.rs/incrementalmerkletree/0.8.1/incrementalmerkletree/frontier/struct.Frontier.html ; https://doc.rust-lang.org/stable/std/fs/struct.File.html . Dependency integrity is not a vulnerability audit. See NOTICE.md for prior borrowed public vector attribution.
+Old Go tree/ciphertext/journal formats are not reinterpreted or migrated. Original missing project documents remain missing. See [M8 detailed boundaries](../../docs/LOCAL_WALLET.zh-CN.md), repository SECURITY.md, LICENSE-STATUS.md and this directory's NOTICE.md; source publication is not an independent audit or a license decision for all Zevune code.
+
+Primary sources: https://github.com/zcash/orchard/tree/0.15.5 ; https://docs.rs/incrementalmerkletree/0.8.1/incrementalmerkletree/frontier/struct.Frontier.html ; https://github.com/RustCrypto/password-hashes/tree/argon2-v0.5.3/argon2 ; https://docs.rs/chacha20poly1305/0.10.1/chacha20poly1305/ . Dependency locking is not a vulnerability audit.

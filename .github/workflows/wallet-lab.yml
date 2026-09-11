@@ -1,9 +1,10 @@
 name: wallet-laboratory
 on:
   push:
-    branches: ['dev/m8-wallet-local']
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', '.github/workflows/wallet-lab.yml', '.gitattributes']
   pull_request:
-    paths: ['integration/orchard/**', '.github/workflows/wallet-lab.yml']
+    paths: ['integration/orchard/**', '.github/workflows/wallet-lab.yml', '.gitattributes']
 permissions:
   contents: read
 jobs:
@@ -17,6 +18,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: integration/orchard
     env:
       RAYON_NUM_THREADS: '2'
       CARGO_BUILD_JOBS: '2'
@@ -26,37 +28,15 @@ jobs:
           persist-credentials: false
       - name: Install fixed Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
-      - name: Development-only additive bootstrap
-        run: python scripts/bootstrap-wallet-lab.py
-      - name: Actual wallet, encrypted recovery and unchanged cryptography tests
-        working-directory: integration/orchard
+      - name: Check exact committed source and dependency lock
         run: |
-          cargo test --locked --release -- --nocapture --test-threads=1
-          cargo clippy --locked --release --all-targets -- -D warnings
+          rustc --version
           cargo fmt --all -- --check
-  record:
-    needs: wallet
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/m8-wallet-local'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
-        with:
-          ref: ${{ github.sha }}
-      - name: Record additive normalized sources only after both platform tests
-        shell: bash
-        env:
-          EXPECTED_HEAD: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
-          python scripts/bootstrap-wallet-lab.py
-          test "$(git ls-remote origin refs/heads/dev/m8-wallet-local | cut -f1)" = "$EXPECTED_HEAD"
-          git add integration/orchard/Cargo.toml integration/orchard/Cargo.lock integration/orchard/src/lib.rs integration/orchard/src/pool.rs integration/orchard/src/pool_tests.rs integration/orchard/src/wallet.rs integration/orchard/src/wallet/vault.rs integration/orchard/src/wallet_history.rs integration/orchard/src/wallet_flow_tests.rs
-          git diff --cached --stat
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Record tested M8 wallet modules, formatting and additive dependency lock'
-          git push origin HEAD:refs/heads/dev/m8-wallet-local
+          cargo metadata --locked --format-version=1 > /dev/null
+          git diff --exit-code
+      - name: Genuine wallet payments, encrypted recovery and crypto regression
+        run: cargo test --locked --release -- --nocapture --test-threads=1
+      - name: Strict static checks
+        run: cargo clippy --locked --release --all-targets -- -D warnings
+      - name: Assert no tracked source or dependency drift
+        run: git diff --exit-code
