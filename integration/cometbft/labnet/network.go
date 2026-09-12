@@ -323,6 +323,5 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 	if ready != nil {
 		ready()
 	}
-	<-ctx.Done()
-	return nil
+	return awaitNodeStop(ctx, engine.Quit())
 }

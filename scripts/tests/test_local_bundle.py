@@ -4,6 +4,9 @@ from pathlib import Path
 import tempfile
 import subprocess
 import unittest
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 spec = importlib.util.spec_from_file_location("build_local_lab", Path(__file__).resolve().parents[1] / "build_local_lab.py")
 build = importlib.util.module_from_spec(spec)

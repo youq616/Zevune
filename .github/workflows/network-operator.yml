@@ -39,7 +39,7 @@ jobs:
           cargo fmt --all -- --check
           cargo build --locked --release --features local-funding-lab --bins
           git diff --exit-code
-      - name: Build create-only operator bundle
+      - name: Build from isolated Git objects and verify create-only bundle
         run: python scripts/build_local_lab.py --output "$RUNNER_TEMP/zevune-local-bundle"
       - name: Register executable paths only
         run: |
