@@ -1,0 +1,61 @@
+name: candidate-protocol-domain
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'internal/txdomain/**', 'internal/orchardbridge/**', 'testdata/domain-v1.txt', 'protocol/**', '.github/workflows/protocol-domain.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'internal/txdomain/**', 'internal/orchardbridge/**', 'testdata/domain-v1.txt', 'protocol/**', '.github/workflows/protocol-domain.yml']
+permissions:
+  contents: read
+jobs:
+  domain:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Format and static checks
+        run: |
+          test -z "$(gofmt -l internal/txdomain)"
+          cargo fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+          cargo clippy --manifest-path integration/orchard/Cargo.toml --locked --release --all-targets -- -D warnings
+          go vet ./internal/txdomain
+      - name: Configure only public test corpus and executable path
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          suffix = '.exe' if os.name == 'nt' else ''
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write('ZEVUNE_DOMAIN_FIXTURES=' + str(Path(os.environ['RUNNER_TEMP']) / 'zevune-domain-public') + '\n')
+              f.write('ZEVUNE_DOMAIN_CHECKER=' + str(Path('integration/orchard/target/release').absolute() / ('zevune-domain-check' + suffix)) + '\n')
+          PY
+      - name: Genuine proofs and signature domain rejection
+        run: cargo test --manifest-path integration/orchard/Cargo.toml --locked --release --test domain_binding -- --test-threads=1
+      - name: Real Go to Rust interoperability without ledger admission
+        run: go test -tags=domain_e2e ./internal/txdomain -count=1 -timeout=3m -v
+      - name: Race and bounded decoder fuzz smoke
+        if: runner.os == 'Linux'
+        run: |
+          go test -race ./internal/txdomain -count=1
+          go test ./internal/txdomain -run '^$' -fuzz '^FuzzDomainDescriptor$' -fuzztime=3s -parallel=2
+          go test ./internal/txdomain -run '^$' -fuzz '^FuzzBoundEnvelope$' -fuzztime=3s -parallel=2
+      - name: Assert unchanged source and dependency lock
+        run: git diff --exit-code

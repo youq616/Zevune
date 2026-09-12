@@ -204,3 +204,6 @@ impl Verifier {
 }
 
 pub mod wallet;
+
+/// Candidate domain-bound protocol; not activated by the legacy node.
+pub mod domain;
