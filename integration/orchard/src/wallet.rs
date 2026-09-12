@@ -14,9 +14,10 @@ use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
+use crate::domain::{bound_signing_digest, DomainId};
 use crate::pool::history::WalletHistory;
 use crate::pool::MAX_COMMITMENTS;
-use crate::wire::{decode, encode, AuthorizationVerifier};
+use crate::wire::{decode_in_domain, encode_in_domain, AuthorizationVerifier};
 use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 
 pub mod vault;
@@ -69,6 +70,7 @@ struct Pending {
 /// Only our seed buffer is zeroized. Upstream key/note copies and the operating
 /// system are not covered by a secure-memory-erasure guarantee.
 pub struct Wallet {
+    domain: Option<DomainId>,
     seed: Zeroizing<[u8; 32]>,
     checkpoint: Option<Checkpoint>,
     scanned: Option<Scanned>,
@@ -87,9 +89,15 @@ impl Default for WalletProver {
 }
 impl WalletProver {
     pub fn new() -> Self {
+        Self::in_domain(None)
+    }
+    pub fn for_domain(domain: DomainId) -> Self {
+        Self::in_domain(Some(domain))
+    }
+    fn in_domain(domain: Option<DomainId>) -> Self {
         Self {
             key: ProvingKey::build(CIRCUIT),
-            verifier: AuthorizationVerifier::new(),
+            verifier: AuthorizationVerifier::in_domain(domain),
         }
     }
 }
@@ -110,11 +118,35 @@ impl Payment {
 
 impl Wallet {
     pub fn create() -> Result<Self, WalletError> {
+        Self::create_in_domain(None)
+    }
+    pub fn create_for_domain(domain: DomainId) -> Result<Self, WalletError> {
+        Self::create_in_domain(Some(domain))
+    }
+    pub fn domain(&self) -> Option<DomainId> {
+        self.domain
+    }
+    /// Bind an UNUSED wallet after its public address was placed in a genesis
+    /// manifest. This breaks the address/genesis-ID construction cycle without
+    /// permitting network changes for a synchronized or already-bound wallet.
+    pub fn bind_domain_once(&mut self, domain: DomainId) -> Result<(), WalletError> {
+        if self.domain.is_some()
+            || self.checkpoint.is_some()
+            || self.scanned.is_some()
+            || self.pending.is_some()
+        {
+            return Err(WalletError::History);
+        }
+        self.domain = Some(domain);
+        Ok(())
+    }
+    fn create_in_domain(domain: Option<DomainId>) -> Result<Self, WalletError> {
         let mut seed = Zeroizing::new([0; 32]);
         OsRng
             .try_fill_bytes(seed.as_mut())
             .map_err(|_| WalletError::Entropy)?;
         let result = Self {
+            domain,
             seed,
             checkpoint: None,
             scanned: None,
@@ -170,6 +202,9 @@ impl Wallet {
     /// cryptographically replayed journal. This is NOT authentication of a remote
     /// peer's tip. Existing checkpoint ancestry must be present, even on restore.
     pub fn sync(&mut self, history: &WalletHistory) -> Result<(), WalletError> {
+        if history.domain != self.domain {
+            return Err(WalletError::History);
+        }
         if let Some(c) = self.checkpoint {
             if c.genesis != history.genesis || history.tip().height < c.height {
                 return Err(WalletError::Rollback);
@@ -217,7 +252,7 @@ impl Wallet {
         let mut spent = BTreeSet::new();
         for block in &history.blocks {
             for raw in &block.transactions {
-                let tx = decode(raw).map_err(|_| WalletError::History)?;
+                let tx = decode_in_domain(raw, self.domain).map_err(|_| WalletError::History)?;
                 let start = leaves.len();
                 if start
                     .checked_add(tx.bundle.actions().len())
@@ -284,6 +319,9 @@ impl Wallet {
         expiry: u64,
         prover: &WalletProver,
     ) -> Result<Payment, WalletError> {
+        if prover.verifier.domain() != self.domain {
+            return Err(WalletError::Proof);
+        }
         if self.pending.is_some() {
             return Err(WalletError::Pending);
         }
@@ -360,13 +398,17 @@ impl Wallet {
             .map_err(|_| WalletError::Proof)?
             .ok_or(WalletError::Proof)?
             .0;
-        let digest = signing_digest(&unsigned, &ctx).map_err(|_| WalletError::Proof)?;
+        let digest = match self.domain {
+            Some(id) => bound_signing_digest(&unsigned, &ctx, id),
+            None => signing_digest(&unsigned, &ctx),
+        }
+        .map_err(|_| WalletError::Proof)?;
         let signed = unsigned
             .create_proof(&prover.key, OsRng)
             .map_err(|_| WalletError::Proof)?
             .apply_signatures(OsRng, digest, &[SpendAuthorizingKey::from(&sk)])
             .map_err(|_| WalletError::Proof)?;
-        let raw = encode(&signed, &ctx).map_err(|_| WalletError::Proof)?;
+        let raw = encode_in_domain(&signed, &ctx, self.domain).map_err(|_| WalletError::Proof)?;
         prover
             .verifier
             .verify(&raw)

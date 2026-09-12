@@ -1,0 +1,61 @@
+name: domain-bound-protocol
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'internal/networkdomain/**', 'internal/orchardbridge/**', '.github/workflows/domain-bound.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'internal/networkdomain/**', 'internal/orchardbridge/**', '.github/workflows/domain-bound.yml']
+permissions:
+  contents: read
+jobs:
+  domain:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Check exact source and locked dependency graph
+        run: |
+          test -z "$(gofmt -l internal/networkdomain)"
+          cd integration/orchard
+          cargo fmt --all -- --check
+          cargo clippy --locked --release --features local-funding-lab --all-targets -- -D warnings
+      - name: Reserve directory for public signed fixtures only
+        run: |
+          python - <<'PY'
+          import os, tempfile
+          folder = tempfile.mkdtemp(prefix='zevune-domain-public-', dir=os.environ['RUNNER_TEMP'])
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write('ZEVUNE_BOUND_FIXTURE_DIR=' + folder + '\n')
+          PY
+      - name: Genuine domain-bound payments, replay refusal and encrypted recovery
+        working-directory: integration/orchard
+        run: cargo test --locked --release --features local-funding-lab --test domain_bound -- --test-threads=1
+      - name: Independent Go codec on real Rust transaction bytes
+        run: |
+          go test -tags=domain_fixture ./internal/networkdomain -count=1 -v
+          go vet -tags=domain_fixture ./internal/networkdomain
+      - name: Race and bounded parser fuzz
+        if: runner.os == 'Linux'
+        run: |
+          go test -race -tags=domain_fixture ./internal/networkdomain -count=1
+          go test ./internal/networkdomain -run '^$' -fuzz '^FuzzDescriptorAndBoundEnvelope$' -fuzztime=5s -parallel=2
+      - name: Preserve exact checked source and dependency locks
+        run: git diff --exit-code

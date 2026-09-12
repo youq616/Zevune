@@ -16,7 +16,7 @@ use zeroize::Zeroizing;
 use super::super::{Payment, Wallet, WalletError, WalletProver};
 use super::{decrypt_payload, encrypt_payload, restore, snapshot, HEADER, MAX_PAYLOAD, PLAIN};
 use crate::pool::history::WalletHistory;
-use crate::wire::{decode, AuthorizationVerifier, MAX_ENVELOPE_SIZE};
+use crate::wire::{decode_in_domain, AuthorizationVerifier, MAX_BOUND_ENVELOPE_SIZE};
 use crate::NETWORK;
 
 const MAGIC: &[u8; 8] = b"ZVWJNL01";
@@ -134,7 +134,7 @@ fn binding(header: &[u8; FILE_HEADER], prefix: &[u8]) -> Vec<u8> {
 }
 fn payload(wallet: &Wallet, outbox: Option<&[u8]>) -> Result<Zeroizing<Vec<u8>>, StoreError> {
     let bytes = outbox.unwrap_or(&[]);
-    if bytes.len() > MAX_ENVELOPE_SIZE || PLAIN + 4 + bytes.len() > MAX_PAYLOAD {
+    if bytes.len() > MAX_BOUND_ENVELOPE_SIZE || PLAIN + 4 + bytes.len() > MAX_PAYLOAD {
         return Err(StoreError::Corrupt);
     }
     let mut result = Zeroizing::new(vec![0; MAX_PAYLOAD]);
@@ -149,7 +149,7 @@ fn decode_payload(raw: &[u8]) -> Result<(Wallet, Option<Vec<u8>>), StoreError> {
     }
     let wallet = restore(&raw[..PLAIN])?;
     let n = u32::from_be_bytes(raw[PLAIN..PLAIN + 4].try_into().unwrap()) as usize;
-    if n > MAX_ENVELOPE_SIZE
+    if n > MAX_BOUND_ENVELOPE_SIZE
         || PLAIN + 4 + n > raw.len()
         || raw[PLAIN + 4 + n..].iter().any(|v| *v != 0)
     {
@@ -160,7 +160,7 @@ fn decode_payload(raw: &[u8]) -> Result<(Wallet, Option<Vec<u8>>), StoreError> {
     } else {
         let bytes = raw[PLAIN + 4..PLAIN + 4 + n].to_vec();
         let pending = wallet.pending.as_ref().ok_or(StoreError::Corrupt)?;
-        let tx = decode(&bytes).map_err(|_| StoreError::Corrupt)?;
+        let tx = decode_in_domain(&bytes, wallet.domain()).map_err(|_| StoreError::Corrupt)?;
         if pending.txid != <Hash>::from(Sha256::digest(&bytes))
             || pending.expiry != tx.context.expiry_height
             || pending.nullifiers.iter().any(|nf| {
@@ -172,7 +172,7 @@ fn decode_payload(raw: &[u8]) -> Result<(Wallet, Option<Vec<u8>>), StoreError> {
         {
             return Err(StoreError::Corrupt);
         }
-        AuthorizationVerifier::new()
+        AuthorizationVerifier::in_domain(wallet.domain())
             .verify(&bytes)
             .map_err(|_| StoreError::Corrupt)?;
         Some(bytes)
@@ -270,6 +270,22 @@ impl WalletStore {
 
     pub fn create(path: &Path, password: &[u8]) -> Result<Self, StoreError> {
         Self::create_wallet(path, password, Wallet::create()?)
+    }
+    pub fn create_for_domain(
+        path: &Path,
+        password: &[u8],
+        domain: crate::domain::DomainId,
+    ) -> Result<Self, StoreError> {
+        Self::create_wallet(path, password, Wallet::create_for_domain(domain)?)
+    }
+    pub fn bind_domain_once(&mut self, domain: crate::domain::DomainId) -> Result<(), StoreError> {
+        self.room()?;
+        self.validate_storage()?;
+        if self.outbox.is_some() {
+            return Err(StoreError::Corrupt);
+        }
+        self.wallet.bind_domain_once(domain)?;
+        self.persist()
     }
     /// Import an existing authenticated M8 snapshot into a NEW journal. A pending
     /// legacy snapshot preserves reservations but contains no signed outbox; it

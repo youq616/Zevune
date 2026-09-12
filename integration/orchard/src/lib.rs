@@ -1,13 +1,14 @@
 //! Isolated, NO-FUNDS integration of upstream Orchard proofs and signatures.
 //!
-//! This is NOT the Zevune network transaction format or a consensus verifier.
-//! Only a fixed, patched Orchard V2 circuit is accepted. The local worker only
-//! verifies public authorization data. No wallet or payment listener is enabled.
+//! Only a fixed, patched Orchard V2 circuit is accepted. V1 laboratory network
+//! entry points remain unchanged. Explicit domain-bound V2 wallet/store APIs are
+//! described in docs/protocol/BOUND_DOMAIN_V2.md; they are not a mainnet protocol.
 #![forbid(unsafe_code)]
 
 #[cfg(test)]
 extern crate self as zevune_orchard_lab;
 
+pub mod domain;
 pub mod pool;
 pub mod wire;
 pub mod worker;
@@ -36,7 +37,7 @@ pub struct Context {
 }
 
 /// The caller must obtain these from a trusted committed state, NOT a transaction.
-/// This borrowed view is deliberately read-only. M3 does not yet construct it.
+/// This borrowed view is deliberately read-only and is not remote finality.
 pub struct StateView<'a> {
     pub height: u64,
     pub anchors: &'a [[u8; 32]],

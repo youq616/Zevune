@@ -170,6 +170,57 @@ impl TestGenesis {
     /// Attach public genesis allocations ONLY after full journal authorization
     /// replay and exact commitment-order comparison. No remote peer is trusted.
     pub fn wallet_history(&self, pool: &mut PoolStore) -> Result<WalletHistory, PoolError> {
+        if pool.state.domain.is_some() {
+            return Err(PoolError::Genesis);
+        }
+        let mut history = pool.wallet_history()?;
+        if history.initial != self.commitments() {
+            return Err(PoolError::Genesis);
+        }
+        history.genesis_notes = self.notes.clone();
+        Ok(history)
+    }
+    fn bound_id(
+        &self,
+        descriptor: &crate::domain::NetworkDescriptor,
+    ) -> Result<crate::domain::DomainId, PoolError> {
+        if descriptor.asset_genesis() != self.digest() {
+            return Err(PoolError::Genesis);
+        }
+        Ok(descriptor.id())
+    }
+    pub fn initial_summary_bound(
+        &self,
+        descriptor: &crate::domain::NetworkDescriptor,
+    ) -> Result<Summary, PoolError> {
+        Ok(
+            State::from_genesis_in_domain(&self.commitments(), Some(self.bound_id(descriptor)?))?
+                .summary(),
+        )
+    }
+    /// Explicit new V2 log; never upgrades or reinterprets an existing V1 log.
+    pub fn create_pool_bound(
+        &self,
+        path: &Path,
+        descriptor: &crate::domain::NetworkDescriptor,
+    ) -> Result<PoolStore, PoolError> {
+        PoolStore::create_in_domain(path, &self.commitments(), Some(self.bound_id(descriptor)?))
+    }
+    pub fn open_pool_bound(
+        &self,
+        path: &Path,
+        descriptor: &crate::domain::NetworkDescriptor,
+    ) -> Result<PoolStore, PoolError> {
+        PoolStore::open_in_domain(path, &self.commitments(), Some(self.bound_id(descriptor)?))
+    }
+    pub fn wallet_history_bound(
+        &self,
+        pool: &mut PoolStore,
+        descriptor: &crate::domain::NetworkDescriptor,
+    ) -> Result<WalletHistory, PoolError> {
+        if pool.state.domain != Some(self.bound_id(descriptor)?) {
+            return Err(PoolError::Genesis);
+        }
         let mut history = pool.wallet_history()?;
         if history.initial != self.commitments() {
             return Err(PoolError::Genesis);

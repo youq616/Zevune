@@ -14,6 +14,8 @@ use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use super::{Checkpoint, Pending, Wallet, WalletError, MAX_ACTIONS, NETWORK};
+use crate::domain::DomainId;
+const DOMAIN_OFFSET: usize = 480;
 
 const MAGIC: &[u8; 8] = b"ZVWLT001";
 const HEADER: usize = 92;
@@ -174,6 +176,10 @@ pub fn read(path: &Path, password: &[u8]) -> Result<Wallet, WalletError> {
 fn snapshot(wallet: &Wallet) -> Result<Zeroizing<[u8; PLAIN]>, WalletError> {
     let mut raw = Zeroizing::new([0; PLAIN]);
     raw[0] = 1;
+    if let Some(domain) = wallet.domain {
+        raw[0] = 2;
+        raw[DOMAIN_OFFSET..].copy_from_slice(&domain.to_bytes());
+    }
     raw[1..33].copy_from_slice(wallet.seed.as_ref());
     let mut p = 34;
     if let Some(c) = wallet.checkpoint {
@@ -219,9 +225,21 @@ fn take<const N: usize>(raw: &[u8], p: &mut usize) -> Result<[u8; N], WalletErro
     Ok(value)
 }
 fn restore(raw: &[u8]) -> Result<Wallet, WalletError> {
-    if raw.len() != PLAIN || raw[0] != 1 {
+    if raw.len() != PLAIN || ![1, 2].contains(&raw[0]) {
         return Err(WalletError::Backup);
     }
+    let domain = if raw[0] == 2 {
+        Some(
+            DomainId::from_bytes(
+                raw[DOMAIN_OFFSET..]
+                    .try_into()
+                    .map_err(|_| WalletError::Backup)?,
+            )
+            .map_err(|_| WalletError::Backup)?,
+        )
+    } else {
+        None
+    };
     let seed = Zeroizing::new(raw[1..33].try_into().map_err(|_| WalletError::Backup)?);
     let mut p = 34;
     let checkpoint = match raw[33] {
@@ -261,10 +279,16 @@ fn restore(raw: &[u8]) -> Result<Wallet, WalletError> {
         }
         _ => return Err(WalletError::Backup),
     };
-    if raw[p..].iter().any(|b| *b != 0) {
+    let padding_end = if domain.is_some() {
+        DOMAIN_OFFSET
+    } else {
+        PLAIN
+    };
+    if p > padding_end || raw[p..padding_end].iter().any(|b| *b != 0) {
         return Err(WalletError::Backup);
     }
     let wallet = Wallet {
+        domain,
         seed,
         checkpoint,
         scanned: None,

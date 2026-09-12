@@ -16,6 +16,11 @@ use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 
 mod cache;
 
+use crate::domain::{bound_signing_digest, DomainId};
+pub const BOUND_MAGIC: &[u8; 8] = b"ZVORLAB2";
+pub const DOMAIN_BYTES: usize = 32;
+pub const MAX_BOUND_ENVELOPE_SIZE: usize = MAX_ENVELOPE_SIZE + DOMAIN_BYTES;
+
 pub const MAGIC: &[u8; 8] = b"ZVORLAB1";
 pub const HEADER_SIZE: usize = 66;
 pub const ACTION_SIZE: usize = 884;
@@ -213,6 +218,56 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     Ok(Decoded { bundle, context })
 }
 
+/// Serialize V2 with an explicit domain ID. This does NOT re-sign a V1 bundle.
+pub fn encode_bound(
+    bundle: &SignedBundle,
+    context: &Context,
+    domain: DomainId,
+) -> Result<Vec<u8>, WireError> {
+    let body = encode(bundle, context)?;
+    let mut out = Vec::with_capacity(body.len() + DOMAIN_BYTES);
+    out.extend_from_slice(BOUND_MAGIC);
+    out.extend_from_slice(&domain.to_bytes());
+    out.extend_from_slice(&body[8..]);
+    Ok(out)
+}
+
+/// Reject a wrong network or V1 BEFORE curve/proof work. The expected domain is
+/// configuration, never trusted because it appears inside this untrusted input.
+pub fn decode_bound(raw: &[u8], expected: DomainId) -> Result<Decoded, WireError> {
+    if raw.len() > MAX_BOUND_ENVELOPE_SIZE {
+        return Err(WireError::Bounds);
+    }
+    if raw.len() < HEADER_SIZE + DOMAIN_BYTES || raw.get(..8) != Some(BOUND_MAGIC.as_slice()) {
+        return Err(WireError::Encoding);
+    }
+    if raw[8..40] != expected.to_bytes() {
+        return Err(WireError::Policy);
+    }
+    let mut body = Vec::with_capacity(raw.len() - DOMAIN_BYTES);
+    body.extend_from_slice(MAGIC);
+    body.extend_from_slice(&raw[40..]);
+    decode(&body)
+}
+
+pub(crate) fn decode_in_domain(raw: &[u8], domain: Option<DomainId>) -> Result<Decoded, WireError> {
+    match domain {
+        Some(id) => decode_bound(raw, id),
+        None => decode(raw),
+    }
+}
+
+pub(crate) fn encode_in_domain(
+    bundle: &SignedBundle,
+    context: &Context,
+    domain: Option<DomainId>,
+) -> Result<Vec<u8>, WireError> {
+    match domain {
+        Some(id) => encode_bound(bundle, context, id),
+        None => encode(bundle, context),
+    }
+}
+
 pub fn payload_digest(raw: &[u8]) -> [u8; 32] {
     Sha256::digest(raw).into()
 }
@@ -225,6 +280,7 @@ pub fn payload_digest(raw: &[u8]) -> [u8; 32] {
 /// Individual upstream signature verification and SingleVerifier avoid a new
 /// randomized signature-batch acceptance decision at this process boundary.
 pub struct AuthorizationVerifier {
+    domain: Option<DomainId>,
     key: VerifyingKey,
     verified: cache::VerifiedCache,
 }
@@ -235,19 +291,32 @@ impl Default for AuthorizationVerifier {
 }
 impl AuthorizationVerifier {
     pub fn new() -> Self {
+        Self::in_domain(None)
+    }
+    pub fn for_domain(domain: DomainId) -> Self {
+        Self::in_domain(Some(domain))
+    }
+    pub fn domain(&self) -> Option<DomainId> {
+        self.domain
+    }
+    pub(crate) fn in_domain(domain: Option<DomainId>) -> Self {
         Self {
+            domain,
             key: VerifyingKey::build(CIRCUIT),
             verified: cache::VerifiedCache::default(),
         }
     }
     pub fn verify(&self, raw: &[u8]) -> Result<[u8; 32], WireError> {
-        let decoded = decode(raw)?;
+        let decoded = decode_in_domain(raw, self.domain)?;
         let payload = payload_digest(raw);
         if self.verified.contains(raw, payload)? {
             return Ok(payload);
         }
-        let digest = signing_digest(&decoded.bundle, &decoded.context)
-            .map_err(|_| WireError::Authorization)?;
+        let digest = match self.domain {
+            Some(id) => bound_signing_digest(&decoded.bundle, &decoded.context, id),
+            None => signing_digest(&decoded.bundle, &decoded.context),
+        }
+        .map_err(|_| WireError::Authorization)?;
         for action in decoded.bundle.actions().iter() {
             action
                 .rk()

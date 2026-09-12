@@ -4,6 +4,7 @@ use super::*;
 use std::io::Seek;
 
 pub struct WalletHistory {
+    pub(crate) domain: Option<DomainId>,
     pub(crate) genesis: Hash,
     pub(crate) initial: Vec<Hash>,
     #[cfg(feature = "local-funding-lab")]
@@ -52,16 +53,36 @@ impl PoolStore {
             return Err(PoolError::Corrupt);
         }
         self.file.rewind().map_err(|_| PoolError::Storage)?;
+        if let Some(id) = self.state.domain {
+            let mut prefix = [0; 40];
+            self.file
+                .read_exact(&mut prefix)
+                .map_err(|_| PoolError::Corrupt)?;
+            if &prefix[..8] != BOUND_FILE_MAGIC || prefix[8..] != id.to_bytes() {
+                return Err(PoolError::Genesis);
+            }
+            // The remaining fixed header is the V1 network fingerprint + count.
+            // Keep one bounded parser for the commitment list and record stream.
+        }
         let mut fixed = [0; 44];
-        self.file
-            .read_exact(&mut fixed)
-            .map_err(|_| PoolError::Corrupt)?;
+        if self.state.domain.is_some() {
+            fixed[..8].copy_from_slice(FILE_MAGIC);
+            self.file
+                .read_exact(&mut fixed[8..])
+                .map_err(|_| PoolError::Corrupt)?;
+        } else {
+            self.file
+                .read_exact(&mut fixed)
+                .map_err(|_| PoolError::Corrupt)?;
+        }
         if &fixed[..8] != FILE_MAGIC || fixed[8..40] != Sha256::digest(NETWORK.as_bytes())[..] {
             return Err(PoolError::Genesis);
         }
         let count =
             u32::from_be_bytes(fixed[40..44].try_into().map_err(|_| PoolError::Corrupt)?) as usize;
-        if count > MAX_COMMITMENTS || 44 + count as u64 * 32 > self.length {
+        if count > MAX_COMMITMENTS
+            || 44 + u64::from(self.state.domain.is_some()) * 32 + count as u64 * 32 > self.length
+        {
             return Err(PoolError::Bounds);
         }
         let mut initial = Vec::with_capacity(count);
@@ -72,12 +93,12 @@ impl PoolStore {
                 .map_err(|_| PoolError::Corrupt)?;
             initial.push(cm);
         }
-        let mut state = State::from_genesis(&initial)?;
+        let mut state = State::from_genesis_in_domain(&initial, self.state.domain)?;
         if state.genesis != self.state.genesis {
             return Err(PoolError::Genesis);
         }
         let origin = state.summary();
-        let mut consumed = 44 + count as u64 * 32;
+        let mut consumed = 44 + u64::from(self.state.domain.is_some()) * 32 + count as u64 * 32;
         let mut blocks = Vec::new();
         while consumed < self.length {
             if blocks.len() >= MAX_RECORDS as usize {
@@ -138,6 +159,7 @@ impl PoolStore {
             return Err(PoolError::Corrupt);
         }
         Ok(WalletHistory {
+            domain: self.state.domain,
             #[cfg(feature = "local-funding-lab")]
             genesis_notes: Vec::new(),
             genesis: state.genesis,
