@@ -7,7 +7,7 @@ use std::path::Path;
 use zevune_orchard_lab::pool::{PoolError, PoolStore, PreparedBlock, Summary};
 use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
 const MAX_FRAME: usize = 524_288;
-const DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-1:zevune-orchard-lab-1:16:28102";
+const DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-2:zevune-orchard-lab-1:16:28134:genesis-bound-v2";
 type Hash = [u8; 32];
 type Block = (u64, Hash, Vec<Vec<u8>>);
 fn bad() -> io::Error {

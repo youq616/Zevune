@@ -74,7 +74,7 @@ func Load(configPath string, expected Hash) (*Network, error) {
 		return nil, ErrConfiguration
 	}
 	home := filepath.Dir(configPath)
-	if _, err = pinnedBytes(filepath.Join(home, assetName), asset, 165, 1890); err != nil {
+	if _, err = pinnedBytes(filepath.Join(home, assetName), asset, 165, 1922); err != nil {
 		return nil, err
 	}
 	raw, err = pinnedBytes(filepath.Join(home, genesisName), consensus, 100, 64*1024)
@@ -130,7 +130,7 @@ func Initialize(ctx context.Context, o InitOptions) (pin Hash, err error) {
 	if ctx == nil || ctx.Err() != nil || !filepath.IsAbs(o.Home) || !filepath.IsAbs(o.Worker) || o.WorkerSHA256 == (Hash{}) {
 		return pin, ErrBounds
 	}
-	asset, err := pinnedBytes(o.AssetManifest, o.AssetSHA256, 165, 1890)
+	asset, err := pinnedBytes(o.AssetManifest, o.AssetSHA256, 165, 1922)
 	if err != nil {
 		return pin, err
 	}

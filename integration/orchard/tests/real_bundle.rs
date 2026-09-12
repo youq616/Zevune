@@ -85,6 +85,7 @@ fn witness(leaves: &[MerkleHashOrchard], position: usize) -> (MerklePath, Anchor
 fn context(fee: u64) -> Context {
     Context {
         network: NETWORK.into(),
+        signing_domain: None,
         expiry_height: 100,
         fee,
     }
@@ -264,6 +265,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
         Proof::expected_proof_size(2)
     );
     let view = StateView {
+        signing_domain: None,
         height: 0,
         anchors: &anchors,
         spent: &spent,
@@ -313,11 +315,13 @@ fn real_proofs_two_hops_and_adversarial_cases() {
         Err(Error::Authorization)
     );
     let expired = StateView {
+        signing_domain: None,
         height: 100,
         ..view
     };
     assert_eq!(verifier.verify(&first, &ctx, &expired), Err(Error::Expired));
     let overflow = StateView {
+        signing_domain: None,
         height: u64::MAX,
         ..view
     };
@@ -327,6 +331,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
     );
     let unknown = [Anchor::empty_tree().to_bytes()];
     let missing = StateView {
+        signing_domain: None,
         anchors: &unknown,
         ..view
     };
@@ -337,6 +342,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
             &first,
             &ctx,
             &StateView {
+                signing_domain: None,
                 anchors: &too_many,
                 ..view
             }
@@ -467,6 +473,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
     let mut already_output = outputs.clone();
     already_output.insert(effects.commitments[0]);
     let repeated_output = StateView {
+        signing_domain: None,
         outputs: &already_output,
         ..view
     };
@@ -508,6 +515,7 @@ fn real_proofs_two_hops_and_adversarial_cases() {
     assert!(bob_path.root(bob_note.commitment().into()) == new_root);
     anchors.push(new_root.to_bytes());
     let after_first = StateView {
+        signing_domain: None,
         height: 1,
         anchors: &anchors,
         spent: &spent,

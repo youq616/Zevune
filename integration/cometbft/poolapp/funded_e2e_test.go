@@ -290,6 +290,20 @@ func TestFundedWalletFourNodesAndRecovery(t *testing.T) {
 	driver.replay(t, ctx, clients[0], set, 3)
 	firstStart := time.Now()
 	first := driver.call(t, 1, nil)
+	if len(first) < 40 || string(first[:8]) != "ZVORLAB2" || !bytes.Equal(first[8:40], pin[:]) {
+		t.Fatal("funded payment not signed for the pinned genesis domain")
+	}
+	foreignDomain := bytes.Clone(first)
+	foreignDomain[8] ^= 1
+	wrongDomain, domainErr := clients[0].BroadcastTxSync(ctx, types.Tx(foreignDomain))
+	if domainErr != nil || wrongDomain == nil || wrongDomain.Code == 0 {
+		t.Fatal("foreign signing domain admitted", domainErr)
+	}
+	downgraded := append([]byte("ZVORLAB1"), first[40:]...)
+	wrongVersion, versionErr := clients[0].BroadcastTxSync(ctx, types.Tx(downgraded))
+	if versionErr != nil || wrongVersion == nil || wrongVersion.Code == 0 {
+		t.Fatal("legacy downgrade admitted by genesis-bound network", versionErr)
+	}
 	if restored := driver.call(t, 4, []byte{0}); !bytes.Equal(first, restored) {
 		t.Fatal("sender backup did not preserve exact signed payment")
 	}
@@ -312,6 +326,9 @@ func TestFundedWalletFourNodesAndRecovery(t *testing.T) {
 	secondStart := time.Now()
 	driver.replay(t, ctx, clients[0], set, height(clients[0]))
 	second := driver.call(t, 3, nil)
+	if len(second) < 40 || string(second[:8]) != "ZVORLAB2" || !bytes.Equal(second[8:40], pin[:]) {
+		t.Fatal("onward payment lost the pinned genesis domain")
+	}
 	if restored := driver.call(t, 4, []byte{1}); !bytes.Equal(second, restored) {
 		t.Fatal("recipient backup lost onward payment")
 	}
@@ -369,5 +386,5 @@ func TestFundedWalletFourNodesAndRecovery(t *testing.T) {
 		}
 	}
 	t.Logf("FUNDED_LOCAL samples_ms=[%d,%d]; includes backup/rescan, signed-header checks and independent replay; only two samples, NOT p95/TPS/WAN or production payment speed", firstMS, secondMS)
-	t.Log("actual nonzero A->B->C, multi-input change, exact encrypted outbox recovery, one-validator outage, full network restart, signed state agreement and duplicate rejection passed")
+	t.Log("genesis-bound signatures, downgrade rejection, actual nonzero A->B->C, multi-input change, exact encrypted outbox recovery, one-validator outage, full network restart, signed state agreement and duplicate rejection passed")
 }

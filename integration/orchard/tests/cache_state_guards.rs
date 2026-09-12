@@ -81,6 +81,6 @@ fn warm_authorization_still_checks_atomicity_spends_expiry_and_roots() {
     let foreign = other.create_pool(&dir.0.join("foreign.journal")).unwrap();
     assert!(matches!(
         foreign.prepare(1, [1; 32], std::slice::from_ref(&raw)),
-        Err(PoolError::Anchor)
+        Err(PoolError::Domain)
     ));
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/youq616/Zevune/internal/poolbridge"
 )
 
 func TestMalformedCommandsNeverCreateOrOverwrite(t *testing.T) {
@@ -27,11 +29,17 @@ func TestMalformedCommandsNeverCreateOrOverwrite(t *testing.T) {
 func TestBoundedPublicTransactionFiles(t *testing.T) {
 	d := t.TempDir()
 	p := filepath.Join(d, "transaction")
-	for _, size := range []int{0, 28103} {
+	for _, size := range []int{0, poolbridge.MaxTransactionBytes + 1} {
 		os.WriteFile(p, make([]byte, size), 0600)
 		if _, e := transactionFile(p); e == nil {
 			t.Fatal("invalid length accepted")
 		}
+	}
+	if err := os.WriteFile(p, make([]byte, poolbridge.MaxTransactionBytes), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if raw, err := transactionFile(p); err != nil || len(raw) != poolbridge.MaxTransactionBytes {
+		t.Fatal("exact envelope size limit rejected")
 	}
 	os.WriteFile(p, []byte{1, 2, 3}, 0600)
 	if b, e := transactionFile(p); e != nil || len(b) != 3 {

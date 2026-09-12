@@ -12,6 +12,7 @@ use zevune_orchard_lab::pool::testnet::TestGenesis;
 use zevune_orchard_lab::pool::{PoolStore, Summary};
 use zevune_orchard_lab::wallet::vault::store::WalletStore;
 use zevune_orchard_lab::wallet::WalletProver;
+use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const LIMIT: usize = 524_288;
@@ -164,7 +165,7 @@ impl Scenario {
         for _ in 0..count {
             let n = u32::from_be_bytes(raw.get(p..p + 4).ok_or_else(bad)?.try_into()?) as usize;
             p += 4;
-            ensure(n > 0 && n <= 28_102)?;
+            ensure(n > 0 && n <= MAX_ENVELOPE_SIZE)?;
             let end = p.checked_add(n).ok_or_else(bad)?;
             txs.push(raw.get(p..end).ok_or_else(bad)?.to_vec());
             p = end;

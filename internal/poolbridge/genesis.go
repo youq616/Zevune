@@ -20,14 +20,14 @@ func (o Options) workerArgs(mode string) ([]string, error) {
 		return nil, ErrBounds
 	}
 	info, err := os.Lstat(o.TestGenesis)
-	if err != nil || !info.Mode().IsRegular() || info.Size() < 165 || info.Size() > 1890 {
+	if err != nil || !info.Mode().IsRegular() || info.Size() < 165 || info.Size() > 1922 {
 		return nil, ErrBounds
 	}
 	f, err := os.Open(o.TestGenesis)
 	if err != nil {
 		return nil, ErrBounds
 	}
-	b, err := io.ReadAll(io.LimitReader(f, 1891))
+	b, err := io.ReadAll(io.LimitReader(f, 1923))
 	closeErr := f.Close()
 	digest := sha256.Sum256(b)
 	if err != nil || closeErr != nil || int64(len(b)) != info.Size() || !bytes.Equal(digest[:], o.TestGenesisSHA256[:]) {

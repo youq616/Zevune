@@ -32,6 +32,7 @@ fn zero_value_real_proof_for_consensus() {
     let bundle = builder.build::<i64>(OsRng).unwrap().unwrap().0;
     let context = Context {
         network: NETWORK.into(),
+        signing_domain: None,
         expiry_height: 9999,
         fee: 0,
     };

@@ -20,9 +20,9 @@ import (
 
 const Network = "zevune-orchard-lab-1"
 const MaxTransactions = 16
-const MaxTransactionBytes = 28102
+const MaxTransactionBytes = 28134
 const maxFrame = 524288
-const domain = "ZEVUNE-POOL-IPC-1:zevune-orchard-lab-1:16:28102"
+const domain = "ZEVUNE-POOL-IPC-2:zevune-orchard-lab-1:16:28134:genesis-bound-v2"
 
 type Hash = [32]byte
 

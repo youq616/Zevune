@@ -1,6 +1,8 @@
 //! Private child-process protocol. No listener, wallet RPC or arbitrary command.
 //! Success reports stateless cryptographic authorization, never ledger validity.
-use crate::wire::{payload_digest, AuthorizationVerifier, MAX_ENVELOPE_SIZE};
+use crate::wire::{
+    payload_digest, AuthorizationVerifier, MAGIC, MAX_LEGACY_ENVELOPE_SIZE as MAX_ENVELOPE_SIZE,
+};
 use sha2::{Digest, Sha256};
 use std::io::{self, Read, Write};
 
@@ -69,7 +71,11 @@ pub fn serve<R: Read, W: Write>(reader: &mut R, writer: &mut W) -> io::Result<()
         last_id = id;
         let raw = &request[20..];
         let digest = payload_digest(raw);
-        let status = if verifier.verify(raw).is_ok() { 0 } else { 1 };
+        let status = if raw.get(..8) == Some(MAGIC.as_slice()) && verifier.verify(raw).is_ok() {
+            0
+        } else {
+            1
+        };
         let mut response = Vec::with_capacity(49);
         response.extend_from_slice(RESPONSE_MAGIC);
         response.extend_from_slice(&id.to_be_bytes());

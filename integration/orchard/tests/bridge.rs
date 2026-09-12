@@ -51,6 +51,7 @@ fn real_wire_roundtrip_individual_authorization_and_rejections() {
             &bundle,
             &ctx,
             &StateView {
+                signing_domain: None,
                 height: 0,
                 anchors: &[bundle.anchor().to_bytes()],
                 spent: &BTreeSet::new(),

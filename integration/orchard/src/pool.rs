@@ -1,5 +1,5 @@
-//! NO-FUNDS Orchard state machine and bounded journal. Not connected to consensus.
-//! Public constructors only support empty genesis. Nonempty bootstrap is test-only.
+//! NO-FUNDS Orchard state machine and bounded journal used by the lab adapter.
+//! Public default constructors support empty genesis. Funded bootstrap is opt-in.
 //! Every replay and commit rechecks actual authorization; hashes are not finality.
 use std::collections::{BTreeSet, VecDeque};
 use std::fs::{self, File, OpenOptions};
@@ -16,6 +16,7 @@ use crate::{MAX_ANCHORS, NETWORK};
 
 type Hash = [u8; 32];
 const FILE_MAGIC: &[u8; 8] = b"ZVOPOL01";
+const BOUND_FILE_MAGIC: &[u8; 8] = b"ZVOPOL02";
 const RECORD_MAGIC: &[u8; 8] = b"ZVOBLK01";
 pub const MAX_BLOCK_TRANSACTIONS: usize = 16;
 pub const MAX_COMMITMENTS: usize = 65_536;
@@ -28,6 +29,7 @@ pub enum PoolError {
     Bounds,
     Height,
     Genesis,
+    Domain,
     Anchor,
     DoubleSpend,
     DuplicateOutput,
@@ -62,6 +64,7 @@ struct State {
     height: u64,
     head: Hash,
     genesis: Hash,
+    signing_domain: Option<Hash>,
     fees: u64,
     frontier: Frontier<MerkleHashOrchard, 32>,
     spent: BTreeSet<Hash>,
@@ -69,7 +72,11 @@ struct State {
     anchors: VecDeque<Hash>,
 }
 impl State {
+    #[cfg(test)]
     fn from_genesis(commitments: &[Hash]) -> Result<Self, PoolError> {
+        Self::from_policy(commitments, None)
+    }
+    fn from_policy(commitments: &[Hash], signing_domain: Option<Hash>) -> Result<Self, PoolError> {
         if commitments.len() > MAX_COMMITMENTS {
             return Err(PoolError::Bounds);
         }
@@ -84,11 +91,12 @@ impl State {
             }
         }
         let root = frontier.root().to_bytes();
-        let genesis = Sha256::digest(genesis_bytes(commitments)?).into();
+        let genesis = Sha256::digest(genesis_bytes_policy(commitments, signing_domain)?).into();
         Ok(Self {
             height: 0,
             head: [0; 32],
             genesis,
+            signing_domain,
             fees: 0,
             frontier,
             spent: BTreeSet::new(),
@@ -148,6 +156,11 @@ impl State {
         let mut next = self.clone();
         for raw in transactions {
             let decoded = decode(raw).map_err(|_| PoolError::Authorization)?;
+            // Check the trusted genesis policy on EVERY execution, including
+            // cache hits, replay and final commit. No legacy/domain fallback.
+            if decoded.context.signing_domain != self.signing_domain {
+                return Err(PoolError::Domain);
+            }
             if decoded.context.expiry_height < height {
                 return Err(PoolError::Expired);
             }
@@ -235,8 +248,15 @@ impl PoolStore {
         Self::open_with_genesis(path, &[])
     }
     fn create_with_genesis(path: &Path, initial: &[Hash]) -> Result<Self, PoolError> {
-        let state = State::from_genesis(initial)?;
-        let header = genesis_bytes(initial)?;
+        Self::create_with_policy(path, initial, None)
+    }
+    fn create_with_policy(
+        path: &Path,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+    ) -> Result<Self, PoolError> {
+        let state = State::from_policy(initial, signing_domain)?;
+        let header = genesis_bytes_policy(initial, signing_domain)?;
         let mut options = OpenOptions::new();
         options.create_new(true).read(true).append(true);
         #[cfg(unix)]
@@ -261,6 +281,13 @@ impl PoolStore {
         })
     }
     fn open_with_genesis(path: &Path, initial: &[Hash]) -> Result<Self, PoolError> {
+        Self::open_with_policy(path, initial, None)
+    }
+    fn open_with_policy(
+        path: &Path,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+    ) -> Result<Self, PoolError> {
         let info = fs::symlink_metadata(path).map_err(|_| PoolError::Storage)?;
         if !info.file_type().is_file() || info.len() > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
@@ -275,7 +302,7 @@ impl PoolStore {
         if length > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
         }
-        let expected_header = genesis_bytes(initial)?;
+        let expected_header = genesis_bytes_policy(initial, signing_domain)?;
         let mut actual_header = vec![0; expected_header.len()];
         file.read_exact(&mut actual_header)
             .map_err(|_| PoolError::Corrupt)?;
@@ -283,7 +310,7 @@ impl PoolStore {
             return Err(PoolError::Genesis);
         }
         let verifier = AuthorizationVerifier::new();
-        let mut state = State::from_genesis(initial)?;
+        let mut state = State::from_policy(initial, signing_domain)?;
         let mut read_length = actual_header.len() as u64;
         loop {
             let mut prefix = [0; 4];
@@ -441,12 +468,29 @@ impl PoolStore {
     }
 }
 
+#[cfg(test)]
 fn genesis_bytes(initial: &[Hash]) -> Result<Vec<u8>, PoolError> {
+    genesis_bytes_policy(initial, None)
+}
+fn genesis_bytes_policy(
+    initial: &[Hash],
+    signing_domain: Option<Hash>,
+) -> Result<Vec<u8>, PoolError> {
     if initial.len() > MAX_COMMITMENTS {
         return Err(PoolError::Bounds);
     }
-    let mut out = FILE_MAGIC.to_vec();
+    if signing_domain == Some([0; 32]) {
+        return Err(PoolError::Domain);
+    }
+    let mut out = if signing_domain.is_some() {
+        BOUND_FILE_MAGIC.to_vec()
+    } else {
+        FILE_MAGIC.to_vec()
+    };
     out.extend_from_slice(&Sha256::digest(NETWORK.as_bytes()));
+    if let Some(domain) = signing_domain {
+        out.extend_from_slice(&domain);
+    }
     out.extend_from_slice(&(initial.len() as u32).to_be_bytes());
     for cm in initial {
         out.extend_from_slice(cm);

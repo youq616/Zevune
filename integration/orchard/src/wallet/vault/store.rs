@@ -373,6 +373,12 @@ impl WalletStore {
     pub fn sync(&mut self, history: &WalletHistory) -> Result<(), StoreError> {
         self.room()?;
         self.validate_storage()?;
+        if let Some(raw) = &self.outbox {
+            let tx = decode(raw).map_err(|_| StoreError::Corrupt)?;
+            if tx.context.signing_domain != history.signing_domain {
+                return Err(StoreError::Wallet(WalletError::History));
+            }
+        }
         let before = snapshot(&self.wallet)?;
         self.wallet.sync(history)?;
         let cleared = self.wallet.pending_id().is_none() && self.outbox.is_some();

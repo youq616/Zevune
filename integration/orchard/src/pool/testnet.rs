@@ -12,8 +12,10 @@ use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
 
-const MAGIC: &[u8; 8] = b"ZVTGEN01";
-const HEADER: usize = 50;
+const LEGACY_MAGIC: &[u8; 8] = b"ZVTGEN01";
+const MAGIC: &[u8; 8] = b"ZVTGEN02";
+const LEGACY_HEADER: usize = 50;
+const HEADER: usize = 82;
 const ENTRY: usize = 115;
 pub const TEST_SUPPLY: u64 = 100_000;
 pub const MAX_ALLOCATIONS: usize = 16;
@@ -44,6 +46,14 @@ impl TestGenesis {
         bytes.extend_from_slice(&Sha256::digest(crate::NETWORK.as_bytes()));
         bytes.extend_from_slice(&TEST_SUPPLY.to_be_bytes());
         bytes.extend_from_slice(&(allocations.len() as u16).to_be_bytes());
+        let mut deployment_id = [0; 32];
+        OsRng
+            .try_fill_bytes(&mut deployment_id)
+            .map_err(|_| PoolError::Genesis)?;
+        if deployment_id == [0; 32] {
+            return Err(PoolError::Genesis);
+        }
+        bytes.extend_from_slice(&deployment_id);
         for (address, value) in allocations {
             let mut produced = None;
             for _ in 0..128 {
@@ -84,23 +94,31 @@ impl TestGenesis {
         Self::decode(&bytes)
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, PoolError> {
-        if !(HEADER + ENTRY..=MAX_GENESIS_BYTES).contains(&bytes.len())
-            || &bytes[..8] != MAGIC
+        if !(LEGACY_HEADER + ENTRY..=MAX_GENESIS_BYTES).contains(&bytes.len())
+            || (&bytes[..8] != MAGIC && &bytes[..8] != LEGACY_MAGIC)
             || bytes[8..40] != Sha256::digest(crate::NETWORK.as_bytes())[..]
             || bytes[40..48] != TEST_SUPPLY.to_be_bytes()
         {
             return Err(PoolError::Genesis);
         }
+        let header = if &bytes[..8] == MAGIC {
+            HEADER
+        } else {
+            LEGACY_HEADER
+        };
         let count =
             u16::from_be_bytes(bytes[48..50].try_into().map_err(|_| PoolError::Genesis)?) as usize;
-        if !(1..=MAX_ALLOCATIONS).contains(&count) || bytes.len() != HEADER + count * ENTRY {
+        if !(1..=MAX_ALLOCATIONS).contains(&count) || bytes.len() != header + count * ENTRY {
+            return Err(PoolError::Genesis);
+        }
+        if header == HEADER && bytes[50..82] == [0; 32] {
             return Err(PoolError::Genesis);
         }
         let mut notes = Vec::with_capacity(count);
         let mut rhos = BTreeSet::new();
         let mut commitments = BTreeSet::new();
         let mut total = 0u64;
-        for entry in bytes[HEADER..].as_chunks::<ENTRY>().0 {
+        for entry in bytes[header..].as_chunks::<ENTRY>().0 {
             let address = Option::<Address>::from(Address::from_raw_address_bytes(
                 &entry[..43].try_into().map_err(|_| PoolError::Genesis)?,
             ))
@@ -152,6 +170,15 @@ impl TestGenesis {
     pub fn digest(&self) -> Hash {
         Sha256::digest(&self.bytes).into()
     }
+    /// The deployment policy comes from an independently pinned manifest, not
+    /// a transaction. Reusing an identical manifest deliberately reuses identity.
+    pub fn signing_domain(&self) -> Option<Hash> {
+        if self.bytes.get(..8) == Some(MAGIC.as_slice()) {
+            Some(self.digest())
+        } else {
+            None
+        }
+    }
     fn commitments(&self) -> Vec<Hash> {
         self.notes
             .iter()
@@ -159,19 +186,20 @@ impl TestGenesis {
             .collect()
     }
     pub fn initial_summary(&self) -> Result<Summary, PoolError> {
-        Ok(State::from_genesis(&self.commitments())?.summary())
+        Ok(State::from_policy(&self.commitments(), self.signing_domain())?.summary())
     }
     pub fn create_pool(&self, path: &Path) -> Result<PoolStore, PoolError> {
-        PoolStore::create_with_genesis(path, &self.commitments())
+        PoolStore::create_with_policy(path, &self.commitments(), self.signing_domain())
     }
     pub fn open_pool(&self, path: &Path) -> Result<PoolStore, PoolError> {
-        PoolStore::open_with_genesis(path, &self.commitments())
+        PoolStore::open_with_policy(path, &self.commitments(), self.signing_domain())
     }
     /// Attach public genesis allocations ONLY after full journal authorization
     /// replay and exact commitment-order comparison. No remote peer is trusted.
     pub fn wallet_history(&self, pool: &mut PoolStore) -> Result<WalletHistory, PoolError> {
         let mut history = pool.wallet_history()?;
-        if history.initial != self.commitments() {
+        if history.initial != self.commitments() || history.signing_domain != self.signing_domain()
+        {
             return Err(PoolError::Genesis);
         }
         history.genesis_notes = self.notes.clone();

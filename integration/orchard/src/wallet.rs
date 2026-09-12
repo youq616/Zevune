@@ -55,6 +55,7 @@ struct OwnedNote {
     position: usize,
 }
 struct Scanned {
+    signing_domain: Option<Hash>,
     leaves: Vec<MerkleHashOrchard>,
     notes: BTreeMap<Hash, OwnedNote>,
 }
@@ -218,6 +219,9 @@ impl Wallet {
         for block in &history.blocks {
             for raw in &block.transactions {
                 let tx = decode(raw).map_err(|_| WalletError::History)?;
+                if tx.context.signing_domain != history.signing_domain {
+                    return Err(WalletError::History);
+                }
                 let start = leaves.len();
                 if start
                     .checked_add(tx.bundle.actions().len())
@@ -263,7 +267,11 @@ impl Wallet {
         let pending = self.pending.clone().filter(|p| {
             tip.height <= p.expiry && !p.nullifiers.iter().any(|nf| spent.contains(nf))
         });
-        self.scanned = Some(Scanned { leaves, notes });
+        self.scanned = Some(Scanned {
+            signing_domain: history.signing_domain,
+            leaves,
+            notes,
+        });
         self.checkpoint = Some(Checkpoint {
             genesis: history.genesis,
             height: tip.height,
@@ -352,6 +360,7 @@ impl Wallet {
         }
         let ctx = Context {
             network: NETWORK.into(),
+            signing_domain: scanned.signing_domain,
             expiry_height: expiry,
             fee,
         };

@@ -13,7 +13,7 @@ import (
 )
 
 const ChainID = poolbridge.Network
-const Version = "0.3.1-funded-consensus-lab"
+const Version = "0.3.2-genesis-bound-lab"
 const AppVersion uint64 = 2
 
 type Application struct {

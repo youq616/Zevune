@@ -17,11 +17,14 @@ use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 mod cache;
 
 pub const MAGIC: &[u8; 8] = b"ZVORLAB1";
+pub const BOUND_MAGIC: &[u8; 8] = b"ZVORLAB2";
+pub const DOMAIN_SIZE: usize = 32;
 pub const HEADER_SIZE: usize = 66;
 pub const ACTION_SIZE: usize = 884;
 pub const TAIL_SIZE: usize = 68;
-pub const MAX_ENVELOPE_SIZE: usize =
+pub const MAX_LEGACY_ENVELOPE_SIZE: usize =
     HEADER_SIZE + MAX_ACTIONS * ACTION_SIZE + Proof::expected_proof_size(MAX_ACTIONS) + TAIL_SIZE;
+pub const MAX_ENVELOPE_SIZE: usize = MAX_LEGACY_ENVELOPE_SIZE + DOMAIN_SIZE;
 
 pub type SignedBundle = Bundle<Authorized, i64>;
 
@@ -52,6 +55,7 @@ fn size(n: usize) -> usize {
 
 fn policy(bundle: &SignedBundle, context: &Context) -> Result<(), WireError> {
     if context.network != NETWORK
+        || context.signing_domain == Some([0; 32])
         || context.expiry_height == 0
         || context.fee > i64::MAX as u64
         || *bundle.value_balance() != context.fee as i64
@@ -77,13 +81,24 @@ fn policy(bundle: &SignedBundle, context: &Context) -> Result<(), WireError> {
     Ok(())
 }
 
-/// Encode all authorizing bytes without changing the M4 signing transcript.
-/// Only one implicit network, circuit version and flags combination is supported.
-/// A future network format MUST have a separately reviewed activation/version rule.
+/// Preserve legacy authorizing bytes or encode explicit genesis-bound LAB2.
+/// A policy is chosen by trusted state, not by accepting any decoded envelope.
+/// Neither variant is a finalized mainnet transaction format.
 pub fn encode(bundle: &SignedBundle, context: &Context) -> Result<Vec<u8>, WireError> {
     policy(bundle, context)?;
-    let mut out = Vec::with_capacity(size(bundle.actions().len()));
-    out.extend_from_slice(MAGIC);
+    let extra = if context.signing_domain.is_some() {
+        DOMAIN_SIZE
+    } else {
+        0
+    };
+    let mut out = Vec::with_capacity(size(bundle.actions().len()) + extra);
+    match context.signing_domain {
+        None => out.extend_from_slice(MAGIC),
+        Some(domain) => {
+            out.extend_from_slice(BOUND_MAGIC);
+            out.extend_from_slice(&domain);
+        }
+    }
     out.extend_from_slice(&context.expiry_height.to_be_bytes());
     out.extend_from_slice(&context.fee.to_be_bytes());
     out.extend_from_slice(&bundle.value_balance().to_be_bytes());
@@ -132,14 +147,28 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     if raw.len() > MAX_ENVELOPE_SIZE {
         return Err(WireError::Bounds);
     }
-    if raw.len() < HEADER_SIZE || raw.get(..8) != Some(MAGIC.as_slice()) {
+    let extra = match raw.get(..8) {
+        Some(magic) if magic == MAGIC => 0,
+        Some(magic) if magic == BOUND_MAGIC => DOMAIN_SIZE,
+        _ => return Err(WireError::Encoding),
+    };
+    if raw.len() < HEADER_SIZE + extra {
         return Err(WireError::Encoding);
     }
-    let n = raw[64] as usize;
+    let signing_domain = if extra == 0 {
+        None
+    } else {
+        let domain: [u8; 32] = raw[8..40].try_into().map_err(|_| WireError::Encoding)?;
+        if domain == [0; 32] {
+            return Err(WireError::Policy);
+        }
+        Some(domain)
+    };
+    let n = raw[64 + extra] as usize;
     if !(2..=MAX_ACTIONS).contains(&n) {
         return Err(WireError::Bounds);
     }
-    if raw[65]
+    if raw[65 + extra]
         != VERSION
             .default_flags()
             .to_byte(VERSION)
@@ -147,10 +176,13 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     {
         return Err(WireError::Policy);
     }
-    if raw.len() != size(n) {
+    if raw.len() != size(n) + extra {
         return Err(WireError::Encoding);
     }
-    let mut r = Reader { raw, pos: 8 };
+    let mut r = Reader {
+        raw,
+        pos: 8 + extra,
+    };
     let expiry = u64::from_be_bytes(r.array()?);
     let fee = u64::from_be_bytes(r.array()?);
     let balance = i64::from_be_bytes(r.array()?);
@@ -203,6 +235,7 @@ pub fn decode(raw: &[u8]) -> Result<Decoded, WireError> {
     .map_err(|_| WireError::Encoding)?;
     let context = Context {
         network: NETWORK.into(),
+        signing_domain,
         expiry_height: expiry,
         fee,
     };

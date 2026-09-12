@@ -71,6 +71,7 @@ pub fn witness(leaves: &[MerkleHashOrchard], position: usize) -> (MerklePath, An
 pub fn context() -> Context {
     Context {
         network: NETWORK.into(),
+        signing_domain: None,
         expiry_height: 100,
         fee: 1_000,
     }
