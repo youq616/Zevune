@@ -10,8 +10,9 @@ use std::path::{Path, PathBuf};
 use zeroize::Zeroizing;
 use zevune_orchard_lab::pool::testnet::TestGenesis;
 use zevune_orchard_lab::pool::{PoolStore, Summary};
-use zevune_orchard_lab::wallet::vault::store::WalletStore;
-use zevune_orchard_lab::wallet::WalletProver;
+use zevune_orchard_lab::wallet::address::Recipient;
+use zevune_orchard_lab::wallet::vault::store::{StoreError, WalletStore};
+use zevune_orchard_lab::wallet::{WalletError, WalletProver};
 use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
@@ -138,7 +139,9 @@ impl Scenario {
             .as_ref()
             .ok_or_else(bad)?
             .view()?
-            .receive_address(0)?;
+            .receive_recipient(0)?;
+        // Exercise the same checked presentation API as a real wallet caller.
+        let destination = Recipient::decode(&destination.encode())?;
         let expiry = self
             .pool
             .as_ref()
@@ -147,10 +150,27 @@ impl Scenario {
             .height
             .checked_add(100)
             .ok_or_else(bad)?;
-        let tx = self.wallets[sender]
-            .as_mut()
-            .ok_or_else(bad)?
-            .prepare_payment(destination, value, 1_000, expiry, &self.prover)?;
+        let sender = self.wallets[sender].as_mut().ok_or_else(bad)?;
+        let domain = sender.view()?.signing_domain()?.ok_or_else(bad)?;
+        let receiver = destination.for_domain(Some(domain))?;
+        let mut other = domain;
+        other[0] ^= 1;
+        if other == [0; 32] {
+            other[1] = 1;
+        }
+        let before = sender.receipt()?;
+        // Wrong domain and legacy downgrades must fail before a new reservation.
+        for wrong in [
+            Recipient::new(receiver, Some(other))?,
+            Recipient::new(receiver, None)?,
+        ] {
+            ensure(matches!(
+                sender.check_payment_to(&wrong, value, 1_000, expiry),
+                Err(StoreError::Wallet(WalletError::History))
+            ))?;
+            ensure(sender.receipt()? == before && sender.pending_payment()?.is_none())?;
+        }
+        let tx = sender.prepare_payment_to(&destination, value, 1_000, expiry, &self.prover)?;
         self.phase += 1;
         Ok(tx.bytes().to_vec())
     }

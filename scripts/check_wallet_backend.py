@@ -7,12 +7,13 @@ The executable is required. Missing prerequisites fail rather than skip tests.
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 import secrets
 import sys
 import tempfile
 
-from zevune_wallet import checked_address, checked_recipient, encode_request, genesis_identity, invoke
+from zevune_wallet import checked_address, checked_prepare_timing, checked_recipient, encode_request, genesis_identity, invoke
 
 
 def run(backend: Path) -> None:
@@ -87,6 +88,8 @@ def run(backend: Path) -> None:
             assert all(Path(name).read_bytes() == data for name, data in before.items())
         payment = invoke(backend, encode_request(4, password, [restored, journal, manifest, pin,
             peer_address, "25000", "1000", "10", output]))
+        timing = checked_prepare_timing(payment)
+        assert timing["valid"] is True, "Discard invalid clock sample; no latency claim"
         raw_payment = Path(output).read_bytes()
         assert raw_payment[:8] == b"ZVORLAB2" and raw_payment[8:40].hex() == pin
         assert hashlib.sha256(raw_payment).hexdigest() == payment["txid"]
@@ -96,6 +99,7 @@ def run(backend: Path) -> None:
         recovered_output = str(root / "same-payment.bin")
         pending = invoke(backend, encode_request(5, password,
             [paid_backup, journal, manifest, pin, recovered_output], payment["receipt"]))
+        assert "local_timing" not in pending, "Outbox export is not a second payment measurement"
         assert pending["txid"] == payment["txid"]
         assert Path(recovered_output).read_bytes() == raw_payment
         # LAB1 remains readable and explicitly unbound; no silent LAB2 downgrade.
@@ -115,6 +119,9 @@ def run(backend: Path) -> None:
             else:
                 raise AssertionError("Invalid private-input frame was accepted")
         assert Path(restored).read_bytes() == original
+    # Only an ephemeral test measurement, never addresses, receipts or secrets.
+    print(json.dumps({"measurement_scope": "single_local_prepare_sample_not_end_to_end",
+                      "samples": 1, "timing": timing}, sort_keys=True))
     print("Python/Rust local-wallet interop and domain-checked payment/outbox recovery passed; no broadcast, secrets or wallet artifacts retained.")
 
 

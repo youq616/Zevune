@@ -156,6 +156,37 @@ def checked_payment_numbers(amount: str, fee: str, expiry: str) -> tuple[str, st
     return values
 
 
+PREPARE_STAGES = {"setup_and_sync", "intent_preflight", "prover_parameters",
+                  "prove_sign_verify_persist", "export"}
+
+
+def checked_prepare_timing(response: dict) -> dict:
+    """Validate local diagnostics, never a payment or confirmation certificate.
+
+    Invalid clock samples explicitly carry nulls. Do not turn them into zeroes,
+    latency promises or a reason to prepare another payment.
+    """
+    timing = response.get("local_timing")
+    if (not isinstance(timing, dict)
+            or set(timing) != {"format", "scope", "unit", "valid", "stages", "total"}
+            or timing["format"] != "zevune-prepare-timing-1"
+            or timing["scope"] != "local_prepare_not_finality"
+            or timing["unit"] != "microseconds" or type(timing["valid"]) is not bool
+            or not isinstance(timing["stages"], dict)
+            or set(timing["stages"]) != PREPARE_STAGES):
+        raise RuntimeError("Unexpected local timing schema; reconcile saved payment state")
+    values = [*timing["stages"].values(), timing["total"]]
+    if timing["valid"]:
+        if any(type(v) is not int or not 0 <= v <= (1 << 64) - 1 for v in values):
+            raise RuntimeError("Invalid timing values; reconcile saved payment state")
+        remainder = timing["total"] - sum(timing["stages"].values())
+        if not 0 <= remainder < len(PREPARE_STAGES):
+            raise RuntimeError("Inconsistent stage timing; reconcile saved payment state")
+    elif any(v is not None for v in values):
+        raise RuntimeError("Invalid clock sample must be explicit; reconcile saved payment state")
+    return timing
+
+
 def invoke(backend: Path, request: bytes, expected_sha: str | None = None) -> dict:
     backend = backend.absolute()
     metadata = backend.lstat()
@@ -245,6 +276,8 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError("Backend network identity mismatch; reconcile saved state")
         if args.command == "network-address":
             checked_recipient(response.get("address", ""), identity["signing_domain"])
+        if args.command == "prepare":
+            checked_prepare_timing(response)
         print(json.dumps(response, ensure_ascii=True, indent=2))
         return 0
     except NetworkMismatch:

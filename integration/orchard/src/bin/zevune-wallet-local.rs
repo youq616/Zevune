@@ -10,6 +10,10 @@ use zevune_orchard_lab::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use zevune_orchard_lab::wallet::vault::store::{StoreReceipt, WalletStore};
 use zevune_orchard_lab::wallet::{address::Recipient, Payment, WalletProver};
 
+#[path = "operator_support/timing.rs"]
+mod timing;
+use timing::PrepareTiming;
+
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const MAX_REQUEST: usize = 16_384;
 fn bad() -> io::Error {
@@ -158,16 +162,21 @@ fn prepare_checked(
     wallet: &mut WalletStore,
     intent: Intent,
     make_prover: impl FnOnce() -> WalletProver,
+    timing: &mut PrepareTiming,
 ) -> Result<Payment> {
     wallet.check_payment_to(&intent.recipient, intent.amount, intent.fee, intent.expiry)?;
+    timing.mark();
     let prover = make_prover();
-    Ok(wallet.prepare_payment_to(
+    timing.mark();
+    let payment = wallet.prepare_payment_to(
         &intent.recipient,
         intent.amount,
         intent.fee,
         intent.expiry,
         &prover,
-    )?)
+    )?;
+    timing.mark();
+    Ok(payment)
 }
 fn export(path: &Path, payment: &Payment) -> Result<()> {
     let mut options = OpenOptions::new();
@@ -189,6 +198,7 @@ fn unused_output(path: &Path) -> Result<()> {
     }
 }
 fn execute(request: Request<'_>) -> Result<String> {
+    let mut timing = PrepareTiming::start();
     let f = &request.fields;
     let source = path(f[0])?;
     if request.op == 0 {
@@ -249,18 +259,27 @@ fn execute(request: Request<'_>) -> Result<String> {
             let genesis = genesis.as_ref().ok_or_else(bad)?;
             sync(&mut wallet, f, genesis)?;
             let payment = if let Some(intent) = payment_intent {
-                prepare_checked(&mut wallet, intent, WalletProver::new)?
+                timing.mark();
+                prepare_checked(&mut wallet, intent, WalletProver::new, &mut timing)?
             } else {
                 wallet.pending_payment()?.ok_or_else(bad)?
             };
             // The encrypted reservation is durable BEFORE any export. A failed
             // export never clears it or silently creates a replacement payment.
             export(target, &payment)?;
+            // Pending export does not generate another proof or measurement.
+            let measured = if request.op == 4 {
+                timing.mark();
+                format!(",{}", timing.json())
+            } else {
+                String::new()
+            };
             format!(
-                "{},\"result\":\"signed_transaction_exported_not_broadcast\",\"txid\":\"{}\",\"receipt\":\"{}\"",
+                "{},\"result\":\"signed_transaction_exported_not_broadcast\",\"txid\":\"{}\",\"receipt\":\"{}\"{}",
                 identity(genesis),
                 hex(&payment.id()),
-                receipt(&wallet)?
+                receipt(&wallet)?,
+                measured
             )
         }
         7 => {
@@ -485,6 +504,7 @@ mod tests {
                     expiry,
                 },
                 || panic!("invalid intent must not initialize proving parameters"),
+                &mut PrepareTiming::start(),
             );
             let error = match error {
                 Ok(_) => panic!("invalid intent accepted"),

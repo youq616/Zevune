@@ -123,3 +123,19 @@ payment reserves its notes, that a restored wallet must rescan, and that having
 sufficient total balance does not bypass the bounded number of spend inputs.
 This eliminates avoidable parameter construction for rejected payments; no
 end-to-end speedup, p95, or TPS is inferred from the ordering tests.
+
+## Multi-process acceptance and measurements
+
+The funded scenario used by the existing four-node suites now serializes and
+parses the receiving wallet's domain-bound recipient and uses
+`WalletStore::prepare_payment_to` for both real payments. Before each payment it
+rejects a different-domain and a legacy-recipient variant, checks that the sender
+receipt and pending state are unchanged, then continues the original broadcast,
+backup/reopen, replay and restart scenarios. It no longer exercises only the raw
+low-level receiver API. No new consensus transaction format is introduced.
+
+The local CLI additionally measures preparation stages without placing timing in
+signatures, proofs or persisted state. See `../LOCAL_PREPARE_TIMING.md` for exact
+scope. A successful preparation measurement is not broadcast or finality evidence.
+P1 still requires further protocol/version/upgrade work; these recipient checks do
+not complete the whole P1 work package, and the local measurements do not complete P7.
