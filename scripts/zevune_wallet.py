@@ -24,8 +24,8 @@ MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
        "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
-       "network-address": 8, "storage": 9}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1}
+       "network-address": 8, "storage": 9, "compact": 10}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -33,6 +33,8 @@ def encode_request(op: int, password: bytes, fields: list[str], pin: str | None 
         raise ValueError("Invalid request bounds")
     if pin is not None and (op == 0 or re.fullmatch(r"[0-9a-f]{144}", pin) is None):
         raise ValueError("Invalid independently saved wallet receipt")
+    if op == 10 and pin is None:
+        raise ValueError("Compaction requires the exact current source receipt")
     data = bytearray(MAGIC + bytes([op]) + struct.pack(">H", len(password)) + password)
     data.append(int(pin is not None))
     if pin is not None:
@@ -212,6 +214,28 @@ def checked_storage_status(response: dict) -> dict:
     return status
 
 
+
+def checked_compaction(response: dict, expected_source: str) -> dict:
+    """Verify handover diagnostics; this is not a signed ancestry certificate."""
+    if (not isinstance(expected_source, str)
+            or re.fullmatch(r"[0-9a-f]{144}", expected_source) is None
+            or not 1 <= int(expected_source[64:80], 16) <= 256):
+        raise RuntimeError("Invalid source receipt; inspect copies before further use")
+    target = response.get("receipt")
+    if (response.get("result") != "compacted_copy_not_synced"
+            or response.get("source_receipt") != expected_source
+            or response.get("source_retained") is not True
+            or response.get("requires_rescan") is not True
+            or any(k in response for k in ("balance", "available", "confirmed", "txid"))
+            or not isinstance(target, str) or re.fullmatch(r"[0-9a-f]{144}", target) is None
+            or target[:64] == expected_source[:64]
+            or int(target[64:80], 16) != 1):
+        raise RuntimeError("Unexpected compaction handover; inspect copies before further use")
+    capacity = checked_storage_status(response)
+    if capacity["records_used"] != 1:
+        raise RuntimeError("Unexpected target capacity; inspect copies before further use")
+    return response
+
 def invoke(backend: Path, request: bytes, expected_sha: str | None = None) -> dict:
     backend = backend.absolute()
     metadata = backend.lstat()
@@ -254,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
     for command in OPS:
         sub = commands.add_parser(command)
         sub.add_argument("wallet", type=Path)
-        if command in {"backup", "restore", "prepare", "pending"}:
+        if command in {"backup", "restore", "prepare", "pending", "compact"}:
             sub.add_argument("output", type=Path)
         if command in {"address", "network-address"}:
             sub.add_argument("--index", default="0")
@@ -265,11 +289,27 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--genesis-sha256", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "compact":
+            # Validate before asking for a password or starting any child. No
+            # overwriting, in-place truncation, automatic retry or file deletion.
+            if args.pin is None or re.fullmatch(r"[0-9a-f]{144}", args.pin) is None:
+                raise ValueError("Compaction requires the exact current source receipt")
+            if not 1 <= int(args.pin[64:80], 16) <= 256:
+                raise ValueError("Invalid source generation")
+            try:
+                args.output.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                raise ValueError("Compaction target must not exist")
+            print("Create a new wallet copy; retain the source OFFLINE. Never operate both copies. Save the NEW receipt and rescan before spending.", file=sys.stderr)
+            if input("Type COMPACT to create the new copy without changing the source: ") != "COMPACT":
+                raise ValueError("Compaction not approved")
         identity = None
         fields = [str(args.wallet.absolute())]
         if args.command == "address":
             fields.append(integer(args.index, (1 << 32) - 1))
-        if args.command in {"backup", "restore"}:
+        if args.command in {"backup", "restore", "compact"}:
             fields.append(str(args.output.absolute()))
         if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address"}:
             fields.extend([str(args.journal.absolute()), str(args.genesis.absolute())])
@@ -303,6 +343,8 @@ def main(argv: list[str] | None = None) -> int:
             checked_recipient(response.get("address", ""), identity["signing_domain"])
         if args.command == "prepare":
             checked_prepare_timing(response)
+        if args.command == "compact":
+            checked_compaction(response, args.pin)
         if args.command == "storage":
             checked_storage_status(response)
             if response.get("result") != "storage_inspected_not_synced":

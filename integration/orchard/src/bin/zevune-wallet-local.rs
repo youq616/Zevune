@@ -80,7 +80,7 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
     let count = take(&mut raw, 1)?[0] as usize;
     let expected = match op {
         0 | 9 => 1,
-        1 | 2 | 6 => 2,
+        1 | 2 | 6 | 10 => 2,
         3 => 4,
         4 => 9,
         5 => 5,
@@ -88,7 +88,7 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         8 => 5,
         _ => return Err(bad().into()),
     };
-    ensure(count == expected && !(op == 0 && pin.is_some()))?;
+    ensure(count == expected && !(op == 0 && pin.is_some()) && !(op == 10 && pin.is_none()))?;
     let mut fields = Vec::with_capacity(count);
     for _ in 0..count {
         let n = u16::from_be_bytes(take(&mut raw, 2)?.try_into()?) as usize;
@@ -105,14 +105,16 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         fields,
     })
 }
-fn receipt(wallet: &WalletStore) -> Result<String> {
-    let r = wallet.receipt()?;
-    Ok(format!(
+fn receipt_text(r: StoreReceipt) -> String {
+    format!(
         "{}{}{}",
         hex(&r.journal_id),
         hex(&r.generation.to_be_bytes()),
         hex(&r.digest)
-    ))
+    )
+}
+fn receipt(wallet: &WalletStore) -> Result<String> {
+    Ok(receipt_text(wallet.receipt()?))
 }
 fn storage_status(wallet: &mut WalletStore) -> Result<String> {
     let status = wallet.storage_status()?;
@@ -329,6 +331,20 @@ fn execute(request: Request<'_>) -> Result<String> {
             storage_status(&mut wallet)?,
             receipt(&wallet)?,
         ),
+        10 => {
+            let output = path(f[1])?;
+            unused_output(output)?;
+            let (mut compacted, handover) =
+                wallet.compact_copy_new(output, request.pin.ok_or_else(bad)?)?;
+            // Source instance is retired; neither file has been synchronized to
+            // newer chain history here. Publish the two DIFFERENT ancestry pins.
+            format!(
+                "\"result\":\"compacted_copy_not_synced\",\"source_retained\":true,\"requires_rescan\":true,\"source_receipt\":\"{}\",\"receipt\":\"{}\",{}",
+                receipt_text(handover.source),
+                receipt_text(handover.target),
+                storage_status(&mut compacted)?,
+            )
+        }
         _ => return Err(bad().into()),
     };
     Ok(body)
@@ -387,6 +403,35 @@ mod tests {
         bad = raw;
         bad[9..11].copy_from_slice(&u16::MAX.to_be_bytes());
         assert!(parse(&bad).is_err());
+    }
+
+    #[test]
+    fn compaction_frame_requires_explicit_pin_and_exact_two_paths() {
+        let password = b"synthetic-parser-password";
+        let mut raw = b"ZVWCLI01".to_vec();
+        raw.push(10);
+        raw.extend_from_slice(&(password.len() as u16).to_be_bytes());
+        raw.extend_from_slice(password);
+        let pin_offset = raw.len();
+        raw.push(1);
+        raw.extend_from_slice(&[1; 32]);
+        raw.extend_from_slice(&256u64.to_be_bytes());
+        raw.extend_from_slice(&[2; 32]);
+        raw.push(2);
+        for field in ["/source", "/target"] {
+            raw.extend_from_slice(&(field.len() as u16).to_be_bytes());
+            raw.extend_from_slice(field.as_bytes());
+        }
+        assert_eq!(parse(&raw).unwrap().op, 10);
+        for end in 0..raw.len() {
+            assert!(parse(&raw[..end]).is_err());
+        }
+        let mut unpinned = raw.clone();
+        unpinned[pin_offset] = 0;
+        unpinned.drain(pin_offset + 1..pin_offset + 73);
+        assert!(parse(&unpinned).is_err());
+        raw.push(0);
+        assert!(parse(&raw).is_err());
     }
 
     #[test]

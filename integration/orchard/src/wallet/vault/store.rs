@@ -28,6 +28,9 @@ pub const MAX_RECORDS: u64 = 256;
 pub const MAX_FILE_BYTES: u64 = FILE_HEADER as u64 + MAX_RECORDS * RECORD as u64;
 type Hash = [u8; 32];
 
+mod compact;
+pub use compact::CompactionReceipt;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreError {
     Io,
@@ -549,3 +552,6 @@ impl WalletStore {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod compact_tests;

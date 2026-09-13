@@ -13,7 +13,7 @@ import secrets
 import sys
 import tempfile
 
-from zevune_wallet import checked_address, checked_prepare_timing, checked_recipient, checked_storage_status, encode_request, genesis_identity, invoke
+from zevune_wallet import checked_compaction, checked_address, checked_prepare_timing, checked_recipient, checked_storage_status, encode_request, genesis_identity, invoke
 
 
 def run(backend: Path) -> None:
@@ -114,6 +114,31 @@ def run(backend: Path) -> None:
         inspected = invoke(backend, encode_request(9, password, [paid_backup], pending["receipt"]))
         checked_storage_status(inspected)
         assert inspected["receipt"] == pending["receipt"]
+        assert Path(paid_backup).read_bytes() == saved
+        # Compact an actual encrypted pending-payment backup. No new proof or
+        # signature is built; the exported pending transaction must be identical.
+        compact_path = str(root / "compacted.zwallet")
+        compacted = invoke(backend, encode_request(10, password,
+            [paid_backup, compact_path], pending["receipt"]), executable_hash)
+        checked_compaction(compacted, pending["receipt"])
+        assert Path(paid_backup).read_bytes() == saved
+        assert Path(compact_path).stat().st_size == 33020
+        assert compacted["receipt"] != pending["receipt"]
+        compact_pending = str(root / "compacted-payment.bin")
+        same = invoke(backend, encode_request(5, password,
+            [compact_path, journal, manifest, pin, compact_pending], compacted["receipt"]))
+        assert same["txid"] == payment["txid"]
+        assert Path(compact_pending).read_bytes() == raw_payment
+        before_compact = Path(compact_path).read_bytes()
+        for request in [encode_request(10, password, [paid_backup, compact_path], pending["receipt"]),
+                        encode_request(9, password, [compact_path], pending["receipt"])]:
+            try:
+                invoke(backend, request)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("Compaction reused a target or accepted an old ancestry pin")
+        assert Path(compact_path).read_bytes() == before_compact
         assert Path(paid_backup).read_bytes() == saved
         # LAB1 remains readable and explicitly unbound; no silent LAB2 downgrade.
         legacy = bytearray(Path(manifest).read_bytes())
