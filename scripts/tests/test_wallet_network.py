@@ -128,6 +128,20 @@ class NetworkIdentityTests(unittest.TestCase):
                 backend.assert_not_called()
         self.assertEqual({p.name for p in self.root.iterdir()}, {"genesis.bin"})
 
+    def test_invalid_payment_numbers_fail_before_password_or_backend(self):
+        samples = [("0", "1", "10"), ("1", "0", "10"), ("1", "1", "0"),
+                   (str((1 << 64) - 1), "1", "10"), (str((1 << 63) - 1), "1", "10")]
+        for amount, fee, expiry in samples:
+            with patch("builtins.input", side_effect=[address(self.pin), amount, fee, expiry]), \
+                 patch.object(wallet, "hidden_password") as password, \
+                 patch.object(wallet, "invoke") as backend, \
+                 patch.object(sys, "stderr", io.StringIO()):
+                self.assertEqual(wallet.main(self.args("prepare")), 1)
+                password.assert_not_called()
+                backend.assert_not_called()
+        self.assertEqual({p.name for p in self.root.iterdir()}, {"genesis.bin"})
+        self.assertEqual(wallet.checked_payment_numbers("1", "1", "10"), ("1", "1", "10"))
+
     def test_network_address_frontend_checks_backend_identity(self):
         response = {"ok": True, "scope": "local_journal_only_no_funds", "address": address(self.pin),
                     "payment_profile": "LAB2", "signing_domain": self.pin, "genesis_sha256": self.pin}

@@ -409,6 +409,23 @@ impl WalletStore {
         self.persist()?;
         Ok(payment)
     }
+    /// Check a recipient and bounded spend policy before expensive proving work.
+    /// This only reads the owned journal; it does not append a wallet record or
+    /// reserve an input. A successful result is not a reusable authorization.
+    pub fn check_payment_to(
+        &mut self,
+        recipient: &super::super::address::Recipient,
+        amount: u64,
+        fee: u64,
+        expiry: u64,
+    ) -> Result<(), StoreError> {
+        self.room()?;
+        self.validate_storage()?;
+        self.wallet
+            .check_payment_to(recipient, amount, fee, expiry)?;
+        Ok(())
+    }
+
     /// Checked presentation path used by the local console. The recipient cannot
     /// select the wallet's domain; validated scanned history is authoritative.
     pub fn prepare_payment_to(
@@ -419,7 +436,7 @@ impl WalletStore {
         expiry: u64,
         prover: &WalletProver,
     ) -> Result<Payment, StoreError> {
-        self.ensure()?;
+        self.check_payment_to(recipient, amount, fee, expiry)?;
         let address = recipient
             .for_domain(self.wallet.signing_domain()?)
             .map_err(|_| StoreError::Wallet(WalletError::History))?;

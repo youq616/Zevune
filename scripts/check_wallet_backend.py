@@ -70,6 +70,21 @@ def run(backend: Path) -> None:
                 raise AssertionError("Backend signed an invalid or wrong-network recipient")
             assert not Path(output).exists()
             assert all(Path(name).read_bytes() == data for name, data in before.items())
+        # Canonical but impossible numbers are rejected by the backend itself,
+        # before a wallet sync/prover/export. Frontend filtering is not authority.
+        for amount, fee, expiry in [("0", "1", "10"), ("1", "0", "10"),
+                ("1", "1", "0"), ("18446744073709551615", "1", "10"),
+                ("9223372036854775807", "1", "10")]:
+            request = encode_request(4, password, [restored, journal, manifest, pin,
+                peer_address, amount, fee, expiry, output])
+            try:
+                invoke(backend, request)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("Backend accepted an invalid bounded intent")
+            assert not Path(output).exists()
+            assert all(Path(name).read_bytes() == data for name, data in before.items())
         payment = invoke(backend, encode_request(4, password, [restored, journal, manifest, pin,
             peer_address, "25000", "1000", "10", output]))
         raw_payment = Path(output).read_bytes()

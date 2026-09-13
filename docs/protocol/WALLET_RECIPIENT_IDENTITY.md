@@ -92,3 +92,34 @@ regressions remain mandatory. Keep old wallets and nodes unchanged.
 Passing tests must be recorded against the actual source commit. Unit-test loops
 and subcases are not counted as independent top-level tests. Multi-node regression
 and local console tests are distinct; do not call them a completed online wallet.
+
+## Spend preflight before proving-parameter construction
+
+The console now rejects zero amounts/fees/expiry and checked amount+fee overflow
+before opening the wallet. These are the existing wallet policy, not new consensus
+fee or issuance rules. The backend repeats the public checks even for a client
+that bypasses Python. Canonical digest input is lowercase hexadecimal only.
+
+After validated history is scanned, `WalletStore::check_payment_to` checks the
+owned journal, expected recipient domain, pending reservation, expiry window,
+amount/fee bounds and bounded coin selection without building proving parameters
+or appending a record. `Wallet::build_payment` uses the same private selection
+implementation again, so a prior preflight success is never spend authorization.
+The preflight exposes no input list, ownership information or reusable token.
+
+The actual console constructs its `WalletProver` only after that check passes.
+The factory-order test fails if an invalid request reaches proving-key creation;
+it does not install a fake verifier. The existing proof, signature, local
+verification and persist-before-return path remain mandatory for success.
+
+The read-only guarantee is for the preflight itself. A valid history sync earlier
+in a console command may save a newer wallet checkpoint before a later policy
+failure; do not describe every failed command as leaving every file unchanged.
+Wrong-domain and malformed public-intent rejection happen before that sync.
+Neither preflight nor local sync is a network confirmation or latest-tip proof.
+
+Tests also verify that a prior successful check cannot be reused after one real
+payment reserves its notes, that a restored wallet must rescan, and that having
+sufficient total balance does not bypass the bounded number of spend inputs.
+This eliminates avoidable parameter construction for rejected payments; no
+end-to-end speedup, p95, or TPS is inferred from the ordering tests.

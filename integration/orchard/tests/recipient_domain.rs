@@ -103,6 +103,12 @@ fn checked_recipient_real_payment_survives_backup_and_does_not_cross_networks() 
     let wrong = Recipient::new(receiver.receive_address(0).unwrap(), Some(other)).unwrap();
     let legacy = Recipient::new(receiver.receive_address(0).unwrap(), None).unwrap();
     eprintln!("recipient-phase: initialized {:?}", started.elapsed());
+    let initial_receipt = sender.receipt().unwrap();
+    sender
+        .check_payment_to(&recipient, 25_000, 1_000, 10)
+        .unwrap();
+    assert_eq!(sender.receipt().unwrap(), initial_receipt);
+    assert!(sender.pending_payment().unwrap().is_none());
     let prover = WalletProver::new();
     eprintln!(
         "recipient-phase: public prover ready {:?}",
@@ -139,6 +145,20 @@ fn checked_recipient_real_payment_survives_backup_and_does_not_cross_networks() 
     eprintln!(
         "recipient-phase: payment saved and verified {:?}",
         started.elapsed()
+    );
+    // Prior successful preflight is not a permit for a second reservation.
+    let saved_receipt = sender.receipt().unwrap();
+    assert_eq!(
+        sender.check_payment_to(&recipient, 1, 1, 10),
+        Err(zevune_orchard_lab::wallet::vault::store::StoreError::Wallet(WalletError::Pending))
+    );
+    assert!(sender
+        .prepare_payment_to(&recipient, 1, 1, 10, &prover)
+        .is_err());
+    assert_eq!(sender.receipt().unwrap(), saved_receipt);
+    assert_eq!(
+        sender.pending_payment().unwrap().unwrap().bytes(),
+        payment.bytes()
     );
     sender.backup_new(&backup_path).unwrap();
     let receipt = sender.receipt().unwrap();

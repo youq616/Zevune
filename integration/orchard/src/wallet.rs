@@ -55,6 +55,12 @@ struct OwnedNote {
     note: Note,
     position: usize,
 }
+// Borrowed, private coin selection. Never a spend permission or a persisted plan.
+struct PaymentSelection<'a> {
+    chosen: Vec<(Hash, &'a OwnedNote)>,
+    total: u64,
+    target: u64,
+}
 struct Scanned {
     signing_domain: Option<Hash>,
     leaves: Vec<MerkleHashOrchard>,
@@ -296,17 +302,30 @@ impl Wallet {
         Ok(())
     }
 
-    /// Build and locally validate a real payment. No network broadcast occurs.
-    /// One pending payment at a time; save the encrypted wallet before handing
-    /// bytes to a network broadcaster. Reserving funds is not chain confirmation.
-    pub fn build_payment(
-        &mut self,
-        destination: Address,
+    /// Read-only affordability and policy preflight against scanned local history.
+    /// Does not construct proving parameters, reserve notes, sign, write files or
+    /// establish finality. The real builder repeats these checks; do not cache
+    /// this result as permission to spend at a later state.
+    pub fn check_payment_to(
+        &self,
+        recipient: &address::Recipient,
         amount: u64,
         fee: u64,
         expiry: u64,
-        prover: &WalletProver,
-    ) -> Result<Payment, WalletError> {
+    ) -> Result<(), WalletError> {
+        recipient
+            .for_domain(self.signing_domain()?)
+            .map_err(|_| WalletError::History)?;
+        self.payment_selection(amount, fee, expiry)?;
+        Ok(())
+    }
+
+    fn payment_selection(
+        &self,
+        amount: u64,
+        fee: u64,
+        expiry: u64,
+    ) -> Result<PaymentSelection<'_>, WalletError> {
         if self.pending.is_some() {
             return Err(WalletError::Pending);
         }
@@ -342,6 +361,30 @@ impl Wallet {
         if total < target {
             return Err(WalletError::InsufficientFunds);
         }
+        Ok(PaymentSelection {
+            chosen,
+            total,
+            target,
+        })
+    }
+
+    /// Build and locally validate a real payment. No network broadcast occurs.
+    /// One pending payment at a time; save the encrypted wallet before handing
+    /// bytes to a network broadcaster. Reserving funds is not chain confirmation.
+    pub fn build_payment(
+        &mut self,
+        destination: Address,
+        amount: u64,
+        fee: u64,
+        expiry: u64,
+        prover: &WalletProver,
+    ) -> Result<Payment, WalletError> {
+        let PaymentSelection {
+            chosen,
+            total,
+            target,
+        } = self.payment_selection(amount, fee, expiry)?;
+        let scanned = self.scanned.as_ref().ok_or(WalletError::NotSynced)?;
         let sk = self.spending_key()?;
         let fvk = FullViewingKey::from(&sk);
         let first = chosen.first().ok_or(WalletError::InsufficientFunds)?.1;

@@ -25,7 +25,12 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 fn unhex<const N: usize>(text: &str) -> Result<[u8; N]> {
-    ensure(text.len() == N * 2 && text.bytes().all(|b| b.is_ascii_hexdigit()))?;
+    ensure(
+        text.len() == N * 2
+            && text
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+    )?;
     let mut result = [0; N];
     for (i, pair) in text.as_bytes().as_chunks::<2>().0.iter().enumerate() {
         result[i] = u8::from_str_radix(std::str::from_utf8(pair)?, 16)?;
@@ -130,12 +135,39 @@ struct Intent {
 fn intent(fields: &[&str], genesis: &TestGenesis) -> Result<Intent> {
     let recipient = Recipient::decode(fields[4])?;
     recipient.for_domain(genesis.signing_domain())?;
+    let amount = number(fields[5])?;
+    let fee = number(fields[6])?;
+    let expiry = number(fields[7])?;
+    ensure(amount > 0 && fee > 0 && expiry > 0)?;
+    ensure(
+        amount
+            .checked_add(fee)
+            .is_some_and(|total| total <= i64::MAX as u64),
+    )?;
     Ok(Intent {
         recipient,
-        amount: number(fields[5])?,
-        fee: number(fields[6])?,
-        expiry: number(fields[7])?,
+        amount,
+        fee,
+        expiry,
     })
+}
+
+// Production supplies WalletProver::new. Keeping the factory private makes the
+// order testable without fake proofs or a skip-verification switch.
+fn prepare_checked(
+    wallet: &mut WalletStore,
+    intent: Intent,
+    make_prover: impl FnOnce() -> WalletProver,
+) -> Result<Payment> {
+    wallet.check_payment_to(&intent.recipient, intent.amount, intent.fee, intent.expiry)?;
+    let prover = make_prover();
+    Ok(wallet.prepare_payment_to(
+        &intent.recipient,
+        intent.amount,
+        intent.fee,
+        intent.expiry,
+        &prover,
+    )?)
 }
 fn export(path: &Path, payment: &Payment) -> Result<()> {
     let mut options = OpenOptions::new();
@@ -217,13 +249,7 @@ fn execute(request: Request<'_>) -> Result<String> {
             let genesis = genesis.as_ref().ok_or_else(bad)?;
             sync(&mut wallet, f, genesis)?;
             let payment = if let Some(intent) = payment_intent {
-                wallet.prepare_payment_to(
-                    &intent.recipient,
-                    intent.amount,
-                    intent.fee,
-                    intent.expiry,
-                    &WalletProver::new(),
-                )?
+                prepare_checked(&mut wallet, intent, WalletProver::new)?
             } else {
                 wallet.pending_payment()?.ok_or_else(bad)?
             };
@@ -424,5 +450,110 @@ mod tests {
             );
             assert_eq!(std::fs::read_dir(&dir.0).unwrap().count(), 1);
         }
+    }
+    #[test]
+    fn invalid_spend_does_not_construct_public_proving_parameters() {
+        use zevune_orchard_lab::wallet::vault::store::StoreError;
+        use zevune_orchard_lab::wallet::WalletError;
+        let home = std::env::temp_dir().join(format!(
+            "zevune-lazy-prover-{:032x}",
+            rand::random::<u128>()
+        ));
+        std::fs::create_dir(&home).unwrap();
+        let password = rand::random::<[u8; 32]>();
+        let mut wallet = WalletStore::create(&home.join("wallet"), &password).unwrap();
+        let owner = wallet.view().unwrap().receive_address(0).unwrap();
+        let genesis = TestGenesis::generate(&[(owner, TEST_SUPPLY)]).unwrap();
+        let mut pool = genesis.create_pool(&home.join("pool")).unwrap();
+        wallet
+            .sync(&genesis.wallet_history(&mut pool).unwrap())
+            .unwrap();
+        let recipient = wallet.view().unwrap().receive_recipient(0).unwrap();
+        let receipt = wallet.receipt().unwrap();
+        for (amount, fee, expiry, expected) in [
+            (0, 1, 10, WalletError::Bounds),
+            (1, 0, 10, WalletError::Bounds),
+            (1, 1, 101, WalletError::Bounds),
+            (TEST_SUPPLY, 1, 10, WalletError::InsufficientFunds),
+        ] {
+            let error = prepare_checked(
+                &mut wallet,
+                Intent {
+                    recipient,
+                    amount,
+                    fee,
+                    expiry,
+                },
+                || panic!("invalid intent must not initialize proving parameters"),
+            );
+            let error = match error {
+                Ok(_) => panic!("invalid intent accepted"),
+                Err(e) => e,
+            };
+            assert_eq!(
+                error.downcast_ref::<StoreError>(),
+                Some(&StoreError::Wallet(expected))
+            );
+            assert_eq!(wallet.receipt().unwrap(), receipt);
+            assert!(wallet.pending_payment().unwrap().is_none());
+        }
+        drop(pool);
+        drop(wallet);
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn malformed_amounts_are_rejected_before_wallet_access() {
+        use zevune_orchard_lab::wallet::Wallet;
+        let home = std::env::temp_dir().join(format!(
+            "zevune-intent-bound-{:032x}",
+            rand::random::<u128>()
+        ));
+        std::fs::create_dir(&home).unwrap();
+        let owner = Wallet::create().unwrap().receive_address(0).unwrap();
+        let genesis = TestGenesis::generate(&[(owner, TEST_SUPPLY)]).unwrap();
+        let manifest = home.join("genesis");
+        genesis.write_new(&manifest).unwrap();
+        for (amount, fee, expiry) in [
+            ("0", "1", "10"),
+            ("1", "0", "10"),
+            ("18446744073709551615", "1", "10"),
+            ("9223372036854775807", "1", "10"),
+            ("1", "1", "0"),
+        ] {
+            let fields = [
+                home.join("absent-wallet").to_str().unwrap().to_owned(),
+                home.join("absent-journal").to_str().unwrap().to_owned(),
+                manifest.to_str().unwrap().to_owned(),
+                hex(&genesis.digest()),
+                Recipient::new(owner, genesis.signing_domain())
+                    .unwrap()
+                    .encode(),
+                amount.to_owned(),
+                fee.to_owned(),
+                expiry.to_owned(),
+                home.join("absent-output").to_str().unwrap().to_owned(),
+            ];
+            let error = execute(Request {
+                op: 4,
+                password: b"synthetic-unused-password",
+                pin: None,
+                fields: fields.iter().map(String::as_str).collect(),
+            })
+            .unwrap_err();
+            assert_eq!(
+                error.downcast_ref::<io::Error>().unwrap().kind(),
+                io::ErrorKind::InvalidData
+            );
+            assert_eq!(std::fs::read_dir(&home).unwrap().count(), 1);
+        }
+        for invalid in [
+            "AB".repeat(32),
+            "1".repeat(63),
+            format!("{}\n", "1".repeat(64)),
+        ] {
+            assert!(unhex::<32>(&invalid).is_err());
+        }
+        std::fs::remove_dir_all(home).unwrap();
     }
 }

@@ -147,6 +147,15 @@ def integer(text: str, maximum: int = (1 << 64) - 1) -> str:
     return text
 
 
+def checked_payment_numbers(amount: str, fee: str, expiry: str) -> tuple[str, str, str]:
+    """Cheap public bounds only. Rust checks spendability against scanned state."""
+    values = tuple(integer(value) for value in (amount, fee, expiry))
+    a, f, e = map(int, values)
+    if a == 0 or f == 0 or e == 0 or a + f > (1 << 63) - 1:
+        raise ValueError("Invalid bounded test payment intent")
+    return values
+
+
 def invoke(backend: Path, request: bytes, expected_sha: str | None = None) -> dict:
     backend = backend.absolute()
     metadata = backend.lstat()
@@ -222,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
             amount = integer(input("Amount in integer test units: "))
             fee = integer(input("Fee in integer test units: "))
             expiry = integer(input("Expiry block height: "))
+            amount, fee, expiry = checked_payment_numbers(amount, fee, expiry)
             if input("Type PREPARE to sign locally (no broadcast): ") != "PREPARE":
                 raise ValueError("Payment not approved")
             fields.extend([destination, amount, fee, expiry])
