@@ -1,8 +1,15 @@
 name: development-source
 on:
   push:
-    branches: ['dev/**']
-    paths: ['.github/workflows/development-source.yml']
+    branches: ['dev/m12-genesis-domain']
+    paths:
+      - '.github/workflows/**'
+      - 'integration/**'
+      - 'internal/**'
+      - 'cmd/**'
+      - 'scripts/**'
+      - 'go.mod'
+      - 'go.sum'
   workflow_dispatch:
 permissions:
   contents: read
