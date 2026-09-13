@@ -108,15 +108,22 @@ fn checked_recipient_real_payment_survives_backup_and_does_not_cross_networks() 
         "recipient-phase: public prover ready {:?}",
         started.elapsed()
     );
-    let original = fs::read(&wallet_path).unwrap();
+    // Windows enforces the live file lock even for another handle in this
+    // process. Read exact encrypted bytes through the owning store's create-only
+    // backup, rather than weakening the lock or skipping the unchanged-file check.
+    let before_path = dir.0.join("before-rejection.wallet");
+    sender.backup_new(&before_path).unwrap();
+    let original = fs::read(&before_path).unwrap();
     let receipt = sender.receipt().unwrap();
-    for address in [wrong, legacy] {
+    for (index, address) in [wrong, legacy].into_iter().enumerate() {
         assert!(sender
             .prepare_payment_to(&address, 25_000, 1_000, 10, &prover)
             .is_err());
         assert_eq!(sender.receipt().unwrap(), receipt);
         assert!(sender.pending_payment().unwrap().is_none());
-        assert_eq!(fs::read(&wallet_path).unwrap(), original);
+        let after_path = dir.0.join(format!("after-rejection-{index}.wallet"));
+        sender.backup_new(&after_path).unwrap();
+        assert_eq!(fs::read(&after_path).unwrap(), original);
     }
     eprintln!("recipient-phase: rejection guards {:?}", started.elapsed());
     let payment = sender
