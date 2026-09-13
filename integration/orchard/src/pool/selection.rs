@@ -34,6 +34,7 @@ impl PoolStore {
         {
             return Err(PoolError::Bounds);
         }
+        let mut storage = budget::JournalBudget::new(self.length, self.journal_byte_limit())?;
         let mut next = self.state.clone();
         let mut remaining = max_bytes;
         let mut count = 0;
@@ -45,8 +46,14 @@ impl PoolStore {
             if raw.is_empty() || raw.len() > remaining {
                 continue;
             }
+            // RPC/ABCI max_bytes counts transaction bytes only. The journal
+            // also stores one length word per transaction and fixed framing.
+            let Some(after_storage) = storage.after_transaction(raw.len()) else {
+                continue;
+            };
             match next.apply_transaction(height, &self.state.anchors, raw, &self.verifier) {
                 Ok(()) => {
+                    storage = after_storage;
                     remaining -= raw.len();
                     count += 1;
                     mask |= 1u64 << i;
