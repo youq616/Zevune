@@ -91,3 +91,11 @@ Orchard 0.15.5 使用固定修复电路。固定依赖不等于漏洞审计。�
 Go 启动层新增有界的公开创世帧检查；无效清单在创建节点目录前拒绝，完整 Orchard 资产和密码学验证仍由 Rust 完成。真实命令与直接节点 RPC 均验证域替换、降级和未知格式拒绝，再继续非零金额付款及恢复测试。具体源码提交、测试范围和失败记录见 [M12 统一基线验收](reports/m12-consolidation-validation.md)，分支取舍见 [开发基线说明](docs/DEVELOPMENT_BASELINE.zh-CN.md)。
 
 这是本机实验基线的整合，不是整个项目完成。旧数据不清空、不自动迁移，LAB1 不会自动获得 LAB2 保护。历史 M11 范围见 [原验收记录](reports/m11-remote-validation.md)。
+
+## P1/P2 钱包网络身份与有界存储交付
+
+已接入本地收款地址的 LAB2 网络身份检查与付款前预检查，错误网络在签名前拒绝。新增 `storage` 和显式 `compact`：钱包日志满时可以保留完整待发送签名字节，将认证快照重新加密到一个新日志，恢复可追加额度。源文件不覆写、不删除；新文件使用新的独立回执，必须重新扫描，旧副本只能离线保留。不是节点账本扩容或跨副本锁。
+
+本地付款准备现在有分段计时；它不包含网络共识和收款确认，不是端到端到账或 TPS 成绩。采用的八项交付范围仍见 [项目计划](docs/DELIVERY_PLAN.zh-CN.md)。P1/P2/P4/P7 均只完成部分增量，网络匿名、多机长期运行、完整在线钱包和主网准入仍未完成。
+
+[精确源码与验收记录](reports/p1-p2-wallet-validation.md) · [钱包收款身份](docs/protocol/WALLET_RECIPIENT_IDENTITY.md) · [容量与恢复](docs/WALLET_CAPACITY_RECOVERY.zh-CN.md) · [整理与故障边界](docs/WALLET_COMPACTION.zh-CN.md)。
