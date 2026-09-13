@@ -52,8 +52,34 @@ func TestRealProposalSelectionAndAtomicRejection(t *testing.T) {
 			t.Fatal("rejected block mutated committed state")
 		}
 	}
+	// One bounded batch must preserve the original first-64 examination policy,
+	// including the high bit in the reply mask. The 65th entry is not examined.
+	candidates := make([][]byte, 64)
+	for i := range candidates {
+		candidates[i] = broken
+	}
+	candidates[63] = tx
+	last, err := a.PrepareProposal(ctx, &abci.RequestPrepareProposal{Height: 1, MaxTxBytes: 100000, Txs: candidates})
+	if err != nil || len(last.Txs) != 1 || !bytes.Equal(last.Txs[0], tx) {
+		t.Fatal("last candidate lost", err)
+	}
+	candidates[63] = broken
+	candidates = append(candidates, tx)
+	beyond, err := a.PrepareProposal(ctx, &abci.RequestPrepareProposal{Height: 1, MaxTxBytes: 100000, Txs: candidates})
+	if err != nil || len(beyond.Txs) != 0 {
+		t.Fatal("selection inspected beyond first 64", err)
+	}
+	if !bytes.Equal(info(t, a).LastBlockAppHash, initial.LastBlockAppHash) {
+		t.Fatal("selection changed committed state")
+	}
 	// Failed proposals/finalization must not reserve nullifiers or a pending slot.
 	if _, err = a.FinalizeBlock(ctx, &abci.RequestFinalizeBlock{Height: 1, Hash: hash[:], Txs: [][]byte{tx}}); err != nil {
+		t.Fatal(err)
+	}
+	// Selection uses a separate disposable state, never the pending finalization
+	// slot. Calling it here cannot change the exact block that Commit will write.
+	_, err = a.PrepareProposal(ctx, &abci.RequestPrepareProposal{Height: 1, MaxTxBytes: 0})
+	if err != nil {
 		t.Fatal(err)
 	}
 	// Exercise the real Rust pending-slot check, not only the Go adapter cache.

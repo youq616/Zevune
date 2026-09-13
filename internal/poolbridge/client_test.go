@@ -46,7 +46,11 @@ func TestPoolProcessHelper(t *testing.T) {
 		if mode == "slow" {
 			time.Sleep(80 * time.Millisecond)
 		}
-		out := make([]byte, 145)
+		responseSize := 145
+		if b[16] == 5 && mode != "select-old-size" {
+			responseSize = 153
+		}
+		out := make([]byte, responseSize)
 		copy(out, "ZVPLRSP1")
 		copy(out[8:16], b[8:16])
 		h := sha256.Sum256(b)
@@ -69,6 +73,22 @@ func TestPoolProcessHelper(t *testing.T) {
 		if mode == "truncated" {
 			_, _ = os.Stdout.Write([]byte{0, 0, 0, 145, 1})
 			os.Exit(0)
+		}
+		if b[16] == 5 && responseSize == 153 {
+			copy(out[49:57], b[17:25])
+			if mode == "select-ok" {
+				binary.BigEndian.PutUint64(out[145:], 1)
+			}
+			if mode == "select-badmask" {
+				binary.BigEndian.PutUint64(out[145:], 2)
+			}
+			if mode == "select-badheight" {
+				binary.BigEndian.PutUint64(out[49:57], 0)
+			}
+			if mode == "select-reject-mask" {
+				out[16] = 1
+				binary.BigEndian.PutUint64(out[145:], 1)
+			}
 		}
 		if writeFrame(os.Stdout, out) != nil {
 			os.Exit(3)

@@ -155,60 +155,82 @@ impl State {
         }
         let mut next = self.clone();
         for raw in transactions {
-            let decoded = decode(raw).map_err(|_| PoolError::Authorization)?;
-            // Check the trusted genesis policy on EVERY execution, including
-            // cache hits, replay and final commit. No legacy/domain fallback.
-            if decoded.context.signing_domain != self.signing_domain {
-                return Err(PoolError::Domain);
+            next.apply_transaction(height, &self.anchors, raw, verifier)?;
+        }
+        next.finish_block(height, block_id);
+        Ok(next)
+    }
+    fn apply_transaction(
+        &mut self,
+        height: u64,
+        trusted_anchors: &VecDeque<Hash>,
+        raw: &[u8],
+        verifier: &AuthorizationVerifier,
+    ) -> Result<(), PoolError> {
+        #[cfg(test)]
+        selection::ATTEMPTS.with(|count| count.set(count.get() + 1));
+        let decoded = decode(raw).map_err(|_| PoolError::Authorization)?;
+        // Check the trusted genesis policy on EVERY execution, including
+        // cache hits, replay and final commit. No legacy/domain fallback.
+        if decoded.context.signing_domain != self.signing_domain {
+            return Err(PoolError::Domain);
+        }
+        if decoded.context.expiry_height < height {
+            return Err(PoolError::Expired);
+        }
+        // Only roots committed before this block are spend anchors. Never
+        // expose roots of partially executed candidate blocks as trusted.
+        if !trusted_anchors.contains(&decoded.bundle.anchor().to_bytes()) {
+            return Err(PoolError::Anchor);
+        }
+        if self
+            .outputs
+            .len()
+            .checked_add(decoded.bundle.actions().len())
+            .ok_or(PoolError::Bounds)?
+            > MAX_COMMITMENTS
+        {
+            return Err(PoolError::Bounds);
+        }
+        for a in decoded.bundle.actions().iter() {
+            if self.spent.contains(&a.nullifier().to_bytes()) {
+                return Err(PoolError::DoubleSpend);
             }
-            if decoded.context.expiry_height < height {
-                return Err(PoolError::Expired);
+            if self.outputs.contains(&a.cmx().to_bytes()) {
+                return Err(PoolError::DuplicateOutput);
             }
-            // Only roots committed before this block are spend anchors. Never
-            // expose roots of partially executed candidate blocks as trusted.
-            if !self.anchors.contains(&decoded.bundle.anchor().to_bytes()) {
-                return Err(PoolError::Anchor);
-            }
-            if next
-                .outputs
-                .len()
-                .checked_add(decoded.bundle.actions().len())
-                .ok_or(PoolError::Bounds)?
-                > MAX_COMMITMENTS
-            {
+        }
+        verifier.verify(raw).map_err(|_| PoolError::Authorization)?;
+        let fees = self
+            .fees
+            .checked_add(decoded.context.fee)
+            .ok_or(PoolError::FeeOverflow)?;
+        let mut frontier = self.frontier.clone();
+        for a in decoded.bundle.actions().iter() {
+            if !frontier.append(MerkleHashOrchard::from_cmx(a.cmx())) {
                 return Err(PoolError::Bounds);
             }
-            for a in decoded.bundle.actions().iter() {
-                if next.spent.contains(&a.nullifier().to_bytes()) {
-                    return Err(PoolError::DoubleSpend);
-                }
-                if next.outputs.contains(&a.cmx().to_bytes()) {
-                    return Err(PoolError::DuplicateOutput);
-                }
-            }
-            verifier.verify(raw).map_err(|_| PoolError::Authorization)?;
-            next.fees = next
-                .fees
-                .checked_add(decoded.context.fee)
-                .ok_or(PoolError::FeeOverflow)?;
-            for a in decoded.bundle.actions().iter() {
-                next.spent.insert(a.nullifier().to_bytes());
-                next.outputs.insert(a.cmx().to_bytes());
-                if !next.frontier.append(MerkleHashOrchard::from_cmx(a.cmx())) {
-                    return Err(PoolError::Bounds);
-                }
+        }
+        // No fallible operation follows this point. A rejected candidate must
+        // not leak partial fees, nullifiers or outputs into the next candidate.
+        for a in decoded.bundle.actions().iter() {
+            self.spent.insert(a.nullifier().to_bytes());
+            self.outputs.insert(a.cmx().to_bytes());
+        }
+        self.fees = fees;
+        self.frontier = frontier;
+        Ok(())
+    }
+    fn finish_block(&mut self, height: u64, block_id: Hash) {
+        self.height = height;
+        self.head = block_id;
+        let root = self.frontier.root().to_bytes();
+        if self.anchors.back() != Some(&root) {
+            self.anchors.push_back(root);
+            if self.anchors.len() > MAX_ANCHORS {
+                self.anchors.pop_front();
             }
         }
-        next.height = height;
-        next.head = block_id;
-        let root = next.frontier.root().to_bytes();
-        if next.anchors.back() != Some(&root) {
-            next.anchors.push_back(root);
-            if next.anchors.len() > MAX_ANCHORS {
-                next.anchors.pop_front();
-            }
-        }
-        Ok(next)
     }
 }
 
@@ -593,3 +615,6 @@ mod wallet_flow_tests;
 
 #[cfg(feature = "local-funding-lab")]
 pub mod testnet;
+
+/// Read-only, bounded proposal selection; never a commit or finality API.
+pub mod selection;

@@ -6,8 +6,9 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use zevune_orchard_lab::pool::{PoolError, PoolStore, PreparedBlock, Summary};
 use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
-const MAX_FRAME: usize = 524_288;
-const DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-2:zevune-orchard-lab-1:16:28134:genesis-bound-v2";
+// At most 64 bounded candidates for the read-only selector (under 2 MiB).
+const MAX_FRAME: usize = 2 * 1024 * 1024;
+const DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-3:zevune-orchard-lab-1:16:28134:selection-64";
 type Hash = [u8; 32];
 type Block = (u64, Hash, Vec<Vec<u8>>);
 fn bad() -> io::Error {
@@ -70,6 +71,33 @@ fn block(data: &[u8]) -> Result<Block, PoolError> {
         return Err(PoolError::Bounds);
     }
     Ok((height, hash, txs))
+}
+fn selection(data: &[u8]) -> Result<(Block, usize), PoolError> {
+    use zevune_orchard_lab::pool::selection::{MAX_CANDIDATES, MAX_PROPOSAL_BYTES};
+    let mut r = Reader(data);
+    let height = u64::from_be_bytes(r.take()?);
+    let hash = r.take()?;
+    let max_bytes = u64::from_be_bytes(r.take()?);
+    if max_bytes > MAX_PROPOSAL_BYTES as u64 {
+        return Err(PoolError::Bounds);
+    }
+    let count = u16::from_be_bytes(r.take()?) as usize;
+    if count > MAX_CANDIDATES {
+        return Err(PoolError::Bounds);
+    }
+    let mut txs = Vec::with_capacity(count);
+    for _ in 0..count {
+        let n = u32::from_be_bytes(r.take()?) as usize;
+        if n > MAX_ENVELOPE_SIZE || n > r.0.len() {
+            return Err(PoolError::Bounds);
+        }
+        txs.push(r.0[..n].to_vec());
+        r.0 = &r.0[n..];
+    }
+    if !r.0.is_empty() {
+        return Err(PoolError::Bounds);
+    }
+    Ok(((height, hash, txs), max_bytes as usize))
 }
 fn summary(s: &Summary) -> Vec<u8> {
     let mut b = s.height.to_be_bytes().to_vec();
@@ -142,11 +170,20 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
             return Err(bad());
         }
         let id = u64::from_be_bytes(b[8..16].try_into().map_err(|_| bad())?);
-        if previous.checked_add(1) != Some(id) || b[16] > 4 {
+        if previous.checked_add(1) != Some(id) || b[16] > 5 {
             return Err(bad());
         }
         previous = id;
-        let result = session.apply(b[16], &b[17..]);
+        let mut selected_mask = 0u64;
+        let result = if b[16] == 5 {
+            selection(&b[17..]).and_then(|((height, hash, txs), limit)| {
+                let selected = session.store.select_proposal(height, hash, limit, &txs)?;
+                selected_mask = selected.mask;
+                Ok(selected.result)
+            })
+        } else {
+            session.apply(b[16], &b[17..])
+        };
         // Storage uncertainty is fatal. EOF is not a negative transaction vote.
         if matches!(
             result,
@@ -166,6 +203,9 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
             Err(_) => session.store.summary().map_err(|_| bad())?,
         };
         response.extend_from_slice(&summary(&state));
+        if b[16] == 5 {
+            response.extend_from_slice(&selected_mask.to_be_bytes());
+        }
         write_frame(w, &response)?;
     }
     Ok(())
@@ -267,5 +307,31 @@ mod tests {
         let mut b = Vec::new();
         write_frame(&mut b, b"test").unwrap();
         assert_eq!(frame(&mut b.as_slice()).unwrap(), Some(b"test".to_vec()));
+    }
+    #[test]
+    fn selection_frame_is_bounded_canonical_and_separate_from_blocks() {
+        let mut b = 1u64.to_be_bytes().to_vec();
+        b.extend_from_slice(&[1; 32]);
+        b.extend_from_slice(&100_000u64.to_be_bytes());
+        b.extend_from_slice(&1u16.to_be_bytes());
+        b.extend_from_slice(&3u32.to_be_bytes());
+        b.extend_from_slice(b"bad");
+        assert_eq!(selection(&b).unwrap().0 .2, vec![b"bad".to_vec()]);
+        for end in 0..b.len() {
+            assert!(selection(&b[..end]).is_err());
+        }
+        let mut bad = b.clone();
+        bad.push(0);
+        assert!(selection(&bad).is_err());
+        bad = b.clone();
+        bad[48..50].copy_from_slice(&65u16.to_be_bytes());
+        assert!(selection(&bad).is_err());
+        bad = b.clone();
+        bad[40..48].copy_from_slice(&u64::MAX.to_be_bytes());
+        assert!(selection(&bad).is_err());
+        bad = b;
+        bad[50..54].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(selection(&bad).is_err());
+        assert!(block(&bad).is_err());
     }
 }

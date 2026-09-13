@@ -128,10 +128,11 @@ migration is needed. Restored balances still require a scan. A stored outbox wit
 a different D must be rejected before mutating the wallet or clearing reservations.
 The same signed bytes must survive backup/reopen; timeout is not cancellation.
 
-The durable Go/Rust pool IPC fingerprint changes to:
+The durable Go/Rust pool IPC fingerprint is now (generation 3 adds bounded
+read-only proposal selection; payment and journal encodings above are unchanged):
 
 ```text
-ZEVUNE-POOL-IPC-2:zevune-orchard-lab-1:16:28134:genesis-bound-v2
+ZEVUNE-POOL-IPC-3:zevune-orchard-lab-1:16:28134:selection-64
 ```
 
 Clients and workers of different IPC generations fail the handshake. Update
@@ -144,8 +145,9 @@ New opt-in local-funding manifests use V2; opening an existing V1 manifest keeps
 V1. There is no in-place upgrade, retroactive replay protection, production
 activation height, signature-free conversion, or arbitrary future-version support.
 To exercise V2 use a separate new valueless test network; retain old wallet/ledger
-files. Current CLI address presentation does not yet identify the network, so
-cross-network address UX remains unfinished.
+files. LAB2 recipient presentation now carries an explicit network domain and is
+checked before signing; see `WALLET_RECIPIENT_IDENTITY.md`. This is still a
+laboratory address format, not a finalized mainnet address standard.
 
 Chain identifiers in CometBFT remain laboratory identifiers; V2 here binds the
 payment domain to the full asset manifest, not to a complete future consensus

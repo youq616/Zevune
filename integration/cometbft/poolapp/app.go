@@ -13,7 +13,7 @@ import (
 )
 
 const ChainID = poolbridge.Network
-const Version = "0.3.2-genesis-bound-lab"
+const Version = "0.3.3-proposal-selection-lab"
 const AppVersion uint64 = 2
 
 type Application struct {
@@ -129,29 +129,26 @@ func (a *Application) PrepareProposal(ctx context.Context, r *abci.RequestPrepar
 	if r == nil || r.Height <= 0 || r.MaxTxBytes < 0 {
 		return nil, poolbridge.ErrBounds
 	}
-	chosen := [][]byte{}
-	size := int64(0)
-	// The real block hash does not exist yet. This marker is used ONLY for
-	// read-only validity checks, never for FinalizeBlock or Commit.
-	marker := sha256.Sum256([]byte("ZEVUNE-PROPOSAL-PREFLIGHT"))
-	if _, e := a.client.Preview(ctx, uint64(r.Height), marker, nil); e != nil {
-		return nil, a.failure(e)
-	}
+	// Preserve the previous greedy policy and first-64 examination bound. The
+	// worker evaluates candidates once against one disposable state, rather
+	// than repeatedly executing the whole previously accepted prefix.
+	candidates := make([][]byte, 0, poolbridge.MaxProposalCandidates)
 	for i, tx := range r.Txs {
-		if i >= 64 || len(chosen) >= poolbridge.MaxTransactions {
+		if i >= poolbridge.MaxProposalCandidates {
 			break
 		}
-		if len(tx) == 0 || len(tx) > poolbridge.MaxTransactionBytes || int64(len(tx)) > r.MaxTxBytes-size {
+		if len(tx) == 0 || len(tx) > poolbridge.MaxTransactionBytes {
 			continue
 		}
-		trial := append(append([][]byte(nil), chosen...), tx)
-		if _, e := a.client.Preview(ctx, uint64(r.Height), marker, trial); invalid(e) {
-			continue
-		} else if e != nil {
-			return nil, a.failure(e)
-		}
-		chosen = trial
-		size += int64(len(tx))
+		candidates = append(candidates, tx)
+	}
+	limit := uint64(r.MaxTxBytes)
+	if limit > poolbridge.MaxProposalBytes {
+		limit = poolbridge.MaxProposalBytes
+	}
+	chosen, err := a.client.SelectProposal(ctx, uint64(r.Height), limit, candidates)
+	if err != nil {
+		return nil, a.failure(err)
 	}
 	return &abci.ResponsePrepareProposal{Txs: chosen}, nil
 }

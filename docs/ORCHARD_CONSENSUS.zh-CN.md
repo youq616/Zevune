@@ -2,6 +2,8 @@
 
 开发中，禁止真实资金。此版本增加连接代码和整合测试，不能声称完整钱包、匿名网络、发行规则或主网已经完成。源码进入主分支前须实际通过同一提交的整合测试。
 
+以下主体记录M7历史边界；当前LAB2和IPC第3代差异见文末补充。历史数值不应当作当前接口常量。
+
 ## 连接结构
 
 CometBFT → poolapp ABCI → Go poolbridge → 本机 stdin/stdout → Rust zevune-pool-worker → M6 PoolStore。
@@ -35,3 +37,11 @@ PrepareProposal 只检查最多 64 个输入候选并选最多 16 笔，防止�
 ## 创世域绑定版本补充
 
 新增 LAB2 将测试创世清单摘要纳入签名，单笔上限更新为 28134 字节，状态 IPC 指纹升级为第 2 代。旧清单和日志保持旧规则，不自动转换；新旧组件混用将拒绝握手。参见 `protocol/GENESIS_DOMAIN_V2.md`，不代表正式主网协议或已完成独立审查。
+
+## 增量提案筛选
+
+PrepareProposal已接入单次有界IPC调用与临时候选状态，避免重复执行已接受的交易前缀。
+ProcessProposal、FinalizeBlock、Commit与日志重放仍完整检查，不复用筛选结果作为许可。
+IPC第3代输入帧上限为2MiB，以支持最多64个有界候选；单块仍最多16笔。
+新旧客户端/worker的本地IPC指纹不兼容，需要成套更新；交易及日志格式不变。
+参见[实现、边界与测试](INCREMENTAL_PROPOSAL_SELECTION.zh-CN.md)。

@@ -21,8 +21,8 @@ import (
 const Network = "zevune-orchard-lab-1"
 const MaxTransactions = 16
 const MaxTransactionBytes = 28134
-const maxFrame = 524288
-const domain = "ZEVUNE-POOL-IPC-2:zevune-orchard-lab-1:16:28134:genesis-bound-v2"
+const maxFrame = 2 * 1024 * 1024
+const domain = "ZEVUNE-POOL-IPC-3:zevune-orchard-lab-1:16:28134:selection-64"
 
 type Hash = [32]byte
 
@@ -248,7 +248,17 @@ func BlockBytes(height uint64, hash Hash, txs [][]byte) ([]byte, error) {
 	return b, nil
 }
 func (c *Client) exchange(ctx context.Context, op byte, payload []byte) (Summary, error) {
-	if ctx == nil || op > 4 || len(payload) > maxFrame-17 {
+	return c.exchangeMask(ctx, op, payload, nil)
+}
+func (c *Client) exchangeMask(ctx context.Context, op byte, payload []byte, mask *uint64) (Summary, error) {
+	if (op == 5) != (mask != nil) || op > 5 {
+		return Summary{}, ErrBounds
+	}
+	expectedSize := 145
+	if mask != nil {
+		expectedSize += 8
+	}
+	if ctx == nil || op > 5 || len(payload) > maxFrame-17 {
 		return Summary{}, ErrBounds
 	}
 	if e := ctx.Err(); e != nil {
@@ -290,7 +300,7 @@ func (c *Client) exchange(ctx context.Context, op byte, payload []byte) (Summary
 		e := writeFrame(c.in, b)
 		var out []byte
 		if e == nil {
-			out, e = readFrame(c.out, 145)
+			out, e = readFrame(c.out, expectedSize)
 		}
 		ch <- reply{out, e}
 	}()
@@ -313,11 +323,11 @@ func (c *Client) exchange(ctx context.Context, op byte, payload []byte) (Summary
 		return Summary{}, ErrUnavailable
 	}
 	b = r.b
-	if len(b) != 145 || string(b[:8]) != "ZVPLRSP1" || binary.BigEndian.Uint64(b[8:16]) != c.id || b[16] > 1 || !bytes.Equal(b[17:49], expected[:]) {
+	if len(b) != expectedSize || string(b[:8]) != "ZVPLRSP1" || binary.BigEndian.Uint64(b[8:16]) != c.id || b[16] > 1 || !bytes.Equal(b[17:49], expected[:]) {
 		_ = c.Close()
 		return Summary{}, ErrProtocol
 	}
-	s, e := decodeSummary(b[49:])
+	s, e := decodeSummary(b[49:145])
 	if e != nil {
 		_ = c.Close()
 		return Summary{}, e
@@ -330,6 +340,13 @@ func (c *Client) exchange(ctx context.Context, op byte, payload []byte) (Summary
 	case <-c.stopped:
 		return Summary{}, ErrUnavailable
 	default:
+	}
+	if mask != nil {
+		*mask = binary.BigEndian.Uint64(b[145:153])
+		if b[16] == 1 && *mask != 0 {
+			_ = c.Close()
+			return Summary{}, ErrProtocol
+		}
 	}
 	if b[16] == 1 {
 		return Summary{}, ErrRejected
