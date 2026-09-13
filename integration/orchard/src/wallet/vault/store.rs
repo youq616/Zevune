@@ -409,6 +409,22 @@ impl WalletStore {
         self.persist()?;
         Ok(payment)
     }
+    /// Checked presentation path used by the local console. The recipient cannot
+    /// select the wallet's domain; validated scanned history is authoritative.
+    pub fn prepare_payment_to(
+        &mut self,
+        recipient: &super::super::address::Recipient,
+        amount: u64,
+        fee: u64,
+        expiry: u64,
+        prover: &WalletProver,
+    ) -> Result<Payment, StoreError> {
+        self.ensure()?;
+        let address = recipient
+            .for_domain(self.wallet.signing_domain()?)
+            .map_err(|_| StoreError::Wallet(WalletError::History))?;
+        self.prepare_payment(address, amount, fee, expiry, prover)
+    }
     /// Explicitly retrieve the SAME signed bytes after a rescan. Never rebuilds
     /// or broadcasts automatically, and never clears reservations on a timeout.
     pub fn pending_payment(&self) -> Result<Option<Payment>, StoreError> {

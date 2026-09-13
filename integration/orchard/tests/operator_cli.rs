@@ -170,10 +170,18 @@ fn operator_processes_prepare_resume_and_confirm_two_real_payments() {
     for wallet in [&alice, &bob, &carol] {
         call(0, &[wallet], None);
     }
-    let bob_address = text_field(&call(1, &[&bob, "0"], None), "address");
-    let carol_address = text_field(&call(1, &[&carol, "0"], None), "address");
     let init = call(7, &[&alice, &journal, &manifest], None);
     let digest = text_field(&init, "genesis_sha256");
+    // LAB2 payment entry points require recipients derived for this trusted
+    // history, not the deliberately unbound create-before-genesis addresses.
+    let bob_info = call(8, &[&bob, &journal, &manifest, &digest, "0"], None);
+    let carol_info = call(8, &[&carol, &journal, &manifest, &digest, "0"], None);
+    for info in [&bob_info, &carol_info] {
+        assert!(info.contains("\"address_network_bound\":true"));
+        assert_eq!(text_field(info, "signing_domain"), digest);
+    }
+    let bob_address = text_field(&bob_info, "address");
+    let carol_address = text_field(&carol_info, "address");
     let genesis =
         TestGenesis::read_pinned(Path::new(&manifest), unhex(&digest).try_into().unwrap()).unwrap();
     let initial = call(3, &[&alice, &journal, &manifest, &digest], None);

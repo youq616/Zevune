@@ -19,6 +19,7 @@ use crate::pool::MAX_COMMITMENTS;
 use crate::wire::{decode, encode, AuthorizationVerifier};
 use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 
+pub mod address;
 pub mod vault;
 type Hash = [u8; 32];
 
@@ -110,6 +111,20 @@ impl Payment {
 }
 
 impl Wallet {
+    /// Payment identity is available only after validated local history is scanned.
+    /// Restoring encrypted keys alone does not establish the current network.
+    pub fn signing_domain(&self) -> Result<Option<Hash>, WalletError> {
+        Ok(self
+            .scanned
+            .as_ref()
+            .ok_or(WalletError::NotSynced)?
+            .signing_domain)
+    }
+    pub fn receive_recipient(&self, index: u32) -> Result<address::Recipient, WalletError> {
+        address::Recipient::new(self.receive_address(index)?, self.signing_domain()?)
+            .map_err(|_| WalletError::History)
+    }
+
     pub fn create() -> Result<Self, WalletError> {
         let mut seed = Zeroizing::new([0; 32]);
         OsRng

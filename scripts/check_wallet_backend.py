@@ -12,7 +12,7 @@ import secrets
 import sys
 import tempfile
 
-from zevune_wallet import checked_address, encode_request, invoke
+from zevune_wallet import checked_address, checked_recipient, encode_request, genesis_identity, invoke
 
 
 def run(backend: Path) -> None:
@@ -40,6 +40,56 @@ def run(backend: Path) -> None:
         ]))
         assert status["balance"] == status["available"] == 100_000
         assert status["height"] == 0 and status["pending"] is False
+        pin = initialized["genesis_sha256"]
+        identity = genesis_identity(Path(manifest), pin)
+        assert all(status[k] == v for k, v in identity.items())
+        receive = invoke(backend, encode_request(8, password, [restored, journal, manifest, pin, "0"]))
+        checked_recipient(receive["address"], pin)
+        assert receive["address"] == initialized["address"]
+        assert receive["address_network_bound"] is True
+        peer = str(root / "peer.zwallet")
+        invoke(backend, encode_request(0, password, [peer]))
+        peer_address = invoke(backend, encode_request(8, password, [peer, journal, manifest, pin, "3"]))["address"]
+        checked_recipient(peer_address, pin)
+        parts = peer_address.split(":")
+        parts[1] = "02" * 32 if pin != "02" * 32 else "03" * 32
+        parts[3] = hashlib.sha256(b"ZEVUNE-LOCAL-ADDRESS\0\x02" + bytes.fromhex(parts[1] + parts[2])).hexdigest()[:16]
+        different_network = ":".join(parts)
+        checked_address(different_network)  # valid checksum, but wrong network
+        before = {name: Path(name).read_bytes() for name in [restored, journal, manifest]}
+        output = str(root / "payment.bin")
+        # Directly exercise the backend, bypassing all Python frontend checks.
+        for invalid_address in [address, different_network, peer_address + ":extra"]:
+            raw = encode_request(4, password, [restored, journal, manifest, pin,
+                invalid_address, "25000", "1000", "10", output])
+            try:
+                invoke(backend, raw)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("Backend signed an invalid or wrong-network recipient")
+            assert not Path(output).exists()
+            assert all(Path(name).read_bytes() == data for name, data in before.items())
+        payment = invoke(backend, encode_request(4, password, [restored, journal, manifest, pin,
+            peer_address, "25000", "1000", "10", output]))
+        raw_payment = Path(output).read_bytes()
+        assert raw_payment[:8] == b"ZVORLAB2" and raw_payment[8:40].hex() == pin
+        assert hashlib.sha256(raw_payment).hexdigest() == payment["txid"]
+        assert all(payment[k] == v for k, v in identity.items())
+        paid_backup = str(root / "paid-backup.zwallet")
+        invoke(backend, encode_request(2, password, [restored, paid_backup], payment["receipt"]))
+        recovered_output = str(root / "same-payment.bin")
+        pending = invoke(backend, encode_request(5, password,
+            [paid_backup, journal, manifest, pin, recovered_output], payment["receipt"]))
+        assert pending["txid"] == payment["txid"]
+        assert Path(recovered_output).read_bytes() == raw_payment
+        # LAB1 remains readable and explicitly unbound; no silent LAB2 downgrade.
+        legacy = bytearray(Path(manifest).read_bytes())
+        legacy[:8] = b"ZVTGEN01"
+        del legacy[50:82]
+        legacy_file = root / "legacy-public-genesis.bin"
+        legacy_file.write_bytes(legacy)
+        assert genesis_identity(legacy_file, hashlib.sha256(legacy).hexdigest())["signing_domain"] is None
         original = Path(restored).read_bytes()
         for raw in [encode_request(1, secrets.token_bytes(32), [restored, "0"]),
                     encode_request(1, password, [restored, "0"]) + b"\0"]:
@@ -50,7 +100,7 @@ def run(backend: Path) -> None:
             else:
                 raise AssertionError("Invalid private-input frame was accepted")
         assert Path(restored).read_bytes() == original
-    print("Python/Rust local-wallet interop passed; no secrets or wallet artifacts retained.")
+    print("Python/Rust local-wallet interop and domain-checked payment/outbox recovery passed; no broadcast, secrets or wallet artifacts retained.")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,6 @@
 //! Opt-in NO-FUNDS local wallet operator. No network connection or auto-broadcast.
 //! Passwords and payment intent arrive only through a bounded private stdin pipe.
 #![forbid(unsafe_code)]
-use orchard::Address;
-use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Read, Write};
@@ -10,11 +8,10 @@ use std::path::Path;
 use zeroize::Zeroizing;
 use zevune_orchard_lab::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use zevune_orchard_lab::wallet::vault::store::{StoreReceipt, WalletStore};
-use zevune_orchard_lab::wallet::{Payment, WalletProver};
+use zevune_orchard_lab::wallet::{address::Recipient, Payment, WalletProver};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const MAX_REQUEST: usize = 16_384;
-const ADDRESS_DOMAIN: &[u8] = b"ZEVUNE-LOCAL-ADDRESS\0\x01";
 fn bad() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "invalid local wallet request")
 }
@@ -34,23 +31,6 @@ fn unhex<const N: usize>(text: &str) -> Result<[u8; N]> {
         result[i] = u8::from_str_radix(std::str::from_utf8(pair)?, 16)?;
     }
     Ok(result)
-}
-fn address_text(address: &Address) -> String {
-    let raw = address.to_raw_address_bytes();
-    let mut hash = Sha256::new();
-    hash.update(ADDRESS_DOMAIN);
-    hash.update(raw);
-    format!("zvlab:{}:{}", hex(&raw), hex(&hash.finalize()[..4]))
-}
-fn address(text: &str) -> Result<Address> {
-    let mut fields = text.split(':');
-    ensure(fields.next() == Some("zvlab"))?;
-    let raw = unhex::<43>(fields.next().ok_or_else(bad)?)?;
-    fields.next().ok_or_else(bad)?;
-    ensure(fields.next().is_none())?;
-    let address = Option::<Address>::from(Address::from_raw_address_bytes(&raw)).ok_or_else(bad)?;
-    ensure(address_text(&address) == text)?;
-    Ok(address)
 }
 fn number(text: &str) -> Result<u64> {
     let n: u64 = text.parse()?;
@@ -96,6 +76,7 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         4 => 9,
         5 => 5,
         7 => 3,
+        8 => 5,
         _ => return Err(bad().into()),
     };
     ensure(count == expected && !(op == 0 && pin.is_some()))?;
@@ -124,11 +105,37 @@ fn receipt(wallet: &WalletStore) -> Result<String> {
         hex(&r.digest)
     ))
 }
-fn sync(wallet: &mut WalletStore, fields: &[&str]) -> Result<()> {
-    let genesis = TestGenesis::read_pinned(path(fields[2])?, unhex(fields[3])?)?;
+fn sync(wallet: &mut WalletStore, fields: &[&str], genesis: &TestGenesis) -> Result<()> {
     let mut pool = genesis.open_pool(path(fields[1])?)?;
     wallet.sync(&genesis.wallet_history(&mut pool)?)?;
     Ok(())
+}
+fn identity(genesis: &TestGenesis) -> String {
+    let (profile, domain) = if let Some(domain) = genesis.signing_domain() {
+        ("LAB2", format!("\"{}\"", hex(&domain)))
+    } else {
+        ("LAB1", "null".to_owned())
+    };
+    format!(
+        "\"payment_profile\":\"{profile}\",\"signing_domain\":{domain},\"genesis_sha256\":\"{}\"",
+        hex(&genesis.digest())
+    )
+}
+struct Intent {
+    recipient: Recipient,
+    amount: u64,
+    fee: u64,
+    expiry: u64,
+}
+fn intent(fields: &[&str], genesis: &TestGenesis) -> Result<Intent> {
+    let recipient = Recipient::decode(fields[4])?;
+    recipient.for_domain(genesis.signing_domain())?;
+    Ok(Intent {
+        recipient,
+        amount: number(fields[5])?,
+        fee: number(fields[6])?,
+        expiry: number(fields[7])?,
+    })
 }
 fn export(path: &Path, payment: &Payment) -> Result<()> {
     let mut options = OpenOptions::new();
@@ -155,18 +162,31 @@ fn execute(request: Request<'_>) -> Result<String> {
     if request.op == 0 {
         let wallet = WalletStore::create(source, request.password)?;
         return Ok(format!(
-            "\"result\":\"created\",\"address\":\"{}\",\"receipt\":\"{}\"",
-            address_text(&wallet.view()?.receive_address(0)?),
+            "\"result\":\"created\",\"address_network_bound\":false,\"address\":\"{}\",\"receipt\":\"{}\"",
+            Recipient::new(wallet.view()?.receive_address(0)?, None)?.encode(),
             receipt(&wallet)?
         ));
     }
+    // Load and retain one pinned, fully decoded public manifest. A mismatched
+    // recipient is rejected BEFORE opening/unlocking or updating the wallet and
+    // BEFORE constructing expensive proving parameters. No manifest re-read.
+    let genesis = if matches!(request.op, 3 | 4 | 5 | 8) {
+        Some(TestGenesis::read_pinned(path(f[2])?, unhex(f[3])?)?)
+    } else {
+        None
+    };
+    let payment_intent = if request.op == 4 {
+        Some(intent(f, genesis.as_ref().ok_or_else(bad)?)?)
+    } else {
+        None
+    };
     let mut wallet = WalletStore::open(source, request.password, request.pin)?;
     let body = match request.op {
         1 => {
             let index = u32::try_from(number(f[1])?)?;
             format!(
-                "\"address\":\"{}\",\"receipt\":\"{}\"",
-                address_text(&wallet.view()?.receive_address(index)?),
+                "\"address_network_bound\":false,\"address\":\"{}\",\"receipt\":\"{}\"",
+                Recipient::new(wallet.view()?.receive_address(index)?, None)?.encode(),
                 receipt(&wallet)?
             )
         }
@@ -178,10 +198,12 @@ fn execute(request: Request<'_>) -> Result<String> {
             )
         }
         3 => {
-            sync(&mut wallet, f)?;
+            let genesis = genesis.as_ref().ok_or_else(bad)?;
+            sync(&mut wallet, f, genesis)?;
             let view = wallet.view()?;
             format!(
-                "\"height\":{},\"balance\":{},\"available\":{},\"pending\":{},\"receipt\":\"{}\"",
+                "{},\"height\":{},\"balance\":{},\"available\":{},\"pending\":{},\"receipt\":\"{}\"",
+                identity(genesis),
                 view.height().ok_or_else(bad)?,
                 view.balance()?,
                 view.available_balance()?,
@@ -192,14 +214,16 @@ fn execute(request: Request<'_>) -> Result<String> {
         4 | 5 => {
             let target = path(f[if request.op == 4 { 8 } else { 4 }])?;
             unused_output(target)?;
-            let intent = if request.op == 4 {
-                Some((address(f[4])?, number(f[5])?, number(f[6])?, number(f[7])?))
-            } else {
-                None
-            };
-            sync(&mut wallet, f)?;
-            let payment = if let Some((destination, amount, fee, expiry)) = intent {
-                wallet.prepare_payment(destination, amount, fee, expiry, &WalletProver::new())?
+            let genesis = genesis.as_ref().ok_or_else(bad)?;
+            sync(&mut wallet, f, genesis)?;
+            let payment = if let Some(intent) = payment_intent {
+                wallet.prepare_payment_to(
+                    &intent.recipient,
+                    intent.amount,
+                    intent.fee,
+                    intent.expiry,
+                    &WalletProver::new(),
+                )?
             } else {
                 wallet.pending_payment()?.ok_or_else(bad)?
             };
@@ -207,7 +231,8 @@ fn execute(request: Request<'_>) -> Result<String> {
             // export never clears it or silently creates a replacement payment.
             export(target, &payment)?;
             format!(
-                "\"result\":\"signed_transaction_exported_not_broadcast\",\"txid\":\"{}\",\"receipt\":\"{}\"",
+                "{},\"result\":\"signed_transaction_exported_not_broadcast\",\"txid\":\"{}\",\"receipt\":\"{}\"",
+                identity(genesis),
                 hex(&payment.id()),
                 receipt(&wallet)?
             )
@@ -224,9 +249,22 @@ fn execute(request: Request<'_>) -> Result<String> {
             let mut pool = genesis.create_pool(journal)?;
             wallet.sync(&genesis.wallet_history(&mut pool)?)?;
             format!(
-                "\"result\":\"public_test_genesis_created\",\"genesis_sha256\":\"{}\",\"receipt\":\"{}\"",
-                hex(&genesis.digest()),
+                "{},\"result\":\"public_test_genesis_created\",\"address_network_bound\":true,\"address\":\"{}\",\"receipt\":\"{}\"",
+                identity(&genesis),
+                wallet.view()?.receive_recipient(0)?.encode(),
                 receipt(&wallet)?
+            )
+        }
+        8 => {
+            let index = u32::try_from(number(f[4])?)?;
+            let genesis = genesis.as_ref().ok_or_else(bad)?;
+            sync(&mut wallet, f, genesis)?;
+            format!(
+                "{},\"address_network_bound\":{},\"address\":\"{}\",\"receipt\":\"{}\"",
+                identity(genesis),
+                genesis.signing_domain().is_some(),
+                wallet.view()?.receive_recipient(index)?.encode(),
+                receipt(&wallet)?,
             )
         }
         _ => return Err(bad().into()),
@@ -293,17 +331,98 @@ mod tests {
     fn experimental_address_and_numbers_require_canonical_encoding() {
         let owner = zevune_orchard_lab::wallet::Wallet::create().unwrap();
         let receive = owner.receive_address(7).unwrap();
-        let text = address_text(&receive);
-        assert_eq!(address(&text).unwrap(), receive);
-        assert!(address(&text.to_uppercase()).is_err());
-        assert!(address(&(text.clone() + ":extra")).is_err());
+        let text = Recipient::new(receive, None).unwrap().encode();
+        assert!(Recipient::decode(&text).unwrap().for_domain(None).unwrap() == receive);
+        assert!(Recipient::decode(&text.to_uppercase()).is_err());
+        assert!(Recipient::decode(&(text.clone() + ":extra")).is_err());
         let mut changed = text;
         changed.pop();
-        assert!(address(&changed).is_err());
+        assert!(Recipient::decode(&changed).is_err());
         for bad in ["01", "+1", "-1", " 1", "1.0", "18446744073709551616"] {
             assert!(number(bad).is_err());
         }
         assert_eq!(number("0").unwrap(), 0);
         assert_eq!(number("18446744073709551615").unwrap(), u64::MAX);
+    }
+    #[test]
+    fn network_address_operation_has_exact_bounded_fields() {
+        let password = b"synthetic-parser-test-password";
+        let mut raw = b"ZVWCLI01".to_vec();
+        raw.push(8);
+        raw.extend_from_slice(&(password.len() as u16).to_be_bytes());
+        raw.extend_from_slice(password);
+        raw.extend_from_slice(&[0, 5]);
+        for field in ["/wallet", "/journal", "/genesis", &"1".repeat(64), "0"] {
+            raw.extend_from_slice(&(field.len() as u16).to_be_bytes());
+            raw.extend_from_slice(field.as_bytes());
+        }
+        assert_eq!(parse(&raw).unwrap().op, 8);
+        for end in 0..raw.len() {
+            assert!(parse(&raw[..end]).is_err());
+        }
+        raw.push(0);
+        assert!(parse(&raw).is_err());
+    }
+
+    #[test]
+    fn wrong_network_is_rejected_before_wallet_file_open() {
+        use zevune_orchard_lab::wallet::{address::AddressError, Wallet};
+        struct Dir(std::path::PathBuf);
+        impl Drop for Dir {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let dir =
+            Dir(std::env::temp_dir()
+                .join(format!("zevune-preflight-{:032x}", rand::random::<u128>())));
+        std::fs::create_dir(&dir.0).unwrap();
+        let receive = Wallet::create().unwrap().receive_address(0).unwrap();
+        let genesis = TestGenesis::generate(&[(receive, TEST_SUPPLY)]).unwrap();
+        let manifest = dir.0.join("genesis");
+        genesis.write_new(&manifest).unwrap();
+        let mut other = genesis.digest();
+        other[0] ^= 1;
+        other[1] |= 1;
+        for destination in [
+            Recipient::new(receive, Some(other)).unwrap(),
+            Recipient::new(receive, None).unwrap(),
+        ] {
+            let fields = [
+                dir.0
+                    .join("never-created-wallet")
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+                dir.0
+                    .join("never-created-journal")
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+                manifest.to_str().unwrap().to_owned(),
+                hex(&genesis.digest()),
+                destination.encode(),
+                "1".to_owned(),
+                "1".to_owned(),
+                "10".to_owned(),
+                dir.0
+                    .join("never-created-output")
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+            ];
+            let error = execute(Request {
+                op: 4,
+                password: b"synthetic-unused-password",
+                pin: None,
+                fields: fields.iter().map(String::as_str).collect(),
+            })
+            .unwrap_err();
+            assert_eq!(
+                error.downcast_ref::<AddressError>(),
+                Some(&AddressError::Network)
+            );
+            assert_eq!(std::fs::read_dir(&dir.0).unwrap().count(), 1);
+        }
     }
 }

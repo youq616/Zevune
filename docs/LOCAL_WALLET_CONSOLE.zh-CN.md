@@ -29,6 +29,7 @@ python scripts/zevune_wallet.py --help
 $work = Join-Path $env:LOCALAPPDATA 'Zevune\wallet-lab'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 python scripts/zevune_wallet.py --no-real-funds create "$work\alice.zwallet"
+# address 返回未绑定网络的旧实验地址，仅用于初始化前或明确的 LAB1 实验。
 python scripts/zevune_wallet.py --no-real-funds address "$work\alice.zwallet" --index 1
 python scripts/zevune_wallet.py --no-real-funds backup "$work\alice.zwallet" "$work\alice-backup.zwallet"
 python scripts/zevune_wallet.py --no-real-funds restore "$work\alice-backup.zwallet" "$work\alice-restored.zwallet"
@@ -51,6 +52,14 @@ $genesisHash = '<独立保存的64字符创世摘要>'
 python scripts/zevune_wallet.py --no-real-funds status "$work\alice.zwallet" --journal "$work\state.journal" --genesis "$work\public-genesis.bin" --genesis-sha256 $genesisHash
 ```
 
+为当前网络取得收款地址（首次同步或备份恢复后，需要经过已验证的本地历史）：
+
+```powershell
+python scripts/zevune_wallet.py --no-real-funds network-address "$work\alice.zwallet" --journal "$work\state.journal" --genesis "$work\public-genesis.bin" --genesis-sha256 $genesisHash --index 1
+```
+
+`status`、`network-address`、`prepare` 和 `pending` 返回准确的 `payment_profile`、`signing_domain`、`genesis_sha256`。LAB2 的收款地址以 `zvlab2:` 开头并携带这个签名域；前端在请求密码之前核对它，Rust 后端在打开钱包、同步或建立证明参数之前独立核对。LAB2 不接受没有域的 `zvlab:`，也不会自动给它加标签；请让收款钱包生成相应网络的地址。旧 LAB1 继续使用旧格式，不能把旧钱包数据改成 LAB2。
+
 构造付款时，接收地址、金额、手续费、过期高度通过交互输入，不进入子进程参数或环境变量。需要明确输入 `PREPARE`，这只是授权本地签名，不是网络转账：
 
 ```powershell
@@ -64,10 +73,16 @@ python scripts/zevune_wallet.py --no-real-funds pending "$work\alice.zwallet" "$
 
 每次成功返回的 `receipt` 是 144 个小写十六进制字符，可通过全局 `--pin` 参数（置于子命令前）核对文件祖先。例如 `--pin <独立保存的receipt> address ...`。没有独立检查点时，完整的旧加密文件仍可能通过解密。receipt 不是区块签名、网络最终性证书或账户密钥；公开它可能暴露本地文件关联。
 
-`zvlab:` 地址是临时、带校验和的本地显示格式，不是正式 Zevune、Zcash Unified Address 或任何主网标准。43 字节 Orchard 接收地址的编码交给上游验证，显示校验和只用于发现输入错误，不认证交易对手。未来的正式地址与网络域隔离需要独立设计，不能静默把本实验地址当成主网地址。
+`zvlab:` 地址是临时、带校验和的本地显示格式，不是正式 Zevune、Zcash Unified Address 或任何主网标准。43 字节 Orchard 接收地址的编码交给上游验证，显示校验和只用于发现输入错误，不认证交易对手。新增 `zvlab2:` 同样是实验显示格式，不是主网地址标准。网络标签用于避免误选网络，校验和不能认证收款人：攻击者能够改标签并重算校验和，所以仍需通过可信渠道确认收款地址。完全相同的创世清单复用同一个域，不能据此辨别克隆链或分叉。详见 [钱包收款身份](protocol/WALLET_RECIPIENT_IDENTITY.md)。
 
 前后端请求有固定操作码、长度上限和精确字段数量。后端只从私有 stdin 管道接收，拒绝未知操作、截断、尾部、多余字段和相对路径。前端使用 `shell=False`，不向后端继承无关环境变量。返回只包含操作状态、本人请求的地址/余额和摘要，不打印种子、查看密钥或证明见证；用户仍应避免终端录屏及日志记录。
 
 现有钱包日志容量为 256 条，超过上限拒绝写入而非自动丢弃记录。所有目录、设备和操作系统仍需可信；Windows ACL、目录替换、硬链接、多副本并发、交换分区及进程内存都不在完整保护保证之内。Python 字符串与系统副本没有可靠擦除保证。公开交易文件包含密文及签名，但本地文件时间和操作时序可能泄露信息。
 
 初始化涉及多个新文件，不提供跨文件系统的整体原子事务。部分失败可能留下新创世清单或新账本，但不会覆盖已有钱包/账本，也不会自动删除以掩盖失败。恢复备份会生成另一份钱包副本，不应同时使用多个副本签名。
+
+## P1 兼容范围
+
+本次不修改 Orchard 电路、支付签名、交易编码、共识规则或钱包日志格式。新增 stdin 操作码 8；既有操作码与长度保持不变。前后端应从同一源码版本构建：旧后端遇到新操作会拒绝，旧前端遇到新地址也会拒绝；不能以回退旧地址代替升级。只恢复密钥不能证明网络或余额，`network-address` 仍需打开与独立摘要匹配的清单、重放本地账本，再通过钱包已有检查点核对历史。
+
+正常底层 `prepare_payment(Address, ...)` 仍是使用 raw Orchard receiver 的库接口。需要显示格式保护的调用方应使用 `Recipient` 与 `prepare_payment_to`；不要剥掉地址网络字段后调用 raw API。本次控制台已实际切换到检查后的入口。网络地址校验只改变签名前用户输入检查，不改变节点的真实授权验证。

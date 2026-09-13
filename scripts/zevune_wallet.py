@@ -23,8 +23,9 @@ import warnings
 MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
-       "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3}
+       "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
+       "network-address": 8}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -62,13 +63,82 @@ def hidden_password(confirm: bool) -> bytes:
 
 
 def checked_address(text: str) -> str:
-    if re.fullmatch(r"zvlab:[0-9a-f]{86}:[0-9a-f]{8}", text) is None:
+    """Presentation/checksum only; Rust separately checks the Orchard receiver."""
+    if not isinstance(text, str):
+        raise ValueError("Invalid address type")
+    if re.fullmatch(r"zvlab:[0-9a-f]{86}:[0-9a-f]{8}", text):
+        _, body, checksum = text.split(":")
+        payload = b"ZEVUNE-LOCAL-ADDRESS\0\x01" + bytes.fromhex(body)
+        length = 8
+    elif re.fullmatch(r"zvlab2:[0-9a-f]{64}:[0-9a-f]{86}:[0-9a-f]{16}", text):
+        _, domain, body, checksum = text.split(":")
+        if domain == "0" * 64:
+            raise ValueError("Zero payment domain")
+        payload = b"ZEVUNE-LOCAL-ADDRESS\0\x02" + bytes.fromhex(domain + body)
+        length = 16
+    else:
         raise ValueError("Invalid experimental local address")
-    _, body, checksum = text.split(":")
-    expected = hashlib.sha256(b"ZEVUNE-LOCAL-ADDRESS\0\x01" + bytes.fromhex(body)).hexdigest()[:8]
-    if checksum != expected:
+    if hashlib.sha256(payload).hexdigest()[:length] != checksum:
         raise ValueError("Local address checksum mismatch")
     return text
+
+
+class NetworkMismatch(ValueError):
+    """No recipient details in diagnostics."""
+
+
+def checked_recipient(text: str, expected_domain: str | None) -> str:
+    checked_address(text)
+    actual = text.split(":")[1] if text.startswith("zvlab2:") else None
+    if actual != expected_domain:
+        raise NetworkMismatch("Recipient belongs to another payment domain or legacy profile")
+    return text
+
+
+def genesis_identity(file: Path, expected_sha: str) -> dict:
+    """Read-only public-frame precheck; not note verification or chain finality.
+
+    The independently retained pin, not the recipient or a remote reply, selects
+    the identity. The Rust backend independently decodes the complete manifest.
+    """
+    if re.fullmatch(r"[0-9a-f]{64}", expected_sha) is None or expected_sha == "0" * 64:
+        raise ValueError("A nonzero independently pinned genesis digest is required")
+    before = file.lstat()
+    if (not stat.S_ISREG(before.st_mode) or not 165 <= before.st_size <= 1922
+            or getattr(before, "st_file_attributes", 0) & 0x400):
+        raise ValueError("Invalid public genesis file")
+    with file.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if not os.path.samestat(before, opened) or not stat.S_ISREG(opened.st_mode):
+            raise ValueError("Genesis file changed")
+        raw = stream.read(1923)
+    current = file.lstat()
+    if (not os.path.samestat(before, current) or current.st_size != before.st_size
+            or current.st_mtime_ns != before.st_mtime_ns
+            or hashlib.sha256(raw).hexdigest() != expected_sha):
+        raise ValueError("Genesis pin or file identity mismatch")
+    magic = raw[:8]
+    if magic not in {b"ZVTGEN01", b"ZVTGEN02"}:
+        raise ValueError("Unknown genesis profile")
+    bound = magic == b"ZVTGEN02"
+    count = int.from_bytes(raw[48:50], "big")
+    header = 82 if bound else 50
+    if (not 1 <= count <= 16 or len(raw) != header + 115 * count
+            or raw[8:40] != hashlib.sha256(b"zevune-orchard-lab-1").digest()
+            or int.from_bytes(raw[40:48], "big") != 100_000
+            or (bound and raw[50:82] == bytes(32))):
+        raise ValueError("Malformed genesis identity")
+    remaining = 100_000
+    for offset in range(header, len(raw), 115):
+        value = int.from_bytes(raw[offset + 43:offset + 51], "big")
+        if not 1 <= value <= remaining:
+            raise ValueError("Invalid public test allocation")
+        remaining -= value
+    if remaining:
+        raise ValueError("Invalid public test supply")
+    return {"payment_profile": "LAB2" if bound else "LAB1",
+            "signing_domain": expected_sha if bound else None,
+            "genesis_sha256": expected_sha}
 
 
 def integer(text: str, maximum: int = (1 << 64) - 1) -> str:
@@ -121,29 +191,34 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("wallet", type=Path)
         if command in {"backup", "restore", "prepare", "pending"}:
             sub.add_argument("output", type=Path)
-        if command == "address":
+        if command in {"address", "network-address"}:
             sub.add_argument("--index", default="0")
-        if command in {"status", "prepare", "pending", "init-test-ledger"}:
+        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address"}:
             sub.add_argument("--journal", type=Path, required=True)
             sub.add_argument("--genesis", type=Path, required=True)
-        if command in {"status", "prepare", "pending"}:
+        if command in {"status", "prepare", "pending", "network-address"}:
             sub.add_argument("--genesis-sha256", required=True)
     args = parser.parse_args(argv)
     try:
+        identity = None
         fields = [str(args.wallet.absolute())]
         if args.command == "address":
             fields.append(integer(args.index, (1 << 32) - 1))
         if args.command in {"backup", "restore"}:
             fields.append(str(args.output.absolute()))
-        if args.command in {"status", "prepare", "pending", "init-test-ledger"}:
+        if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address"}:
             fields.extend([str(args.journal.absolute()), str(args.genesis.absolute())])
-        if args.command in {"status", "prepare", "pending"}:
+        if args.command in {"status", "prepare", "pending", "network-address"}:
             if re.fullmatch(r"[0-9a-f]{64}", args.genesis_sha256) is None:
                 raise ValueError("A pinned public genesis digest is required")
             fields.append(args.genesis_sha256)
+            identity = genesis_identity(args.genesis.absolute(), args.genesis_sha256)
+            print("Pinned local payment network: " + json.dumps(identity, sort_keys=True), file=sys.stderr)
+        if args.command == "network-address":
+            fields.append(integer(args.index, (1 << 32) - 1))
         if args.command == "prepare":
             # Private intent is prompted, never placed in shell arguments/history.
-            destination = checked_address(input("Local recipient address: "))
+            destination = checked_recipient(input("Recipient address for the displayed network: "), identity["signing_domain"])
             amount = integer(input("Amount in integer test units: "))
             fee = integer(input("Fee in integer test units: "))
             expiry = integer(input("Expiry block height: "))
@@ -156,8 +231,15 @@ def main(argv: list[str] | None = None) -> int:
         password = hidden_password(args.command == "create")
         request = encode_request(OPS[args.command], password, fields, args.pin)
         response = invoke(args.backend, request, args.backend_sha256)
+        if identity is not None and any(response.get(k) != v or k not in response for k, v in identity.items()):
+            raise RuntimeError("Backend network identity mismatch; reconcile saved state")
+        if args.command == "network-address":
+            checked_recipient(response.get("address", ""), identity["signing_domain"])
         print(json.dumps(response, ensure_ascii=True, indent=2))
         return 0
+    except NetworkMismatch:
+        print("Recipient network mismatch. Obtain an address for the displayed pinned network; do not relabel an address or sign again blindly.", file=sys.stderr)
+        return 1
     except (ValueError, OSError, RuntimeError, getpass.GetPassWarning, EOFError, subprocess.TimeoutExpired):
         print("Operation not completed. No automatic retry or reset. Check trusted local files and reconcile pending transactions before signing again.", file=sys.stderr)
         return 1
