@@ -329,12 +329,23 @@ fn legacy_snapshot_import_preserves_missing_outbox_reservation() {
     assert!(WalletStore::import_snapshot_new(&path, &old, PASSWORD).is_err());
 }
 
+// Read through the owning lock handle. On Windows a second file handle is not
+// entitled to read a file locked exclusively by this store, even in this process.
+fn owned_file_bytes(store: &mut WalletStore) -> Vec<u8> {
+    let previous = store.file.stream_position().unwrap();
+    store.file.seek(SeekFrom::Start(0)).unwrap();
+    let mut bytes = Vec::new();
+    store.file.read_to_end(&mut bytes).unwrap();
+    store.file.seek(SeekFrom::Start(previous)).unwrap();
+    bytes
+}
+
 #[test]
 fn capacity_inspection_is_read_only_and_does_not_claim_synced_balance() {
     let dir = Dir::new();
     let path = dir.path("inspect.zwallet");
     let mut store = WalletStore::create(&path, PASSWORD).unwrap();
-    let before = fs::read(&path).unwrap();
+    let before = owned_file_bytes(&mut store);
     let receipt = store.receipt().unwrap();
     let status = store.storage_status().unwrap();
     assert_eq!(status.records_used, 1);
@@ -344,7 +355,7 @@ fn capacity_inspection_is_read_only_and_does_not_claim_synced_balance() {
     assert_eq!(status.max_records, MAX_RECORDS);
     assert_eq!(store.receipt().unwrap(), receipt);
     assert_eq!(store.view().unwrap().balance(), Err(WalletError::NotSynced));
-    assert_eq!(fs::read(&path).unwrap(), before);
+    assert_eq!(owned_file_bytes(&mut store), before);
     store.file.seek(SeekFrom::Start(0)).unwrap();
     store.file.write_all(b"BADMAGIC").unwrap();
     assert_eq!(store.storage_status(), Err(StoreError::Corrupt));
@@ -380,7 +391,7 @@ fn full_real_journal_reopens_and_recovers_identical_outbox_without_capacity_bypa
         store.persist().unwrap();
     }
     let receipt = store.receipt().unwrap();
-    let bytes = fs::read(&path).unwrap();
+    let bytes = owned_file_bytes(&mut store);
     assert_eq!(bytes.len() as u64, MAX_FILE_BYTES);
     drop(store);
 
@@ -398,7 +409,7 @@ fn full_real_journal_reopens_and_recovers_identical_outbox_without_capacity_bypa
         store.check_payment_to(&recipient, 1, 1, 10),
         Err(StoreError::Capacity)
     );
-    assert_eq!(fs::read(&path).unwrap(), bytes);
+    assert_eq!(owned_file_bytes(&mut store), bytes);
 
     let plan = pool
         .prepare(1, [0x73; 32], &[payment.bytes().to_vec()])
@@ -417,7 +428,7 @@ fn full_real_journal_reopens_and_recovers_identical_outbox_without_capacity_bypa
         payment.bytes()
     );
     assert_eq!(store.storage_status().unwrap().records_remaining, 0);
-    assert_eq!(fs::read(&path).unwrap(), bytes);
+    assert_eq!(owned_file_bytes(&mut store), bytes);
 
     let copy = dir.path("backup.zwallet");
     assert_eq!(store.backup_new(&copy).unwrap(), receipt);
