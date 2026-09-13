@@ -79,7 +79,7 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
     };
     let count = take(&mut raw, 1)?[0] as usize;
     let expected = match op {
-        0 => 1,
+        0 | 9 => 1,
         1 | 2 | 6 => 2,
         3 => 4,
         4 => 9,
@@ -112,6 +112,18 @@ fn receipt(wallet: &WalletStore) -> Result<String> {
         hex(&r.journal_id),
         hex(&r.generation.to_be_bytes()),
         hex(&r.digest)
+    ))
+}
+fn storage_status(wallet: &mut WalletStore) -> Result<String> {
+    let status = wallet.storage_status()?;
+    Ok(format!(
+        "\"wallet_storage\":{{\"format\":\"zevune-wallet-capacity-1\",\"records_used\":{},\"records_remaining\":{},\"max_records\":{},\"file_bytes\":{},\"max_file_bytes\":{},\"can_append\":{}}}",
+        status.records_used,
+        status.records_remaining,
+        status.max_records,
+        status.file_bytes,
+        status.max_file_bytes,
+        status.records_remaining > 0,
     ))
 }
 fn sync(wallet: &mut WalletStore, fields: &[&str], genesis: &TestGenesis) -> Result<()> {
@@ -312,6 +324,11 @@ fn execute(request: Request<'_>) -> Result<String> {
                 receipt(&wallet)?,
             )
         }
+        9 => format!(
+            "\"result\":\"storage_inspected_not_synced\",{},\"receipt\":\"{}\"",
+            storage_status(&mut wallet)?,
+            receipt(&wallet)?,
+        ),
         _ => return Err(bad().into()),
     };
     Ok(body)
@@ -370,6 +387,24 @@ mod tests {
         bad = raw;
         bad[9..11].copy_from_slice(&u16::MAX.to_be_bytes());
         assert!(parse(&bad).is_err());
+    }
+
+    #[test]
+    fn storage_inspection_frame_has_exactly_one_path() {
+        let password = b"synthetic-parser-test-password";
+        let mut raw = b"ZVWCLI01".to_vec();
+        raw.push(9);
+        raw.extend_from_slice(&(password.len() as u16).to_be_bytes());
+        raw.extend_from_slice(password);
+        raw.extend_from_slice(&[0, 1]);
+        raw.extend_from_slice(&7u16.to_be_bytes());
+        raw.extend_from_slice(b"/wallet");
+        assert_eq!(parse(&raw).unwrap().op, 9);
+        for end in 0..raw.len() {
+            assert!(parse(&raw[..end]).is_err());
+        }
+        raw.push(0);
+        assert!(parse(&raw).is_err());
     }
 
     #[test]

@@ -13,7 +13,7 @@ import secrets
 import sys
 import tempfile
 
-from zevune_wallet import checked_address, checked_prepare_timing, checked_recipient, encode_request, genesis_identity, invoke
+from zevune_wallet import checked_address, checked_prepare_timing, checked_recipient, checked_storage_status, encode_request, genesis_identity, invoke
 
 
 def run(backend: Path) -> None:
@@ -27,6 +27,14 @@ def run(backend: Path) -> None:
         created = invoke(backend, encode_request(0, password, [owner]), executable_hash)
         address = checked_address(created["address"])
         receipt = created["receipt"]
+        saved = Path(owner).read_bytes()
+        inspected = invoke(backend, encode_request(9, password, [owner], receipt), executable_hash)
+        capacity = checked_storage_status(inspected)
+        assert capacity["records_used"] == 1 and capacity["can_append"] is True
+        assert inspected["result"] == "storage_inspected_not_synced"
+        assert inspected["receipt"] == receipt
+        assert all(k not in inspected for k in ("balance", "confirmed", "signing_domain"))
+        assert Path(owner).read_bytes() == saved
         again = invoke(backend, encode_request(1, password, [owner, "0"], receipt))
         assert again["address"] == address
         invoke(backend, encode_request(2, password, [owner, backup], receipt))
@@ -102,6 +110,11 @@ def run(backend: Path) -> None:
         assert "local_timing" not in pending, "Outbox export is not a second payment measurement"
         assert pending["txid"] == payment["txid"]
         assert Path(recovered_output).read_bytes() == raw_payment
+        saved = Path(paid_backup).read_bytes()
+        inspected = invoke(backend, encode_request(9, password, [paid_backup], pending["receipt"]))
+        checked_storage_status(inspected)
+        assert inspected["receipt"] == pending["receipt"]
+        assert Path(paid_backup).read_bytes() == saved
         # LAB1 remains readable and explicitly unbound; no silent LAB2 downgrade.
         legacy = bytearray(Path(manifest).read_bytes())
         legacy[:8] = b"ZVTGEN01"

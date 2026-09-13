@@ -257,7 +257,7 @@ fn bounds_padding_and_live_disk_drift_fail_closed() {
     let history = pool.wallet_history().unwrap();
     let real = store.receipt;
     store.receipt.generation = MAX_RECORDS;
-    assert_eq!(store.sync(&history), Err(StoreError::Capacity));
+    assert_eq!(store.room(), Err(StoreError::Capacity));
     store.receipt = real;
     let length = store.file.metadata().unwrap().len();
     store.file.seek(SeekFrom::Start(length - 1)).unwrap();
@@ -327,4 +327,107 @@ fn legacy_snapshot_import_preserves_missing_outbox_reservation() {
         Err(StoreError::MissingOutbox)
     ));
     assert!(WalletStore::import_snapshot_new(&path, &old, PASSWORD).is_err());
+}
+
+#[test]
+fn capacity_inspection_is_read_only_and_does_not_claim_synced_balance() {
+    let dir = Dir::new();
+    let path = dir.path("inspect.zwallet");
+    let mut store = WalletStore::create(&path, PASSWORD).unwrap();
+    let before = fs::read(&path).unwrap();
+    let receipt = store.receipt().unwrap();
+    let status = store.storage_status().unwrap();
+    assert_eq!(status.records_used, 1);
+    assert_eq!(status.records_remaining, MAX_RECORDS - 1);
+    assert_eq!(status.file_bytes, before.len() as u64);
+    assert_eq!(status.max_file_bytes, MAX_FILE_BYTES);
+    assert_eq!(status.max_records, MAX_RECORDS);
+    assert_eq!(store.receipt().unwrap(), receipt);
+    assert_eq!(store.view().unwrap().balance(), Err(WalletError::NotSynced));
+    assert_eq!(fs::read(&path).unwrap(), before);
+    store.file.seek(SeekFrom::Start(0)).unwrap();
+    store.file.write_all(b"BADMAGIC").unwrap();
+    assert_eq!(store.storage_status(), Err(StoreError::Corrupt));
+    assert_eq!(store.storage_status(), Err(StoreError::Unavailable));
+}
+
+#[cfg(feature = "local-funding-lab")]
+#[test]
+fn full_real_journal_reopens_and_recovers_identical_outbox_without_capacity_bypass() {
+    use crate::pool::testnet::{TestGenesis, TEST_SUPPLY};
+    use crate::wallet::address::Recipient;
+
+    let dir = Dir::new();
+    let path = dir.path("full.zwallet");
+    let mut store = WalletStore::create(&path, PASSWORD).unwrap();
+    let owner = store.view().unwrap().receive_address(0).unwrap();
+    let recipient_owner = Wallet::create().unwrap();
+    let genesis = TestGenesis::generate(&[(owner, TEST_SUPPLY)]).unwrap();
+    let mut pool = genesis.create_pool(&dir.path("pool.journal")).unwrap();
+    let saved_history = genesis.wallet_history(&mut pool).unwrap();
+    store.sync(&saved_history).unwrap();
+    let recipient = Recipient::new(
+        recipient_owner.receive_address(0).unwrap(),
+        genesis.signing_domain(),
+    )
+    .unwrap();
+    let payment = store
+        .prepare_payment_to(&recipient, 20_000, 1_000, 10, &WalletProver::new())
+        .unwrap();
+    // Every record is written, encrypted and synchronized by the real writer.
+    // Repeated snapshots exercise capacity, not 256 separate network payments.
+    while store.receipt().unwrap().generation < MAX_RECORDS {
+        store.persist().unwrap();
+    }
+    let receipt = store.receipt().unwrap();
+    let bytes = fs::read(&path).unwrap();
+    assert_eq!(bytes.len() as u64, MAX_FILE_BYTES);
+    drop(store);
+
+    let mut store = WalletStore::open(&path, PASSWORD, Some(receipt)).unwrap();
+    assert_eq!(store.view().unwrap().balance(), Err(WalletError::NotSynced));
+    assert_eq!(store.storage_status().unwrap().records_remaining, 0);
+    store.sync(&saved_history).unwrap();
+    assert_eq!(store.receipt().unwrap(), receipt);
+    assert_eq!(
+        store.pending_payment().unwrap().unwrap().bytes(),
+        payment.bytes()
+    );
+    assert_eq!(store.view().unwrap().available_balance().unwrap(), 0);
+    assert_eq!(
+        store.check_payment_to(&recipient, 1, 1, 10),
+        Err(StoreError::Capacity)
+    );
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+
+    let plan = pool
+        .prepare(1, [0x73; 32], &[payment.bytes().to_vec()])
+        .unwrap();
+    pool.commit(plan).unwrap();
+    // Clearing the outbox or advancing a checkpoint needs a new saved record.
+    // Capacity rejection must not expose a partly updated in-memory wallet.
+    assert_eq!(
+        store.sync(&genesis.wallet_history(&mut pool).unwrap()),
+        Err(StoreError::Capacity)
+    );
+    assert_eq!(store.receipt().unwrap(), receipt);
+    assert_eq!(store.view().unwrap().height(), Some(0));
+    assert_eq!(
+        store.pending_payment().unwrap().unwrap().bytes(),
+        payment.bytes()
+    );
+    assert_eq!(store.storage_status().unwrap().records_remaining, 0);
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+
+    let copy = dir.path("backup.zwallet");
+    assert_eq!(store.backup_new(&copy).unwrap(), receipt);
+    assert_eq!(fs::read(&copy).unwrap(), bytes);
+    drop(store);
+    let mut restored = WalletStore::open(&copy, PASSWORD, Some(receipt)).unwrap();
+    restored.sync(&saved_history).unwrap();
+    assert_eq!(
+        restored.pending_payment().unwrap().unwrap().id(),
+        payment.id()
+    );
+    assert_eq!(restored.receipt().unwrap(), receipt);
 }

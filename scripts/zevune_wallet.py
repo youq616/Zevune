@@ -24,8 +24,8 @@ MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
        "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
-       "network-address": 8}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5}
+       "network-address": 8, "storage": 9}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -187,6 +187,31 @@ def checked_prepare_timing(response: dict) -> dict:
     return timing
 
 
+def checked_storage_status(response: dict) -> dict:
+    """A validated bounded local-file report, never an up-to-date balance claim."""
+    status = response.get("wallet_storage")
+    fields = {"format", "records_used", "records_remaining", "max_records",
+              "file_bytes", "max_file_bytes", "can_append"}
+    if (not isinstance(status, dict) or set(status) != fields
+            or status["format"] != "zevune-wallet-capacity-1"):
+        raise RuntimeError("Unexpected wallet capacity schema")
+    for key in fields - {"format", "can_append"}:
+        if type(status[key]) is not int:
+            raise RuntimeError("Invalid wallet capacity value")
+    # These are existing ZVWJNL01 bounds, not configurable limits or repair hints.
+    header, record, limit = 72, 32_948, 256
+    used = status["records_used"]
+    remaining = status["records_remaining"]
+    if (status["max_records"] != limit or not 1 <= used <= limit
+            or remaining != limit - used
+            or status["file_bytes"] != header + used * record
+            or status["max_file_bytes"] != header + limit * record
+            or type(status["can_append"]) is not bool
+            or status["can_append"] != (remaining > 0)):
+        raise RuntimeError("Inconsistent wallet capacity report")
+    return status
+
+
 def invoke(backend: Path, request: bytes, expected_sha: str | None = None) -> dict:
     backend = backend.absolute()
     metadata = backend.lstat()
@@ -278,6 +303,10 @@ def main(argv: list[str] | None = None) -> int:
             checked_recipient(response.get("address", ""), identity["signing_domain"])
         if args.command == "prepare":
             checked_prepare_timing(response)
+        if args.command == "storage":
+            checked_storage_status(response)
+            if response.get("result") != "storage_inspected_not_synced":
+                raise RuntimeError("Unexpected storage operation result")
         print(json.dumps(response, ensure_ascii=True, indent=2))
         return 0
     except NetworkMismatch:

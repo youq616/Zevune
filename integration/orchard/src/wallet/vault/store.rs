@@ -60,6 +60,17 @@ pub struct StoreReceipt {
     pub digest: Hash,
 }
 
+/// Capacity of the validated local file only, not spendability or network state.
+/// A record is a saved wallet checkpoint/outbox snapshot, not a payment count.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StorageStatus {
+    pub records_used: u64,
+    pub records_remaining: u64,
+    pub max_records: u64,
+    pub file_bytes: u64,
+    pub max_file_bytes: u64,
+}
+
 /// No Debug, Clone, mutable-wallet accessor, or password export.
 /// Keeping this object unlocked retains a password buffer until drop. Zeroizing
 /// covers owned buffers, not upstream copies, swap, core dumps or a compromised OS.
@@ -370,8 +381,19 @@ impl WalletStore {
         self.ensure()?;
         Ok(self.receipt)
     }
+    /// Inspect the owned file without scanning chain history or appending a
+    /// record. This does not certify a backup is the newest copy; use a receipt.
+    pub fn storage_status(&mut self) -> Result<StorageStatus, StoreError> {
+        self.validate_storage()?;
+        Ok(StorageStatus {
+            records_used: self.receipt.generation,
+            records_remaining: MAX_RECORDS - self.receipt.generation,
+            max_records: MAX_RECORDS,
+            file_bytes: FILE_HEADER as u64 + self.receipt.generation * RECORD as u64,
+            max_file_bytes: MAX_FILE_BYTES,
+        })
+    }
     pub fn sync(&mut self, history: &WalletHistory) -> Result<(), StoreError> {
-        self.room()?;
         self.validate_storage()?;
         if let Some(raw) = &self.outbox {
             let tx = decode(raw).map_err(|_| StoreError::Corrupt)?;
@@ -379,13 +401,24 @@ impl WalletStore {
                 return Err(StoreError::Wallet(WalletError::History));
             }
         }
+        // Stage the rescan from the already authenticated, zeroizing snapshot.
+        // A full journal can reconstruct the SAME saved checkpoint and outbox
+        // without appending. A different checkpoint still needs space. Checking
+        // capacity before publishing the staged wallet preserves the original
+        // state and reservation on Capacity, including after a pending spend.
         let before = snapshot(&self.wallet)?;
-        self.wallet.sync(history)?;
-        let cleared = self.wallet.pending_id().is_none() && self.outbox.is_some();
+        let mut next = restore(before.as_ref())?;
+        next.sync(history)?;
+        let cleared = next.pending_id().is_none() && self.outbox.is_some();
+        let changed = before.as_ref() != snapshot(&next)?.as_ref() || cleared;
+        if changed {
+            self.room()?;
+        }
+        self.wallet = next;
         if cleared {
             self.outbox = None;
         }
-        if before.as_ref() != snapshot(&self.wallet)?.as_ref() || cleared {
+        if changed {
             self.persist()?;
         }
         Ok(())
