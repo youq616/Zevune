@@ -2,9 +2,9 @@ name: funded-wallet-consensus
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
   pull_request:
-    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'integration/cometbft/**', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
 permissions:
   contents: read
 jobs:
@@ -29,6 +29,11 @@ jobs:
         with:
           go-version: '1.27.1'
           cache-dependency-path: integration/cometbft/go.sum
+      - name: Compile Go modules before expensive cryptography checks
+        run: |
+          go test -mod=readonly ./... -run '^$'
+          cd integration/cometbft
+          go test -mod=readonly ./... -run '^$'
       - name: Install fixed Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
       - name: Local console request and hidden-password boundary tests

@@ -328,7 +328,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	if HashText(state.AppHash) != synced.AppHash {
 		t.Fatal("independent replay mismatch")
 	}
-	submit := func(raw []byte, index int, success bool) {
+	submit := func(raw []byte, index int, success bool) Submission {
 		path := filepath.Join(root, fmt.Sprintf("payment-%x.tx", sha256.Sum256(raw)))
 		if e := os.WriteFile(path, raw, 0600); e != nil {
 			t.Fatal(e)
@@ -342,11 +342,44 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 		if out.Confirmed || (success && out.Status != "accepted_to_mempool_not_confirmed") {
 			t.Fatal("incorrect finality status")
 		}
+		return out
 	}
 	first := driver.call(t, 1, nil)
 	if restored := driver.call(t, 4, []byte{0}); !bytes.Equal(first, restored) {
 		t.Fatal("outbox backup changed payment")
 	}
+	// The shipped commands, not just Rust unit tests, must keep V2's pinned
+	// genesis domain and must never fall back to the legacy signing profile.
+	if len(first) < 40 || string(first[:8]) != "ZVORLAB2" || !bytes.Equal(first[8:40], assetPin[:]) {
+		t.Fatal("scenario did not generate a correctly bound LAB2 payment")
+	}
+	wrongDomain := bytes.Clone(first)
+	wrongDomain[8] ^= 1
+	downgrade := append([]byte("ZVORLAB1"), first[40:]...)
+	unknownProfile := bytes.Clone(first)
+	unknownProfile[7] = '3'
+	for _, raw := range [][]byte{wrongDomain, downgrade, unknownProfile} {
+		receipt := submit(raw, 0, false)
+		if receipt.Status != "not_submitted" || receipt.TxID != HashText(sha256.Sum256(raw)) {
+			t.Fatal("invalid profile reached broadcast or produced the wrong receipt")
+		}
+		// Bypass only the client preflight in the TEST, not any node check.
+		// A caller using the actual node RPC still cannot submit these bytes.
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		response, err := peers[1].BroadcastTxSync(ctx, types.Tx(raw))
+		cancel()
+		if err != nil || response == nil || response.Code == 0 {
+			t.Fatal("actual node did not reject wrong domain/downgrade/unknown profile", err)
+		}
+	}
+	synced = doSync(false)
+	rejectedState := replayScenario(t, peers[0], driver, state, synced.Height)
+	if rejectedState.Root != state.Root || rejectedState.Commitments != state.Commitments ||
+		rejectedState.Nullifiers != state.Nullifiers || rejectedState.Fees != state.Fees ||
+		HashText(rejectedState.AppHash) != synced.AppHash {
+		t.Fatal("rejected transactions changed committed asset state")
+	}
+	state = rejectedState
 	bad := bytes.Clone(first)
 	bad[len(bad)-1] ^= 1
 	submit(bad, 0, false)
@@ -415,7 +448,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	driver.call(t, 6, nil)
 	submit(first, 0, false)
 	submit(second, 1, false)
-	t.Log("shipped init/run/sync/submit commands: real nonzero A->B->C, encrypted outbox backup, one-node outage, signed reference-state checks, full restart and duplicate rejection passed; local NO-FUNDS only")
+	t.Log("shipped init/run/sync/submit commands: wrong-domain, downgrade and unknown-profile RPC rejection; real nonzero A->B->C, encrypted outbox backup, one-node outage, signed reference-state checks, full restart and duplicate rejection passed; local NO-FUNDS only")
 }
 
 // An adversarial test-only RPC source returns genuine quorum signatures over an

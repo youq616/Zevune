@@ -74,8 +74,12 @@ func Load(configPath string, expected Hash) (*Network, error) {
 		return nil, ErrConfiguration
 	}
 	home := filepath.Dir(configPath)
-	if _, err = pinnedBytes(filepath.Join(home, assetName), asset, 165, 1922); err != nil {
+	assetBytes, err := pinnedBytes(filepath.Join(home, assetName), asset, poolbridge.MinTestGenesisBytes, poolbridge.MaxTestGenesisBytes)
+	if err != nil {
 		return nil, err
+	}
+	if poolbridge.ValidateTestGenesisFrame(assetBytes) != nil {
+		return nil, ErrConfiguration
 	}
 	raw, err = pinnedBytes(filepath.Join(home, genesisName), consensus, 100, 64*1024)
 	if err != nil {
@@ -130,9 +134,12 @@ func Initialize(ctx context.Context, o InitOptions) (pin Hash, err error) {
 	if ctx == nil || ctx.Err() != nil || !filepath.IsAbs(o.Home) || !filepath.IsAbs(o.Worker) || o.WorkerSHA256 == (Hash{}) {
 		return pin, ErrBounds
 	}
-	asset, err := pinnedBytes(o.AssetManifest, o.AssetSHA256, 165, 1922)
+	asset, err := pinnedBytes(o.AssetManifest, o.AssetSHA256, poolbridge.MinTestGenesisBytes, poolbridge.MaxTestGenesisBytes)
 	if err != nil {
 		return pin, err
+	}
+	if poolbridge.ValidateTestGenesisFrame(asset) != nil {
+		return pin, ErrConfiguration
 	}
 	if err = os.Mkdir(o.Home, 0700); err != nil {
 		return pin, ErrStorage

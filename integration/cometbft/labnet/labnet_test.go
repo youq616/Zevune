@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +24,7 @@ import (
 	"github.com/cometbft/cometbft/types"
 	"github.com/cometbft/cometbft/version"
 	"github.com/youq616/Zevune/integration/cometbft/poolapp"
+	"github.com/youq616/Zevune/internal/poolbridge"
 )
 
 // In-memory signing keys are random test-only material; they are never printed.
@@ -93,7 +96,13 @@ func TestQuorumAndAllHeaderBindings(t *testing.T) {
 func TestPinnedPublicConfigurationAndCompanionFiles(t *testing.T) {
 	n, _ := signingNetwork(t)
 	home := t.TempDir()
-	asset := bytes.Repeat([]byte{1}, 165) // structure-only fixture, never a spendable genesis
+	asset := make([]byte, poolbridge.MinTestGenesisBytes) // framing-only fixture, never a valid Orchard opening
+	copy(asset, "ZVTGEN01")
+	networkID := sha256.Sum256([]byte("zevune-orchard-lab-1"))
+	copy(asset[8:40], networkID[:])
+	binary.BigEndian.PutUint64(asset[40:48], 100_000)
+	binary.BigEndian.PutUint16(asset[48:50], 1)
+	binary.BigEndian.PutUint64(asset[93:101], 100_000)
 	assetPin := sha256.Sum256(asset)
 	n.genesis.AppState, _ = json.Marshal(struct {
 		Digest string `json:"test_genesis_sha256"`
@@ -252,4 +261,24 @@ func FuzzNumericLoopbackEndpoint(f *testing.F) {
 			t.Fatal("escaped local policy")
 		}
 	})
+}
+
+func TestMalformedGenesisInitDoesNotCreatePrivateDirectory(t *testing.T) {
+	root := t.TempDir()
+	manifest := filepath.Join(root, "unknown-genesis")
+	raw := bytes.Repeat([]byte{1}, poolbridge.MinTestGenesisBytes)
+	if err := os.WriteFile(manifest, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Join(root, "must-not-exist")
+	_, err := Initialize(context.Background(), InitOptions{
+		Home: home, Worker: filepath.Join(root, "not-executed"), WorkerSHA256: Hash{1},
+		AssetManifest: manifest, AssetSHA256: sha256.Sum256(raw),
+	})
+	if !errors.Is(err, ErrConfiguration) {
+		t.Fatalf("wrong rejection: %v", err)
+	}
+	if _, err := os.Stat(home); !os.IsNotExist(err) {
+		t.Fatal("malformed genesis created private state")
+	}
 }
