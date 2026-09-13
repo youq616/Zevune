@@ -8,7 +8,7 @@
 |---|---|
 | 根程序 `zevuned`，0.1.2-dev | 原单机诊断、预执行、Go 日志恢复，付款仍关闭 |
 | 原 M3 共识应用 | 原四进程空块实验，已有入口和数据保持兼容 |
-| Orchard / Go-Rust 连接 / `poolapp`，0.3.2-genesis-bound-lab | 真实证明、签名、资产树、落盘、共识与重启；默认空创世，显式测试模式才提供初始资产 |
+| Orchard / Go-Rust 连接 / `poolapp`，0.3.3-proposal-selection-lab | 真实证明、签名、资产树、落盘、共识与重启；默认空创世，显式测试模式才提供初始资产 |
 | 钱包核心与 `WalletStore` | 本地密钥派生、收款扫描、找零、加密备份、检查点、持久化待发送队列 |
 | `zevune-wallet-local` 与 Python 控制台 | 创建、地址、备份/恢复、本地扫描、付款准备与签名文件导出；不联网、不广播 |
 | `zevune-network` 本机操作工具 | 初始化/运行固定四验证者、独立执行并验证签名头部后同步参考账本、提交已有签名交易；不读取钱包秘密 |
@@ -99,3 +99,11 @@ Go 启动层新增有界的公开创世帧检查；无效清单在创建节点�
 本地付款准备现在有分段计时；它不包含网络共识和收款确认，不是端到端到账或 TPS 成绩。采用的八项交付范围仍见 [项目计划](docs/DELIVERY_PLAN.zh-CN.md)。P1/P2/P4/P7 均只完成部分增量，网络匿名、多机长期运行、完整在线钱包和主网准入仍未完成。
 
 [精确源码与验收记录](reports/p1-p2-wallet-validation.md) · [钱包收款身份](docs/protocol/WALLET_RECIPIENT_IDENTITY.md) · [容量与恢复](docs/WALLET_CAPACITY_RECOVERY.zh-CN.md) · [整理与故障边界](docs/WALLET_COMPACTION.zh-CN.md)。
+
+## P7 增量提案筛选
+
+`PrepareProposal` 已接入单次有界 Go/Rust 请求，最多检查原始前64项、选择最多16笔。在一个临时候选状态上逐笔尝试，不再为每笔候选重跑全部已接受前缀。失败交易不留下部分更新；历史根取自区块前已提交状态，筛选不改变已提交账本或待最终提交槽。
+
+完整提案验证、最终执行、提交和日志重放仍执行原有真实授权与账本检查。IPC第3代组件必须成套更新，旧组件握手失败；交易、签名、创世和日志格式不变，不迁移现有数据。三笔真实付款的应用计数对照为旧前缀方法6次、新方法3次，这不是实际速度倍数、TPS或端到端5秒到账承诺。
+
+P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完成。[实现与兼容边界](docs/INCREMENTAL_PROPOSAL_SELECTION.zh-CN.md) · [精确源码与验证记录](reports/p7-proposal-selection-validation.md)。
