@@ -129,8 +129,6 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			f.BoolVar(&stopOnEOF, "stop-on-stdin-eof", false, "stop when supervising process closes stdin")
 		} else if command == "storage" {
 			f.StringVar(&journal, "journal", "", "existing offline node or reference journal; never created")
-			f.StringVar(&expectedHeight, "expected-height", "", "exact independently retained height; requires --expected-app-hash")
-			f.StringVar(&expectedAppHash, "expected-app-hash", "", "exact independently retained state hash; requires --expected-height")
 		} else {
 			f.StringVar(&endpoint, "endpoint", "", "numeric loopback HTTP endpoint")
 			f.StringVar(&journal, "journal", "", "wallet reference journal, not node journal")
@@ -142,6 +140,10 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 				f.StringVar(&txfile, "tx", "", "exact signed transaction file")
 			}
 		}
+	}
+	if command == "storage" || command == "sync" || command == "submit" {
+		f.StringVar(&expectedHeight, "expected-height", "", "exact independently retained local starting height; requires --expected-app-hash")
+		f.StringVar(&expectedAppHash, "expected-app-hash", "", "exact independently retained local starting state hash; requires --expected-height")
 	}
 	if err := strictFlags(f, args[1:]); err != nil || !*noFunds || !filepath.IsAbs(*worker) {
 		return labnet.ErrBounds
@@ -157,8 +159,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	// Validate before configuration/file access. Explicit height 0 is a real
 	// genesis checkpoint, not the default/absent value.
 	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash, checkpointRequested)
-	if err != nil {
-		return err
+	if err != nil || (expected != nil && create) {
+		return labnet.ErrBounds
 	}
 	pin, err := labnet.ParseHash(*workerDigest)
 	if err != nil {
@@ -215,7 +217,13 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	o := labnet.SyncOptions{Endpoint: endpoint, Worker: *worker, WorkerSHA256: pin, Journal: journal, Create: create, Limit: limit}
 	if command == "sync" {
-		result, err := network.Synchronize(bounded, o)
+		var result labnet.SyncResult
+		var err error
+		if expected == nil {
+			result, err = network.Synchronize(bounded, o)
+		} else {
+			result, err = network.SynchronizeAtCheckpoint(bounded, o, *expected)
+		}
 		if err != nil {
 			return err
 		}
@@ -225,7 +233,12 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	if err != nil {
 		return err
 	}
-	result, err := network.Submit(bounded, o, raw)
+	var result labnet.Submission
+	if expected == nil {
+		result, err = network.Submit(bounded, o, raw)
+	} else {
+		result, err = network.SubmitAtCheckpoint(bounded, o, raw, *expected)
+	}
 	if writeErr := emit.Encode(result); writeErr != nil {
 		return writeErr
 	}

@@ -59,6 +59,7 @@ type SyncResult struct {
 	ObservedSignedTip     uint64 `json:"observed_signed_tip"`
 	CaughtUpToObservedTip bool   `json:"caught_up_to_observed_tip"`
 	Payments              bool   `json:"real_funds_allowed"`
+	BaseCheckpointMatched bool   `json:"base_checkpoint_matched"`
 }
 
 func resultFor(s poolbridge.Summary, initial, tip uint64) SyncResult {
@@ -196,6 +197,21 @@ func (n *Network) synchronize(ctx context.Context, remote rpcSource, store *pool
 }
 
 func (n *Network) Synchronize(ctx context.Context, o SyncOptions) (SyncResult, error) {
+	return n.synchronizeReference(ctx, o, nil)
+}
+
+// SynchronizeAtCheckpoint requires the existing reference journal to match the
+// caller's retained exact tip BEFORE any RPC or state update. The same worker
+// and exclusive journal lock remain in use during subsequent synchronization.
+// It is not an ancestry test; create and checkpoint options cannot be combined.
+func (n *Network) SynchronizeAtCheckpoint(ctx context.Context, o SyncOptions, expected StorageCheckpoint) (SyncResult, error) {
+	return n.synchronizeReference(ctx, o, &expected)
+}
+
+func (n *Network) synchronizeReference(ctx context.Context, o SyncOptions, expected *StorageCheckpoint) (SyncResult, error) {
+	if err := validateReferenceCheckpoint(o, expected); err != nil {
+		return SyncResult{}, err
+	}
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Limit == 0 || o.Limit > maxSyncBlocks {
 		return SyncResult{}, ErrBounds
 	}
@@ -209,21 +225,44 @@ func (n *Network) Synchronize(ctx context.Context, o SyncOptions) (SyncResult, e
 		return SyncResult{}, err
 	}
 	defer store.Close()
-	return n.synchronize(ctx, remote, store, o.Limit)
+	if err := checkReferenceCheckpoint(ctx, store, expected); err != nil {
+		return SyncResult{}, err
+	}
+	result, err := n.synchronize(ctx, remote, store, o.Limit)
+	if err != nil {
+		return SyncResult{}, err
+	}
+	result.BaseCheckpointMatched = expected != nil
+	return result, nil
 }
 
 type Submission struct {
-	Status          string `json:"status"`
-	TxID            string `json:"txid"`
-	ReferenceHeight uint64 `json:"reference_height"`
-	Confirmed       bool   `json:"confirmed"`
+	Status                string `json:"status"`
+	TxID                  string `json:"txid"`
+	ReferenceHeight       uint64 `json:"reference_height"`
+	Confirmed             bool   `json:"confirmed"`
+	BaseCheckpointMatched bool   `json:"base_checkpoint_matched"`
 }
 
 // Submit never takes a wallet password, signs a transaction, releases a wallet
 // reservation, retries a broadcast, or treats a mempool receipt as finality.
 func (n *Network) Submit(ctx context.Context, o SyncOptions, raw []byte) (Submission, error) {
+	return n.submitReference(ctx, o, raw, nil)
+}
+
+// SubmitAtCheckpoint checks the exact local starting state, then synchronizes
+// and broadcasts the existing signed bytes once. Matching the base checkpoint
+// is neither current finality nor permission to release a wallet reservation.
+func (n *Network) SubmitAtCheckpoint(ctx context.Context, o SyncOptions, raw []byte, expected StorageCheckpoint) (Submission, error) {
+	return n.submitReference(ctx, o, raw, &expected)
+}
+
+func (n *Network) submitReference(ctx context.Context, o SyncOptions, raw []byte, expected *StorageCheckpoint) (Submission, error) {
 	txid := sha256.Sum256(raw)
 	out := Submission{Status: "not_submitted", TxID: HashText(txid)}
+	if err := validateReferenceCheckpoint(o, expected); err != nil {
+		return out, err
+	}
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Create || len(raw) == 0 || len(raw) > poolbridge.MaxTransactionBytes || o.Limit == 0 || o.Limit > maxSyncBlocks {
 		return out, ErrBounds
 	}
@@ -237,6 +276,10 @@ func (n *Network) Submit(ctx context.Context, o SyncOptions, raw []byte) (Submis
 		return out, err
 	}
 	defer store.Close()
+	if err := checkReferenceCheckpoint(ctx, store, expected); err != nil {
+		return out, err
+	}
+	out.BaseCheckpointMatched = expected != nil
 	synced, err := n.synchronize(ctx, remote, store, o.Limit)
 	if err != nil {
 		return out, err
