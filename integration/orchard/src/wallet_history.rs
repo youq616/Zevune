@@ -94,58 +94,18 @@ impl PoolStore {
             return Err(PoolError::Corrupt);
         }
         self.file.rewind().map_err(|_| PoolError::Storage)?;
-        let mut fixed = [0; 40];
-        self.file
-            .read_exact(&mut fixed)
-            .map_err(|_| PoolError::Corrupt)?;
-        if fixed[8..40] != Sha256::digest(NETWORK.as_bytes())[..] {
-            return Err(PoolError::Genesis);
-        }
-        let signing_domain = if &fixed[..8] == FILE_MAGIC {
-            None
-        } else if &fixed[..8] == BOUND_FILE_MAGIC {
-            let mut domain = [0; 32];
-            self.file
-                .read_exact(&mut domain)
-                .map_err(|_| PoolError::Corrupt)?;
-            if domain == [0; 32] {
-                return Err(PoolError::Domain);
-            }
-            Some(domain)
-        } else {
-            return Err(PoolError::Genesis);
-        };
+        let header = replay::read_header(&mut self.file, self.length)?;
+        let signing_domain = header.signing_domain;
         if signing_domain != self.state.signing_domain {
             return Err(PoolError::Domain);
         }
-        let mut raw_count = [0; 4];
-        self.file
-            .read_exact(&mut raw_count)
-            .map_err(|_| PoolError::Corrupt)?;
-        let count = u32::from_be_bytes(raw_count) as usize;
-        let header_size = if signing_domain.is_some() { 76 } else { 44 };
-        if count > MAX_COMMITMENTS || header_size + count as u64 * 32 > self.length {
-            return Err(PoolError::Bounds);
-        }
-        let mut initial = Vec::with_capacity(count);
-        for _ in 0..count {
-            let mut cm = [0; 32];
-            self.file
-                .read_exact(&mut cm)
-                .map_err(|_| PoolError::Corrupt)?;
-            initial.push(cm);
-        }
+        let initial = header.initial;
         let state = State::from_policy(&initial, signing_domain)?;
         if state.genesis != self.state.genesis {
             return Err(PoolError::Genesis);
         }
         let origin = state.summary();
-        let mut replay = replay::Replay::new(
-            &mut self.file,
-            self.length,
-            header_size + count as u64 * 32,
-            state,
-        )?;
+        let mut replay = replay::Replay::new(&mut self.file, self.length, header.length, state)?;
         while let Some(block) = replay.next_block(&self.verifier)? {
             visit(block)?;
         }

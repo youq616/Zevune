@@ -243,12 +243,8 @@ fn fingerprint(file: &mut File, length: u64) -> Result<Hash, PoolError> {
         hash.update(&buffer[..take]);
         left -= take as u64;
     }
-    if file
-        .read(&mut buffer[..1])
-        .map_err(|_| PoolError::Storage)?
-        != 0
-        || file.metadata().map_err(|_| PoolError::Storage)?.len() != length
-    {
+    super::replay::require_eof(file)?;
+    if file.metadata().map_err(|_| PoolError::Storage)?.len() != length {
         return Err(PoolError::Corrupt);
     }
     Ok(hash.finalize().into())
@@ -258,45 +254,18 @@ fn verify_locked(mut file: File, checkpoint: RecoveryCheckpoint) -> Result<PoolS
         return Err(PoolError::Corrupt);
     }
     file.rewind().map_err(|_| PoolError::Storage)?;
-    let mut fixed = [0; 40];
-    file.read_exact(&mut fixed)
-        .map_err(|_| PoolError::Corrupt)?;
-    if fixed[8..] != Sha256::digest(NETWORK.as_bytes())[..] {
-        return Err(PoolError::Genesis);
-    }
-    let domain = match &fixed[..8] {
-        bytes if bytes == FILE_MAGIC => None,
-        bytes if bytes == BOUND_FILE_MAGIC => {
-            let mut hash = [0; 32];
-            file.read_exact(&mut hash).map_err(|_| PoolError::Corrupt)?;
-            if hash == [0; 32] {
-                return Err(PoolError::Domain);
-            }
-            Some(hash)
-        }
-        _ => return Err(PoolError::Genesis),
-    };
-    let mut encoded_count = [0; 4];
-    file.read_exact(&mut encoded_count)
-        .map_err(|_| PoolError::Corrupt)?;
-    let count = u32::from_be_bytes(encoded_count) as usize;
-    let header_size = if domain.is_some() { 76 } else { 44 };
-    if count > MAX_COMMITMENTS || header_size + count as u64 * 32 > checkpoint.length {
-        return Err(PoolError::Bounds);
-    }
-    let mut initial = Vec::with_capacity(count);
-    for _ in 0..count {
-        let mut cm = [0; 32];
-        file.read_exact(&mut cm).map_err(|_| PoolError::Corrupt)?;
-        initial.push(cm);
-    }
-    let genesis: Hash = Sha256::digest(genesis_bytes_policy(&initial, domain)?).into();
+    let header = super::replay::read_header(&mut file, checkpoint.length)?;
+    let genesis: Hash = Sha256::digest(genesis_bytes_policy(
+        &header.initial,
+        header.signing_domain,
+    )?)
+    .into();
     if genesis != checkpoint.genesis {
         return Err(PoolError::Genesis);
     }
-    // Reuse the same isolated bounded replay as writable startup; ownership
-    // of this handle and its existing lock is retained throughout.
-    let mut store = PoolStore::replay_locked_file(file, &initial, domain)?;
+    // The same isolated replay as node open and wallet history. Never accept
+    // an archive on its checksum alone or expose a partly rebuilt store.
+    let mut store = PoolStore::replay_locked_file(file, &header.initial, header.signing_domain)?;
     checkpoint.matches(&store)?;
     if fingerprint(&mut store.file, checkpoint.length)? != checkpoint.journal_hash {
         return Err(PoolError::Corrupt);

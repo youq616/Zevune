@@ -365,16 +365,13 @@ impl PoolStore {
         if length > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
         }
-        let expected_header = genesis_bytes_policy(initial, signing_domain)?;
-        let mut actual_header = vec![0; expected_header.len()];
-        file.read_exact(&mut actual_header)
-            .map_err(|_| PoolError::Corrupt)?;
-        if actual_header != expected_header {
+        let header = replay::read_header(&mut file, length)?;
+        if header.initial != initial || header.signing_domain != signing_domain {
             return Err(PoolError::Genesis);
         }
         let verifier = AuthorizationVerifier::new();
         let state = State::from_policy(initial, signing_domain)?;
-        let mut replay = replay::Replay::new(&mut file, length, actual_header.len() as u64, state)?;
+        let mut replay = replay::Replay::new(&mut file, length, header.length, state)?;
         while replay.next_block(&verifier)?.is_some() {}
         let (state, _) = replay.finish()?;
         Ok(Self {

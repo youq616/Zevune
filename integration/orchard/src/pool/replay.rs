@@ -2,11 +2,90 @@
 //! is unpublished: a failure consumes it, and only exact EOF permits finish().
 //! Frame checksums detect damage; every record still executes real authorization.
 use super::{
-    Hash, PoolError, Record, State, Summary, MAX_JOURNAL_BYTES, MAX_RECORDS, MAX_RECORD_BYTES,
+    Hash, PoolError, Record, State, Summary, BOUND_FILE_MAGIC, FILE_MAGIC, MAX_COMMITMENTS,
+    MAX_JOURNAL_BYTES, MAX_RECORDS, MAX_RECORD_BYTES, NETWORK,
 };
 use crate::wire::AuthorizationVerifier;
 use sha2::{Digest, Sha256};
 use std::io::{ErrorKind, Read};
+
+/// The existing LAB1/LAB2 header only. This is not a checkpoint or a
+/// cryptographic authorization: callers still pin policy and replay all records.
+pub(super) struct Header {
+    pub(super) initial: Vec<Hash>,
+    pub(super) signing_domain: Option<Hash>,
+    pub(super) length: u64,
+}
+
+pub(super) fn read_header<R: Read>(reader: &mut R, length: u64) -> Result<Header, PoolError> {
+    if !(44..=MAX_JOURNAL_BYTES).contains(&length) {
+        return Err(PoolError::Bounds);
+    }
+    let mut fixed = [0; 40];
+    reader
+        .read_exact(&mut fixed)
+        .map_err(|_| PoolError::Corrupt)?;
+    if fixed[8..] != Sha256::digest(NETWORK.as_bytes())[..] {
+        return Err(PoolError::Genesis);
+    }
+    let signing_domain = match &fixed[..8] {
+        magic if magic == FILE_MAGIC => None,
+        magic if magic == BOUND_FILE_MAGIC => {
+            if length < 76 {
+                return Err(PoolError::Bounds);
+            }
+            let mut domain = [0; 32];
+            reader
+                .read_exact(&mut domain)
+                .map_err(|_| PoolError::Corrupt)?;
+            if domain == [0; 32] {
+                return Err(PoolError::Domain);
+            }
+            Some(domain)
+        }
+        _ => return Err(PoolError::Genesis),
+    };
+    let mut encoded = [0; 4];
+    reader
+        .read_exact(&mut encoded)
+        .map_err(|_| PoolError::Corrupt)?;
+    let count = u32::from_be_bytes(encoded) as usize;
+    let header_size = if signing_domain.is_some() { 76 } else { 44 };
+    let header_length = header_size + count as u64 * 32;
+    if count > MAX_COMMITMENTS || header_length > length {
+        return Err(PoolError::Bounds);
+    }
+    let mut initial = Vec::new();
+    initial
+        .try_reserve_exact(count)
+        .map_err(|_| PoolError::Storage)?;
+    for _ in 0..count {
+        let mut commitment = [0; 32];
+        reader
+            .read_exact(&mut commitment)
+            .map_err(|_| PoolError::Corrupt)?;
+        initial.push(commitment);
+    }
+    Ok(Header {
+        initial,
+        signing_domain,
+        length: header_length,
+    })
+}
+
+/// Reaching the captured length is not proof of EOF. Retry a transient
+/// interruption, but reject trailing data and propagate all other read failures.
+pub(super) fn require_eof<R: Read>(reader: &mut R) -> Result<(), PoolError> {
+    let mut byte = [0; 1];
+    loop {
+        match reader.read(&mut byte) {
+            Ok(0) => return Ok(()),
+            Ok(_) => return Err(PoolError::Corrupt),
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(_) => return Err(PoolError::Storage),
+        }
+    }
+}
 
 #[cfg(test)]
 std::thread_local! {
@@ -45,18 +124,9 @@ impl<R: Read> Records<R> {
         if self.consumed == self.length {
             // Do not treat reaching the captured length as EOF: appended data
             // must be rejected. Retry Interrupted just as read_exact does.
-            let mut byte = [0; 1];
-            loop {
-                match self.reader.read(&mut byte) {
-                    Ok(0) => {
-                        self.exhausted = true;
-                        return Ok(None);
-                    }
-                    Ok(_) => return Err(PoolError::Corrupt),
-                    Err(e) if e.kind() == ErrorKind::Interrupted => continue,
-                    Err(_) => return Err(PoolError::Storage),
-                }
-            }
+            require_eof(&mut self.reader)?;
+            self.exhausted = true;
+            return Ok(None);
         }
         if self.count >= MAX_RECORDS {
             return Err(PoolError::Bounds);

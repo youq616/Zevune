@@ -143,3 +143,38 @@ fn a_shorter_valid_archive_needs_its_own_pin_not_the_later_checkpoint() {
     // A self-consistent old pin can authenticate old data; it is not a freshness
     // proof. The API must not pretend to solve complete backup rollback.
 }
+
+#[test]
+fn every_recovery_entry_uses_isolated_replay_without_per_block_state_copies() {
+    use crate::pool::replay::COPYING_EXECUTIONS;
+    let dir = Dir::new();
+    for (name, domain) in [("legacy", None), ("bound", Some([7; 32]))] {
+        let source = dir.path(name);
+        let mut pool = PoolStore::create_with_policy(&source, &[], domain).unwrap();
+        for id in 1..=3 {
+            empty_block(&mut pool, id);
+        }
+        let before = bytes(&mut pool);
+        let summary = pool.summary().unwrap();
+        COPYING_EXECUTIONS.with(|v| v.set(0));
+        let checkpoint = pool.recovery_checkpoint().unwrap();
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 0);
+        assert_eq!(pool.wallet_history().unwrap().tip(), &summary);
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 0);
+        assert_eq!(bytes(&mut pool), before);
+        drop(pool);
+        let mut archive = RecoveryArchive::open(&source, checkpoint).unwrap();
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 0);
+        let destination = dir.path(&format!("{name}-copy"));
+        archive.copy_new(&destination).unwrap();
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 0);
+        assert_eq!(fs::read(&destination).unwrap(), before);
+        let recovered = PoolStore::open_with_policy(&destination, &[], domain).unwrap();
+        assert_eq!(recovered.summary().unwrap(), summary);
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 0);
+        // Normal live block execution MUST still own an independent copy.
+        recovered.prepare(4, [4; 32], &[]).unwrap();
+        assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 1);
+        assert_eq!(recovered.summary().unwrap(), summary);
+    }
+}

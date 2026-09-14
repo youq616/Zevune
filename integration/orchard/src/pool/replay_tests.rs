@@ -474,3 +474,113 @@ fn reusable_buffer_does_not_decode_stale_tail_bytes_after_a_shorter_record() {
     assert_eq!(records.body.capacity(), capacity);
     assert!(records.next().unwrap().is_none());
 }
+
+#[test]
+fn shared_header_preserves_both_profiles_and_leaves_records_unread() {
+    // Structural samples only; authorization is not performed by the header parser.
+    for domain in [None, Some([9; 32])] {
+        for initial in [vec![], vec![[1; 32], [2; 32]]] {
+            let encoded = genesis_bytes_policy(&initial, domain).unwrap();
+            let mut with_tail = encoded.clone();
+            with_tail.extend_from_slice(b"not part of the header");
+            let captured_length = with_tail.len() as u64;
+            let mut reader = Cursor::new(with_tail);
+            let decoded = read_header(&mut reader, captured_length).unwrap();
+            assert_eq!(decoded.initial, initial);
+            assert_eq!(decoded.signing_domain, domain);
+            assert_eq!(decoded.length, encoded.len() as u64);
+            assert_eq!(reader.position(), encoded.len() as u64);
+        }
+    }
+}
+
+#[test]
+fn shared_header_rejects_bounds_before_reading_commitment_payload() {
+    for domain in [None, Some([9; 32])] {
+        let header = genesis_bytes_policy(&[], domain).unwrap();
+        for count in [
+            1,
+            MAX_COMMITMENTS as u32,
+            MAX_COMMITMENTS as u32 + 1,
+            u32::MAX,
+        ] {
+            let mut changed = header.clone();
+            let offset = changed.len() - 4;
+            changed[offset..].copy_from_slice(&count.to_be_bytes());
+            let mut reader = Cursor::new(changed);
+            assert!(matches!(
+                read_header(&mut reader, header.len() as u64),
+                Err(PoolError::Bounds)
+            ));
+            assert_eq!(reader.position(), header.len() as u64);
+        }
+    }
+    for length in [0, 43, MAX_JOURNAL_BYTES + 1, u64::MAX] {
+        let mut reader = Cursor::new([0; 76]);
+        assert!(matches!(
+            read_header(&mut reader, length),
+            Err(PoolError::Bounds)
+        ));
+        assert_eq!(reader.position(), 0);
+    }
+}
+
+#[test]
+fn shared_header_rejects_unknown_network_domain_and_truncation() {
+    let original = genesis_bytes_policy(&[[1; 32]], Some([9; 32])).unwrap();
+    for cut in 0..original.len() {
+        let mut reader = Cursor::new(&original[..cut]);
+        assert!(
+            read_header(&mut reader, original.len() as u64).is_err(),
+            "cut {cut}"
+        );
+    }
+    for offset in [0, 7, 8, 39] {
+        let mut damaged = original.clone();
+        damaged[offset] ^= 1;
+        assert!(matches!(
+            read_header(&mut Cursor::new(damaged), original.len() as u64),
+            Err(PoolError::Genesis)
+        ));
+    }
+    let mut damaged = original.clone();
+    damaged[40..72].fill(0);
+    assert!(matches!(
+        read_header(&mut Cursor::new(damaged), original.len() as u64),
+        Err(PoolError::Domain)
+    ));
+    let mut reader = Cursor::new(&original);
+    assert!(matches!(
+        read_header(&mut reader, 75),
+        Err(PoolError::Bounds)
+    ));
+    assert_eq!(reader.position(), 40);
+}
+
+#[test]
+fn shared_header_and_eof_retry_interrupted_and_short_reads() {
+    for domain in [None, Some([9; 32])] {
+        let raw = genesis_bytes_policy(&[[1; 32]], domain).unwrap();
+        let mut fragmented = Fragmented {
+            inner: Cursor::new(&raw),
+            calls: 0,
+        };
+        let header = read_header(&mut fragmented, raw.len() as u64).unwrap();
+        assert_eq!(header.signing_domain, domain);
+        assert_eq!(header.initial, vec![[1; 32]]);
+        require_eof(&mut fragmented).unwrap();
+    }
+}
+
+#[test]
+fn shared_eof_does_not_swallow_read_errors_or_trailing_data() {
+    struct Failure;
+    impl Read for Failure {
+        fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::from(ErrorKind::PermissionDenied))
+        }
+    }
+    assert_eq!(require_eof(&mut Failure), Err(PoolError::Storage));
+    assert_eq!(require_eof(&mut Cursor::new([0])), Err(PoolError::Corrupt));
+    assert_eq!(require_eof(&mut Cursor::new([])), Ok(()));
+}
