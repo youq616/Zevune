@@ -49,3 +49,13 @@ func TestBoundedPublicTransactionFiles(t *testing.T) {
 		t.Fatal("directory accepted")
 	}
 }
+
+func TestStorageCommandRejectsNetworkAndMutationFlags(t *testing.T) {
+	for _, flag := range []string{"--create", "--endpoint=http://127.0.0.1:30000", "--limit=3", "--node=0", "--tx=/tmp/tx", "--reset", "--stop-on-stdin-eof"} {
+		var out bytes.Buffer
+		args := []string{"storage", "--no-real-funds", flag}
+		if execute(context.Background(), args, nil, &out) == nil || out.Len() != 0 {
+			t.Fatal("storage accepted non-read-only flag or emitted partial success")
+		}
+	}
+}
