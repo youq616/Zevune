@@ -3,7 +3,7 @@
 //! Every replay and commit rechecks actual authorization; hashes are not finality.
 use std::collections::{BTreeSet, VecDeque};
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use incrementalmerkletree::frontier::Frontier;
@@ -142,6 +142,19 @@ impl State {
         transactions: &[Vec<u8>],
         verifier: &AuthorizationVerifier,
     ) -> Result<State, PoolError> {
+        self.validate_block(height, block_id, transactions)?;
+        #[cfg(test)]
+        replay::COPYING_EXECUTIONS.with(|count| count.set(count.get() + 1));
+        let mut next = self.clone();
+        next.execute_unpublished(height, block_id, transactions, verifier)?;
+        Ok(next)
+    }
+    fn validate_block(
+        &self,
+        height: u64,
+        block_id: Hash,
+        transactions: &[Vec<u8>],
+    ) -> Result<(), PoolError> {
         if height != self.height.checked_add(1).ok_or(PoolError::Height)?
             || height > MAX_RECORDS
             || block_id == [0; 32]
@@ -153,12 +166,26 @@ impl State {
         {
             return Err(PoolError::Bounds);
         }
-        let mut next = self.clone();
+        Ok(())
+    }
+    // Only for a disposable, UNPUBLISHED state: a later transaction can fail
+    // after earlier transactions have applied. execute() owns a clone; Replay
+    // owns a reconstruction and discards it on ANY error. Never call on the
+    // live PoolStore state or on the incremental proposal-selection state.
+    fn execute_unpublished(
+        &mut self,
+        height: u64,
+        block_id: Hash,
+        transactions: &[Vec<u8>],
+        verifier: &AuthorizationVerifier,
+    ) -> Result<(), PoolError> {
+        self.validate_block(height, block_id, transactions)?;
+        let trusted_anchors = self.anchors.clone();
         for raw in transactions {
-            next.apply_transaction(height, &self.anchors, raw, verifier)?;
+            self.apply_transaction(height, &trusted_anchors, raw, verifier)?;
         }
-        next.finish_block(height, block_id);
-        Ok(next)
+        self.finish_block(height, block_id);
+        Ok(())
     }
     fn apply_transaction(
         &mut self,
@@ -318,67 +345,35 @@ impl PoolStore {
         if !info.file_type().is_file() || info.len() > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
         }
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .read(true)
             .append(true)
             .open(path)
             .map_err(|_| PoolError::Storage)?;
         file.try_lock().map_err(|_| PoolError::Locked)?;
+        Self::replay_locked_file(file, initial, signing_domain)
+    }
+    // The caller owns the file and its lock for the entire replay. Recovery
+    // readers keep the returned store private and never expose a write API.
+    fn replay_locked_file(
+        mut file: File,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+    ) -> Result<Self, PoolError> {
+        file.rewind().map_err(|_| PoolError::Storage)?;
         let length = file.metadata().map_err(|_| PoolError::Storage)?.len();
         if length > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
         }
-        let expected_header = genesis_bytes_policy(initial, signing_domain)?;
-        let mut actual_header = vec![0; expected_header.len()];
-        file.read_exact(&mut actual_header)
-            .map_err(|_| PoolError::Corrupt)?;
-        if actual_header != expected_header {
+        let header = replay::read_header(&mut file, length)?;
+        if header.initial != initial || header.signing_domain != signing_domain {
             return Err(PoolError::Genesis);
         }
         let verifier = AuthorizationVerifier::new();
-        let mut state = State::from_policy(initial, signing_domain)?;
-        let mut read_length = actual_header.len() as u64;
-        loop {
-            let mut prefix = [0; 4];
-            if !read_prefix(&mut file, &mut prefix)? {
-                break;
-            }
-            let n = u32::from_be_bytes(prefix) as usize;
-            if !(114..=MAX_RECORD_BYTES).contains(&n) {
-                return Err(PoolError::Bounds);
-            }
-            read_length = read_length
-                .checked_add(n as u64 + 36)
-                .ok_or(PoolError::Bounds)?;
-            if read_length > length {
-                return Err(PoolError::Corrupt);
-            }
-            let mut body = vec![0; n];
-            let mut checksum = [0; 32];
-            file.read_exact(&mut body).map_err(|_| PoolError::Corrupt)?;
-            file.read_exact(&mut checksum)
-                .map_err(|_| PoolError::Corrupt)?;
-            if checksum != Hash::from(Sha256::digest(&body)) {
-                return Err(PoolError::Corrupt);
-            }
-            let record = Record::decode(&body)?;
-            if record.base_hash != state.summary().app_hash {
-                return Err(PoolError::Corrupt);
-            }
-            let next = state.execute(
-                record.height,
-                record.block_id,
-                &record.transactions,
-                &verifier,
-            )?;
-            if next.summary().app_hash != record.result_hash {
-                return Err(PoolError::Corrupt);
-            }
-            state = next;
-        }
-        if read_length != length {
-            return Err(PoolError::Corrupt);
-        }
+        let state = State::from_policy(initial, signing_domain)?;
+        let mut replay = replay::Replay::new(&mut file, length, header.length, state)?;
+        while replay.next_block(&verifier)?.is_some() {}
+        let (state, _) = replay.finish()?;
         Ok(Self {
             file,
             state,
@@ -538,19 +533,6 @@ fn genesis_bytes_policy(
     }
     Ok(out)
 }
-fn read_prefix(file: &mut File, prefix: &mut [u8; 4]) -> Result<bool, PoolError> {
-    loop {
-        match file.read(&mut prefix[..1]) {
-            Ok(0) => return Ok(false),
-            Ok(_) => break,
-            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(_) => return Err(PoolError::Storage),
-        }
-    }
-    file.read_exact(&mut prefix[1..])
-        .map_err(|_| PoolError::Corrupt)?;
-    Ok(true)
-}
 struct Record {
     height: u64,
     block_id: Hash,
@@ -643,3 +625,8 @@ pub mod selection;
 mod capacity_tests;
 
 mod budget;
+
+/// Checkpoint-pinned, create-only recovery copies; not snapshots or finality.
+pub mod recovery;
+
+mod replay;

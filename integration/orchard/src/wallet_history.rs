@@ -37,7 +37,7 @@ impl WalletHistory {
 impl PoolStore {
     /// Export only public signed records after full cryptographic replay. A
     /// caller must trust this local full-node store; checksum alone is not trust.
-    /// This deliberately performs O(history) work for the bounded laboratory.
+    /// Replays all blocks; state summaries still traverse cumulative sets.
     pub fn wallet_history(&mut self) -> Result<WalletHistory, PoolError> {
         let committed = self.summary()?;
         let result = self.read_wallet_history(&committed);
@@ -47,126 +47,86 @@ impl PoolStore {
         result
     }
     fn read_wallet_history(&mut self, committed: &Summary) -> Result<WalletHistory, PoolError> {
+        let mut blocks = Vec::new();
+        let origin = self.replay_history(committed, |block| {
+            blocks.try_reserve(1).map_err(|_| PoolError::Storage)?;
+            #[cfg(test)]
+            replay::HISTORY_BLOCKS_COLLECTED.with(|n| n.set(n.get() + 1));
+            blocks.push(WalletBlock {
+                result: block.result,
+                transactions: block.transactions,
+            });
+            Ok(())
+        })?;
+        Ok(WalletHistory {
+            #[cfg(feature = "local-funding-lab")]
+            genesis_notes: Vec::new(),
+            genesis: origin.genesis,
+            signing_domain: origin.signing_domain,
+            initial: origin.initial,
+            origin: origin.summary,
+            blocks,
+        })
+    }
+
+    // Verify the entire committed file without retaining every transaction for
+    // wallet scanning. This is still full authorization replay, not a checkpoint
+    // shortcut. Only recovery checkpoint export calls this discard mode.
+    pub(super) fn verify_committed_history(&mut self) -> Result<(), PoolError> {
+        let committed = self.summary()?;
+        let result = self.replay_history(&committed, |_| Ok(())).map(|_| ());
+        if result.is_err() {
+            self.available = false;
+        }
+        result
+    }
+
+    // The visitor is private and must only collect into unpublished local
+    // storage or discard blocks. Failed replay drops everything before return.
+    fn replay_history(
+        &mut self,
+        committed: &Summary,
+        mut visit: impl FnMut(replay::ReplayedBlock) -> Result<(), PoolError>,
+    ) -> Result<HistoryOrigin, PoolError> {
         if self.file.metadata().map_err(|_| PoolError::Storage)?.len() != self.length
             || self.length > MAX_JOURNAL_BYTES
         {
             return Err(PoolError::Corrupt);
         }
         self.file.rewind().map_err(|_| PoolError::Storage)?;
-        let mut fixed = [0; 40];
-        self.file
-            .read_exact(&mut fixed)
-            .map_err(|_| PoolError::Corrupt)?;
-        if fixed[8..40] != Sha256::digest(NETWORK.as_bytes())[..] {
-            return Err(PoolError::Genesis);
-        }
-        let signing_domain = if &fixed[..8] == FILE_MAGIC {
-            None
-        } else if &fixed[..8] == BOUND_FILE_MAGIC {
-            let mut domain = [0; 32];
-            self.file
-                .read_exact(&mut domain)
-                .map_err(|_| PoolError::Corrupt)?;
-            if domain == [0; 32] {
-                return Err(PoolError::Domain);
-            }
-            Some(domain)
-        } else {
-            return Err(PoolError::Genesis);
-        };
+        let header = replay::read_header(&mut self.file, self.length)?;
+        let signing_domain = header.signing_domain;
         if signing_domain != self.state.signing_domain {
             return Err(PoolError::Domain);
         }
-        let mut raw_count = [0; 4];
-        self.file
-            .read_exact(&mut raw_count)
-            .map_err(|_| PoolError::Corrupt)?;
-        let count = u32::from_be_bytes(raw_count) as usize;
-        let header_size = if signing_domain.is_some() { 76 } else { 44 };
-        if count > MAX_COMMITMENTS || header_size + count as u64 * 32 > self.length {
-            return Err(PoolError::Bounds);
-        }
-        let mut initial = Vec::with_capacity(count);
-        for _ in 0..count {
-            let mut cm = [0; 32];
-            self.file
-                .read_exact(&mut cm)
-                .map_err(|_| PoolError::Corrupt)?;
-            initial.push(cm);
-        }
-        let mut state = State::from_policy(&initial, signing_domain)?;
+        let initial = header.initial;
+        let state = State::from_policy(&initial, signing_domain)?;
         if state.genesis != self.state.genesis {
             return Err(PoolError::Genesis);
         }
         let origin = state.summary();
-        let mut consumed = header_size + count as u64 * 32;
-        let mut blocks = Vec::new();
-        while consumed < self.length {
-            if blocks.len() >= MAX_RECORDS as usize {
-                return Err(PoolError::Bounds);
-            }
-            let mut prefix = [0; 4];
-            self.file
-                .read_exact(&mut prefix)
-                .map_err(|_| PoolError::Corrupt)?;
-            let n = u32::from_be_bytes(prefix) as usize;
-            if !(114..=MAX_RECORD_BYTES).contains(&n) {
-                return Err(PoolError::Bounds);
-            }
-            consumed = consumed
-                .checked_add(n as u64 + 36)
-                .ok_or(PoolError::Bounds)?;
-            if consumed > self.length {
-                return Err(PoolError::Corrupt);
-            }
-            let mut body = vec![0; n];
-            let mut checksum = [0; 32];
-            self.file
-                .read_exact(&mut body)
-                .map_err(|_| PoolError::Corrupt)?;
-            self.file
-                .read_exact(&mut checksum)
-                .map_err(|_| PoolError::Corrupt)?;
-            if checksum != Hash::from(Sha256::digest(&body)) {
-                return Err(PoolError::Corrupt);
-            }
-            let record = Record::decode(&body)?;
-            if record.base_hash != state.summary().app_hash {
-                return Err(PoolError::Corrupt);
-            }
-            state = state.execute(
-                record.height,
-                record.block_id,
-                &record.transactions,
-                &self.verifier,
-            )?;
-            let result = state.summary();
-            if result.app_hash != record.result_hash {
-                return Err(PoolError::Corrupt);
-            }
-            blocks.push(WalletBlock {
-                result,
-                transactions: record.transactions,
-            });
+        let mut replay = replay::Replay::new(&mut self.file, self.length, header.length, state)?;
+        while let Some(block) = replay.next_block(&self.verifier)? {
+            visit(block)?;
         }
-        let mut trailing = [0];
-        if self
-            .file
-            .read(&mut trailing)
-            .map_err(|_| PoolError::Storage)?
-            != 0
-            || &state.summary() != committed
-        {
+        let (state, final_summary) = replay.finish()?;
+        if &final_summary != committed {
             return Err(PoolError::Corrupt);
         }
-        Ok(WalletHistory {
-            #[cfg(feature = "local-funding-lab")]
-            genesis_notes: Vec::new(),
+        Ok(HistoryOrigin {
             genesis: state.genesis,
             signing_domain,
             initial,
-            origin,
-            blocks,
+            summary: origin,
         })
     }
+}
+
+// Initial policy metadata only; never contains a purported final tip or a
+// partial history. The final tip was checked before constructing this value.
+struct HistoryOrigin {
+    genesis: Hash,
+    signing_domain: Option<Hash>,
+    initial: Vec<Hash>,
+    summary: Summary,
 }
