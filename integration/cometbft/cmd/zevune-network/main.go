@@ -103,7 +103,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		return labnet.ErrBounds
 	}
 	command := args[0]
-	if command != "init" && command != "run" && command != "sync" && command != "submit" && command != "storage" {
+	if command != "init" && command != "run" && command != "sync" && command != "submit" && command != "storage" && command != "storage-copy" {
 		return labnet.ErrBounds
 	}
 	f := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -115,7 +115,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	var index, ports int
 	var create, stopOnEOF bool
 	var limit uint64
-	var expectedHeight, expectedAppHash string
+	var expectedHeight, expectedAppHash, destination string
 	if command == "init" {
 		f.StringVar(&home, "home", "", "new private network directory")
 		f.StringVar(&manifest, "genesis", "", "public test asset manifest")
@@ -127,8 +127,11 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			f.IntVar(&index, "node", -1, "node index 0..3")
 			f.IntVar(&ports, "base-port", 30000, "local port base")
 			f.BoolVar(&stopOnEOF, "stop-on-stdin-eof", false, "stop when supervising process closes stdin")
-		} else if command == "storage" {
+		} else if command == "storage" || command == "storage-copy" {
 			f.StringVar(&journal, "journal", "", "existing offline node or reference journal; never created")
+			if command == "storage-copy" {
+				f.StringVar(&destination, "output", "", "new journal backup or restore path; never overwritten")
+			}
 		} else {
 			f.StringVar(&endpoint, "endpoint", "", "numeric loopback HTTP endpoint")
 			f.StringVar(&journal, "journal", "", "wallet reference journal, not node journal")
@@ -141,7 +144,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			}
 		}
 	}
-	if command == "storage" || command == "sync" || command == "submit" {
+	if command == "storage" || command == "storage-copy" || command == "sync" || command == "submit" {
 		f.StringVar(&expectedHeight, "expected-height", "", "exact independently retained local starting height; requires --expected-app-hash")
 		f.StringVar(&expectedAppHash, "expected-app-hash", "", "exact independently retained local starting state hash; requires --expected-height")
 	}
@@ -159,7 +162,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	// Validate before configuration/file access. Explicit height 0 is a real
 	// genesis checkpoint, not the default/absent value.
 	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash, checkpointRequested)
-	if err != nil || (expected != nil && create) {
+	if err != nil || (expected != nil && create) ||
+		(command == "storage-copy" && (expected == nil || !filepath.IsAbs(destination) || !filepath.IsAbs(journal))) {
 		return labnet.ErrBounds
 	}
 	pin, err := labnet.ParseHash(*workerDigest)
@@ -202,6 +206,18 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
+	if command == "storage-copy" {
+		result, err := network.CopyStorageAtCheckpoint(bounded, labnet.StorageCopyOptions{
+			Worker: *worker, WorkerPin: pin, Source: journal, Destination: destination, Expected: *expected,
+		})
+		if err != nil {
+			return err
+		}
+		if err = emit.Encode(result); err != nil {
+			return labnet.ErrCopyPublicationUncertain
+		}
+		return nil
+	}
 	if command == "storage" {
 		var result labnet.StorageReport
 		var err error
