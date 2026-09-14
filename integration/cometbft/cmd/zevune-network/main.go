@@ -89,7 +89,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		return labnet.ErrBounds
 	}
 	command := args[0]
-	if command != "init" && command != "run" && command != "sync" && command != "submit" {
+	if command != "init" && command != "run" && command != "sync" && command != "submit" && command != "storage" {
 		return labnet.ErrBounds
 	}
 	f := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -112,6 +112,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			f.IntVar(&index, "node", -1, "node index 0..3")
 			f.IntVar(&ports, "base-port", 30000, "local port base")
 			f.BoolVar(&stopOnEOF, "stop-on-stdin-eof", false, "stop when supervising process closes stdin")
+		} else if command == "storage" {
+			f.StringVar(&journal, "journal", "", "existing offline node or reference journal; never created")
 		} else {
 			f.StringVar(&endpoint, "endpoint", "", "numeric loopback HTTP endpoint")
 			f.StringVar(&journal, "journal", "", "wallet reference journal, not node journal")
@@ -167,6 +169,13 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
+	if command == "storage" {
+		result, err := network.InspectStorage(bounded, *worker, pin, journal)
+		if err != nil {
+			return err
+		}
+		return emit.Encode(result)
+	}
 	o := labnet.SyncOptions{Endpoint: endpoint, Worker: *worker, WorkerSHA256: pin, Journal: journal, Create: create, Limit: limit}
 	if command == "sync" {
 		result, err := network.Synchronize(bounded, o)
