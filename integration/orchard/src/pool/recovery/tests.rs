@@ -34,6 +34,33 @@ fn empty_block(pool: &mut PoolStore, id: u8) {
     pool.commit(p).unwrap();
 }
 
+// Fault injection needs overwrite access, which production append-only handles
+// intentionally do not have on Windows. Only these cfg(test) fixtures open a
+// read/write handle; replay, verification and the exclusive lock remain real.
+fn open_fault_fixture(path: &Path) -> PoolStore {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)
+        .unwrap();
+    file.try_lock().unwrap();
+    let length = file.metadata().unwrap().len();
+    let header = crate::pool::replay::read_header(&mut file, length).unwrap();
+    PoolStore::replay_locked_file(file, &header.initial, header.signing_domain).unwrap()
+}
+
+fn overwrite_fixture(pool: &mut PoolStore, replacement: &[u8]) {
+    // Same-size mutation avoids resizing the fixture and requires positioning
+    // explicitly: read/write files do not have append-mode cursor semantics.
+    assert_eq!(replacement.len() as u64, pool.length);
+    assert_eq!(pool.file.metadata().unwrap().len(), pool.length);
+    pool.file.rewind().unwrap();
+    pool.file.write_all(replacement).unwrap();
+    pool.file.sync_all().unwrap();
+    assert_eq!(pool.file.metadata().unwrap().len(), pool.length);
+    assert_eq!(bytes(pool), replacement); // Prove corruption was actually injected.
+}
+
 #[test]
 fn recovery_checkpoint_codec_bounds_and_every_truncation() {
     let dir = Dir::new();
@@ -261,8 +288,9 @@ fn recovery_real_lab2_payment_replay_and_rechecksums_cannot_bypass_authorization
     // The unchanged real verifier, not the archive checksum, must still reject.
     let live_path = dir.path("changed-owned-source");
     fs::write(&live_path, &good).unwrap();
-    let mut live = genesis.open_pool(&live_path).unwrap();
+    let mut live = open_fault_fixture(&live_path);
     let committed = live.summary().unwrap();
+    assert_eq!(committed.app_hash, cp.app_hash());
     let mut corrupt = good;
     let header = 76 + 32;
     let body_len = u32::from_be_bytes(corrupt[header..header + 4].try_into().unwrap()) as usize;
@@ -280,9 +308,7 @@ fn recovery_real_lab2_payment_replay_and_rechecksums_cannot_bypass_authorization
     ));
     // The export path must not turn a whole-file digest or a warm verifier
     // cache into spend permission. It uses discard replay, not wallet history.
-    live.file.set_len(0).unwrap();
-    live.file.write_all(&corrupt).unwrap();
-    live.file.sync_all().unwrap();
+    overwrite_fixture(&mut live, &corrupt);
     crate::pool::replay::HISTORY_BLOCKS_COLLECTED.with(|n| n.set(0));
     assert!(matches!(
         live.recovery_checkpoint(),

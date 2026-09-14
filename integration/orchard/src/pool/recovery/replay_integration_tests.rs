@@ -73,11 +73,12 @@ fn checkpoint_export_rejects_a_valid_same_length_alternate_history() {
     let before = source.summary().unwrap();
     let replacement = bytes(&mut other);
     assert_eq!(replacement.len() as u64, source.length);
-    // Mutate via the owning handle: opening a second writer would make this
-    // test fail at the Windows lock instead of at the intended tip check.
-    source.file.set_len(0).unwrap();
-    source.file.write_all(&replacement).unwrap();
-    source.file.sync_all().unwrap();
+    // Reopen this isolated fixture with overwrite rights BEFORE injecting the
+    // fault. Do not widen production append-only access or bypass its lock.
+    drop(source);
+    let mut source = open_fault_fixture(&dir.path("source"));
+    assert_eq!(source.summary().unwrap(), before);
+    overwrite_fixture(&mut source, &replacement);
     reset_counts();
     assert!(matches!(
         source.recovery_checkpoint(),
@@ -177,4 +178,73 @@ fn every_recovery_entry_uses_isolated_replay_without_per_block_state_copies() {
         assert_eq!(COPYING_EXECUTIONS.with(|v| v.get()), 1);
         assert_eq!(recovered.summary().unwrap(), summary);
     }
+}
+
+#[test]
+fn normal_append_handles_preserve_history_even_after_read_cursor_rewinds() {
+    let dir = Dir::new();
+    for (name, domain) in [("append-legacy", None), ("append-bound", Some([8; 32]))] {
+        let path = dir.path(name);
+        let mut pool = PoolStore::create_with_policy(&path, &[], domain).unwrap();
+        empty_block(&mut pool, 1);
+        let prefix = bytes(&mut pool);
+        let pin = pool.recovery_checkpoint().unwrap();
+        pool.file.rewind().unwrap();
+        empty_block(&mut pool, 2);
+        let final_bytes = bytes(&mut pool);
+        assert_eq!(&final_bytes[..prefix.len()], prefix.as_slice());
+        assert_eq!(final_bytes.len(), prefix.len() + 150);
+        let expected = pool.summary().unwrap();
+        drop(pool);
+        let reopened = PoolStore::open_with_policy(&path, &[], domain).unwrap();
+        assert_eq!(reopened.summary().unwrap(), expected);
+        drop(reopened);
+        assert!(RecoveryArchive::open(&path, pin).is_err());
+    }
+}
+
+#[test]
+fn injected_replay_failure_keeps_lock_and_blocks_prepared_commit_without_repair() {
+    let dir = Dir::new();
+    let path = dir.path("poisoned-owner");
+    let mut original = PoolStore::create(&path).unwrap();
+    empty_block(&mut original, 1);
+    let pin = original.recovery_checkpoint().unwrap();
+    drop(original);
+    let mut pool = open_fault_fixture(&path);
+    assert!(matches!(PoolStore::open(&path), Err(PoolError::Locked)));
+    assert!(matches!(
+        RecoveryArchive::open(&path, pin),
+        Err(PoolError::Locked)
+    ));
+    let committed = pool.summary().unwrap();
+    let prepared = pool.prepare(2, [2; 32], &[]).unwrap();
+    let mut corrupt = bytes(&mut pool);
+    let body = 44 + 4;
+    corrupt[body + 80] ^= 1; // Wrong post-state after an otherwise valid block.
+    let checksum: Hash = Sha256::digest(&corrupt[body..body + 114]).into();
+    corrupt[body + 114..body + 146].copy_from_slice(&checksum);
+    overwrite_fixture(&mut pool, &corrupt);
+    reset_counts();
+    assert!(matches!(
+        pool.recovery_checkpoint(),
+        Err(PoolError::Corrupt)
+    ));
+    assert_discard_replay();
+    assert!(matches!(pool.commit(prepared), Err(PoolError::Unavailable)));
+    assert!(matches!(
+        pool.prepare(2, [2; 32], &[]),
+        Err(PoolError::Unavailable)
+    ));
+    assert!(matches!(pool.wallet_history(), Err(PoolError::Unavailable)));
+    assert!(matches!(
+        pool.recovery_checkpoint(),
+        Err(PoolError::Unavailable)
+    ));
+    assert_eq!(pool.state.summary(), committed);
+    assert_eq!(bytes(&mut pool), corrupt);
+    assert!(matches!(PoolStore::open(&path), Err(PoolError::Locked)));
+    drop(pool);
+    assert!(matches!(PoolStore::open(&path), Err(PoolError::Corrupt)));
+    assert_eq!(fs::read(&path).unwrap(), corrupt);
 }
