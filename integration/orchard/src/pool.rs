@@ -259,6 +259,8 @@ pub struct PoolStore {
     length: u64,
     #[cfg(test)]
     fault: u8,
+    #[cfg(test)]
+    test_byte_limit: Option<u64>,
 }
 impl PoolStore {
     /// Create an empty pool. Does not issue assets or overwrite any existing file.
@@ -300,6 +302,8 @@ impl PoolStore {
             length: header.len() as u64,
             #[cfg(test)]
             fault: 0,
+            #[cfg(test)]
+            test_byte_limit: None,
         })
     }
     fn open_with_genesis(path: &Path, initial: &[Hash]) -> Result<Self, PoolError> {
@@ -383,6 +387,8 @@ impl PoolStore {
             length,
             #[cfg(test)]
             fault: 0,
+            #[cfg(test)]
+            test_byte_limit: None,
         })
     }
     pub fn summary(&self) -> Result<Summary, PoolError> {
@@ -407,6 +413,9 @@ impl PoolStore {
         transactions: &[Vec<u8>],
     ) -> Result<PreparedBlock, PoolError> {
         let base = self.summary()?;
+        // Reject a known-unpersistable candidate before cryptographic work or
+        // reporting a successful preview. Commit repeats this same accounting.
+        budget::record_end(self.length, self.journal_byte_limit(), transactions)?;
         let next = self
             .state
             .execute(height, block_id, transactions, &self.verifier)?;
@@ -422,6 +431,11 @@ impl PoolStore {
         if base != prepared.base {
             return Err(PoolError::Stale);
         }
+        let new_length = budget::record_end(
+            self.length,
+            self.journal_byte_limit(),
+            &prepared.transactions,
+        )?;
         let next = self.state.execute(
             prepared.result.height,
             prepared.block_id,
@@ -440,12 +454,10 @@ impl PoolStore {
             transactions: prepared.transactions,
         }
         .encode()?;
-        let new_length = self
-            .length
-            .checked_add(body.len() as u64 + 36)
-            .ok_or(PoolError::Bounds)?;
-        if new_length > MAX_JOURNAL_BYTES {
-            return Err(PoolError::Bounds);
+        // Fail closed if the encoder and preflight ever diverge after a format
+        // change. No bytes have been written and no committed state has changed.
+        if self.length.checked_add(body.len() as u64 + 36) != Some(new_length) {
+            return Err(PoolError::Corrupt);
         }
         let file_length = match self.file.metadata() {
             Ok(meta) => meta.len(),
@@ -468,6 +480,13 @@ impl PoolStore {
         self.state = next;
         self.length = new_length;
         Ok(result)
+    }
+    fn journal_byte_limit(&self) -> u64 {
+        #[cfg(test)]
+        if let Some(limit) = self.test_byte_limit {
+            return limit.min(MAX_JOURNAL_BYTES);
+        }
+        MAX_JOURNAL_BYTES
     }
     fn append(&mut self, frame: &[u8]) -> std::io::Result<()> {
         #[cfg(test)]
@@ -618,3 +637,9 @@ pub mod testnet;
 
 /// Read-only, bounded proposal selection; never a commit or finality API.
 pub mod selection;
+
+#[cfg(test)]
+#[path = "pool/capacity_tests.rs"]
+mod capacity_tests;
+
+mod budget;
