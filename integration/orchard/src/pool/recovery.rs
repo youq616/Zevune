@@ -76,7 +76,7 @@ impl PoolStore {
         let summary = self.summary()?;
         let result = (|| {
             let before = fingerprint(&mut self.file, self.length)?;
-            self.wallet_history()?;
+            self.verify_committed_history()?;
             if fingerprint(&mut self.file, self.length)? != before {
                 return Err(PoolError::Corrupt);
             }
@@ -294,7 +294,8 @@ fn verify_locked(mut file: File, checkpoint: RecoveryCheckpoint) -> Result<PoolS
     if genesis != checkpoint.genesis {
         return Err(PoolError::Genesis);
     }
-    // Reuse the ORIGINAL bounded replay implementation and authorization checks.
+    // Reuse the same isolated bounded replay as writable startup; ownership
+    // of this handle and its existing lock is retained throughout.
     let mut store = PoolStore::replay_locked_file(file, &initial, domain)?;
     checkpoint.matches(&store)?;
     if fingerprint(&mut store.file, checkpoint.length)? != checkpoint.journal_hash {

@@ -231,7 +231,11 @@ fn recovery_real_lab2_payment_replay_and_rechecksums_cannot_bypass_authorization
         .to_vec();
     let p = pool.prepare(1, [1; 32], std::slice::from_ref(&tx)).unwrap();
     pool.commit(p).unwrap();
+    crate::pool::replay::COPYING_EXECUTIONS.with(|n| n.set(0));
+    crate::pool::replay::HISTORY_BLOCKS_COLLECTED.with(|n| n.set(0));
     let cp = pool.recovery_checkpoint().unwrap();
+    crate::pool::replay::COPYING_EXECUTIONS.with(|n| assert_eq!(n.get(), 0));
+    crate::pool::replay::HISTORY_BLOCKS_COLLECTED.with(|n| assert_eq!(n.get(), 0));
     let good = bytes(&mut pool);
     drop(pool);
     let mut archive = RecoveryArchive::open(&source, cp).unwrap();
@@ -255,6 +259,10 @@ fn recovery_real_lab2_payment_replay_and_rechecksums_cannot_bypass_authorization
     drop(archive);
     // Recompute all ordinary hashes around a changed real binding signature.
     // The unchanged real verifier, not the archive checksum, must still reject.
+    let live_path = dir.path("changed-owned-source");
+    fs::write(&live_path, &good).unwrap();
+    let mut live = genesis.open_pool(&live_path).unwrap();
+    let committed = live.summary().unwrap();
     let mut corrupt = good;
     let header = 76 + 32;
     let body_len = u32::from_be_bytes(corrupt[header..header + 4].try_into().unwrap()) as usize;
@@ -270,6 +278,20 @@ fn recovery_real_lab2_payment_replay_and_rechecksums_cannot_bypass_authorization
         RecoveryArchive::open(&bad, forged),
         Err(PoolError::Authorization)
     ));
+    // The export path must not turn a whole-file digest or a warm verifier
+    // cache into spend permission. It uses discard replay, not wallet history.
+    live.file.set_len(0).unwrap();
+    live.file.write_all(&corrupt).unwrap();
+    live.file.sync_all().unwrap();
+    crate::pool::replay::HISTORY_BLOCKS_COLLECTED.with(|n| n.set(0));
+    assert!(matches!(
+        live.recovery_checkpoint(),
+        Err(PoolError::Authorization)
+    ));
+    crate::pool::replay::HISTORY_BLOCKS_COLLECTED.with(|n| assert_eq!(n.get(), 0));
+    assert!(matches!(live.summary(), Err(PoolError::Unavailable)));
+    assert_eq!(live.state.summary(), committed);
+    assert_eq!(bytes(&mut live), corrupt);
 }
 
 #[cfg(unix)]
@@ -328,3 +350,6 @@ fn recovery_legacy_funded_header_is_preserved_not_relabelled_as_lab2() {
         Err(PoolError::Genesis)
     ));
 }
+
+#[path = "replay_integration_tests.rs"]
+mod replay_integration_tests;
