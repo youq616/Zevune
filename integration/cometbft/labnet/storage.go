@@ -19,21 +19,22 @@ const emptyRecordBytes uint64 = 150
 // StorageReport describes one offline journal after genuine worker replay. It
 // says nothing about consensus freshness, disk free space, or spend permission.
 type StorageReport struct {
-	Scope                 string   `json:"scope"`
-	Height                uint64   `json:"height"`
-	AppHash               string   `json:"app_hash"`
-	JournalBytes          uint64   `json:"journal_bytes"`
-	JournalLimitBytes     uint64   `json:"journal_limit_bytes"`
-	JournalRemainingBytes uint64   `json:"journal_remaining_bytes"`
-	RecordsRemaining      uint64   `json:"records_remaining"`
-	Commitments           uint64   `json:"commitments"`
-	CommitmentsRemaining  uint64   `json:"commitments_remaining"`
-	EmptyRecordBytes      uint64   `json:"empty_record_bytes"`
-	EmptyBlockFitsLimits  bool     `json:"empty_block_fits_limits"`
-	Warnings              []string `json:"warnings"`
-	ConsensusVerified     bool     `json:"consensus_verified"`
-	NetworkAccessed       bool     `json:"network_accessed"`
-	RealFundsAllowed      bool     `json:"real_funds_allowed"`
+	Scope                     string   `json:"scope"`
+	Height                    uint64   `json:"height"`
+	AppHash                   string   `json:"app_hash"`
+	JournalBytes              uint64   `json:"journal_bytes"`
+	JournalLimitBytes         uint64   `json:"journal_limit_bytes"`
+	JournalRemainingBytes     uint64   `json:"journal_remaining_bytes"`
+	RecordsRemaining          uint64   `json:"records_remaining"`
+	Commitments               uint64   `json:"commitments"`
+	CommitmentsRemaining      uint64   `json:"commitments_remaining"`
+	EmptyRecordBytes          uint64   `json:"empty_record_bytes"`
+	EmptyBlockFitsLimits      bool     `json:"empty_block_fits_limits"`
+	Warnings                  []string `json:"warnings"`
+	ExpectedCheckpointMatched bool     `json:"expected_checkpoint_matched"`
+	ConsensusVerified         bool     `json:"consensus_verified"`
+	NetworkAccessed           bool     `json:"network_accessed"`
+	RealFundsAllowed          bool     `json:"real_funds_allowed"`
 }
 
 func storageReport(s poolbridge.Summary, size int64) (StorageReport, error) {
@@ -97,6 +98,21 @@ func sameJournal(before, after os.FileInfo) bool {
 // Metadata checks detect ordinary replacement/growth during inspection; they
 // are not a defense against malicious local OS or same-size/mtime tampering.
 func (n *Network) InspectStorage(ctx context.Context, worker string, workerPin Hash, journal string) (StorageReport, error) {
+	return n.inspectStorage(ctx, worker, workerPin, journal, nil)
+}
+
+// InspectStorageAtCheckpoint performs the same genuine offline replay and lock
+// checks as InspectStorage, then requires an exact independently selected tip.
+// No checkpoint is derived from the candidate journal or fetched from an RPC.
+func (n *Network) InspectStorageAtCheckpoint(ctx context.Context, worker string, workerPin Hash, journal string, expected StorageCheckpoint) (StorageReport, error) {
+	if err := expected.Validate(); err != nil {
+		return StorageReport{}, err
+	}
+	// Copy by value so the caller cannot change the requirement during replay.
+	return n.inspectStorage(ctx, worker, workerPin, journal, &expected)
+}
+
+func (n *Network) inspectStorage(ctx context.Context, worker string, workerPin Hash, journal string, expected *StorageCheckpoint) (StorageReport, error) {
 	if n == nil || ctx == nil || ctx.Err() != nil {
 		return StorageReport{}, ErrBounds
 	}
@@ -126,5 +142,5 @@ func (n *Network) InspectStorage(ctx context.Context, worker string, workerPin H
 	if err := ctx.Err(); err != nil {
 		return StorageReport{}, err
 	}
-	return storageReport(s, after.Size())
+	return storageReportAtCheckpoint(s, after.Size(), expected)
 }

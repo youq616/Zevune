@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -63,12 +64,63 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		}
 		if !bytes.Equal(before, after) || report.Height != want.Height || report.AppHash != HashText(want.AppHash) ||
 			report.Commitments != want.Commitments || report.JournalBytes != uint64(len(before)) ||
-			report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed || !report.EmptyBlockFitsLimits {
+			report.ExpectedCheckpointMatched || report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed || !report.EmptyBlockFitsLimits {
 			t.Fatal("offline inspection changed data or overstated its result")
 		}
 		return report
 	}
 	initial := inspect(expected)
+	genesisState := expected
+	genesisBytes, err := os.ReadFile(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A real CLI call with an independently selected exact checkpoint. All
+	// samples are temporary test data; this is not a consensus certificate.
+	checkPinned := func(path string, checkpoint poolbridge.Summary, succeeds bool) {
+		t.Helper()
+		before, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pinnedArgs := append([]string{"storage"}, common...)
+		pinnedArgs = append(pinnedArgs, "--journal", path,
+			"--expected-height", strconv.FormatUint(checkpoint.Height, 10),
+			"--expected-app-hash", HashText(checkpoint.AppHash))
+		out := operator(t, pinnedArgs, succeeds)
+		if succeeds {
+			var report StorageReport
+			if err := json.Unmarshal(out, &report); err != nil {
+				t.Fatal(err)
+			}
+			if !report.ExpectedCheckpointMatched || report.Height != checkpoint.Height || report.AppHash != HashText(checkpoint.AppHash) ||
+				report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed {
+				t.Fatal("checkpoint did not constrain real inspection or claimed finality")
+			}
+		} else if len(out) != 0 {
+			t.Fatal("checkpoint rejection emitted a partial success report")
+		}
+		after, err := os.ReadFile(path)
+		if err != nil || !bytes.Equal(before, after) {
+			t.Fatal("checkpoint inspection modified journal")
+		}
+	}
+	checkPinned(journal, genesisState, true) // explicit zero height must be checked
+	// Use a fully valid original inspection request: a missing unrelated pin
+	// must not mask regression to treating explicit empty arguments as absent.
+	for _, flags := range [][]string{
+		{"--expected-height", "", "--expected-app-hash", ""},
+		{"--expected-height", ""}, {"--expected-app-hash", ""},
+	} {
+		emptyArgs := append(append([]string(nil), args...), flags...)
+		if len(operator(t, emptyArgs, false)) != 0 {
+			t.Fatal("explicit empty checkpoint produced an unpinned result")
+		}
+	}
+	unchangedGenesis, err := os.ReadFile(journal)
+	if err != nil || !bytes.Equal(unchangedGenesis, genesisBytes) {
+		t.Fatal("invalid checkpoint flags modified the source")
+	}
 	for _, flag := range []string{"--create", "--endpoint=http://127.0.0.1:30000", "--limit=1", "--node=0", "--tx=transaction"} {
 		invalid := append(append([]string(nil), args...), flag)
 		if len(operator(t, invalid, false)) != 0 {
@@ -110,6 +162,53 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	after := inspect(expected)
+	checkPinned(journal, expected, true)
+	checkPinned(journal, genesisState, false) // newer does not mean exact match
+	prefix := filepath.Join(root, "valid-prefix.journal")
+	if err := os.WriteFile(prefix, genesisBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Without a retained checkpoint, a fully valid older file must continue to
+	// pass replay. The new gate, not relaxed parsing, detects the rollback.
+	prefixArgs := append([]string{"storage"}, common...)
+	prefixArgs = append(prefixArgs, "--journal", prefix)
+	var prefixReport StorageReport
+	if err := json.Unmarshal(operator(t, prefixArgs, true), &prefixReport); err != nil {
+		t.Fatal(err)
+	}
+	if prefixReport.Height != 0 || prefixReport.ExpectedCheckpointMatched {
+		t.Fatal("prefix result overstated")
+	}
+	checkPinned(prefix, expected, false)
+	checkPinned(prefix, genesisState, true)
+	// Same valid payment under the same genesis, but in a different local block
+	// history. Equal height is insufficient; the complete AppHash must match.
+	alternate := filepath.Join(root, "alternate-history.journal")
+	if err := os.WriteFile(alternate, genesisBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	otherOwner, err := poolbridge.Start(ctx, poolbridge.Options{Executable: worker, ExpectedSHA256: workerPin,
+		Journal: alternate, TestGenesis: filepath.Join(wallets, "test-genesis.bin"), TestGenesisSHA256: assetPin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = otherOwner.Close() })
+	_, otherTag, err := otherOwner.Finalize(ctx, 1, Hash{8}, [][]byte{raw})
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherState, err := otherOwner.Commit(ctx, otherTag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := otherOwner.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if otherState.Height != expected.Height || otherState.AppHash == expected.AppHash {
+		t.Fatal("alternate test history did not diverge")
+	}
+	checkPinned(alternate, otherState, true)
+	checkPinned(alternate, expected, false)
 	if after.JournalBytes-initial.JournalBytes != 150+4+uint64(len(raw)) || after.RecordsRemaining+1 != initial.RecordsRemaining {
 		t.Fatal("real encoded record differs from capacity report")
 	}
@@ -163,5 +262,7 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 	if err != nil || !bytes.Equal(data, unchanged) {
 		t.Fatal("inspection repaired or truncated corrupt data")
 	}
+	checkPinned(corrupted, expected, false) // a caller hash never replaces replay
+	checkPinned(journal, expected, true)
 	inspect(expected)
 }
