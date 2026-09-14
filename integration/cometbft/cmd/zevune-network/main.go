@@ -81,8 +81,11 @@ func strictFlags(f *flag.FlagSet, args []string) error {
 	}
 	return nil
 }
-func storageCheckpointFlags(height, appHash string) (*labnet.StorageCheckpoint, error) {
-	if height == "" && appHash == "" {
+func storageCheckpointFlags(height, appHash string, requested bool) (*labnet.StorageCheckpoint, error) {
+	if !requested {
+		if height != "" || appHash != "" {
+			return nil, labnet.ErrBounds
+		}
 		return nil, nil
 	}
 	checkpoint, err := labnet.ParseStorageCheckpoint(height, appHash)
@@ -143,9 +146,17 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	if err := strictFlags(f, args[1:]); err != nil || !*noFunds || !filepath.IsAbs(*worker) {
 		return labnet.ErrBounds
 	}
-	// Validate the paired checkpoint before loading configuration or starting a
-	// worker. In particular, explicit height 0 must not mean "not supplied".
-	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash)
+	// Track flag presence separately from its value: passing empty shell
+	// variables must fail, not silently disable the requested checkpoint.
+	checkpointRequested := false
+	f.Visit(func(v *flag.Flag) {
+		if v.Name == "expected-height" || v.Name == "expected-app-hash" {
+			checkpointRequested = true
+		}
+	})
+	// Validate before configuration/file access. Explicit height 0 is a real
+	// genesis checkpoint, not the default/absent value.
+	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash, checkpointRequested)
 	if err != nil {
 		return err
 	}

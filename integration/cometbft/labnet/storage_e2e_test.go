@@ -106,6 +106,21 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		}
 	}
 	checkPinned(journal, genesisState, true) // explicit zero height must be checked
+	// Use a fully valid original inspection request: a missing unrelated pin
+	// must not mask regression to treating explicit empty arguments as absent.
+	for _, flags := range [][]string{
+		{"--expected-height", "", "--expected-app-hash", ""},
+		{"--expected-height", ""}, {"--expected-app-hash", ""},
+	} {
+		emptyArgs := append(append([]string(nil), args...), flags...)
+		if len(operator(t, emptyArgs, false)) != 0 {
+			t.Fatal("explicit empty checkpoint produced an unpinned result")
+		}
+	}
+	unchangedGenesis, err := os.ReadFile(journal)
+	if err != nil || !bytes.Equal(unchangedGenesis, genesisBytes) {
+		t.Fatal("invalid checkpoint flags modified the source")
+	}
 	for _, flag := range []string{"--create", "--endpoint=http://127.0.0.1:30000", "--limit=1", "--node=0", "--tx=transaction"} {
 		invalid := append(append([]string(nil), args...), flag)
 		if len(operator(t, invalid, false)) != 0 {
