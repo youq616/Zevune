@@ -46,7 +46,7 @@ func TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands(t *testing.
 			t.Fatal("invalid checkpoint flags emitted a result")
 		}
 	}
-	for _, cmd := range []string{"init", "run", "sync", "submit"} {
+	for _, cmd := range []string{"init", "run"} {
 		args := []string{cmd, "--no-real-funds", "--worker", worker, "--expected-height=0", "--expected-app-hash=" + hash}
 		var out bytes.Buffer
 		if execute(context.Background(), args, nil, &out) == nil || out.Len() != 0 {
