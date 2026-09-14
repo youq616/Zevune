@@ -81,6 +81,17 @@ func strictFlags(f *flag.FlagSet, args []string) error {
 	}
 	return nil
 }
+func storageCheckpointFlags(height, appHash string) (*labnet.StorageCheckpoint, error) {
+	if height == "" && appHash == "" {
+		return nil, nil
+	}
+	checkpoint, err := labnet.ParseStorageCheckpoint(height, appHash)
+	if err != nil {
+		return nil, err
+	}
+	return &checkpoint, nil
+}
+
 func execute(ctx context.Context, args []string, input io.Reader, output io.Writer) error {
 	if len(args) == 1 && args[0] == "version" {
 		return json.NewEncoder(output).Encode(map[string]any{"version": labnet.Version, "real_funds_allowed": false})
@@ -101,6 +112,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	var index, ports int
 	var create, stopOnEOF bool
 	var limit uint64
+	var expectedHeight, expectedAppHash string
 	if command == "init" {
 		f.StringVar(&home, "home", "", "new private network directory")
 		f.StringVar(&manifest, "genesis", "", "public test asset manifest")
@@ -114,6 +126,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			f.BoolVar(&stopOnEOF, "stop-on-stdin-eof", false, "stop when supervising process closes stdin")
 		} else if command == "storage" {
 			f.StringVar(&journal, "journal", "", "existing offline node or reference journal; never created")
+			f.StringVar(&expectedHeight, "expected-height", "", "exact independently retained height; requires --expected-app-hash")
+			f.StringVar(&expectedAppHash, "expected-app-hash", "", "exact independently retained state hash; requires --expected-height")
 		} else {
 			f.StringVar(&endpoint, "endpoint", "", "numeric loopback HTTP endpoint")
 			f.StringVar(&journal, "journal", "", "wallet reference journal, not node journal")
@@ -128,6 +142,12 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	if err := strictFlags(f, args[1:]); err != nil || !*noFunds || !filepath.IsAbs(*worker) {
 		return labnet.ErrBounds
+	}
+	// Validate the paired checkpoint before loading configuration or starting a
+	// worker. In particular, explicit height 0 must not mean "not supplied".
+	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash)
+	if err != nil {
+		return err
 	}
 	pin, err := labnet.ParseHash(*workerDigest)
 	if err != nil {
@@ -170,7 +190,13 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	bounded, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	if command == "storage" {
-		result, err := network.InspectStorage(bounded, *worker, pin, journal)
+		var result labnet.StorageReport
+		var err error
+		if expected == nil {
+			result, err = network.InspectStorage(bounded, *worker, pin, journal)
+		} else {
+			result, err = network.InspectStorageAtCheckpoint(bounded, *worker, pin, journal, *expected)
+		}
 		if err != nil {
 			return err
 		}
