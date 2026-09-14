@@ -30,9 +30,10 @@ jobs:
           git diff --exit-code
           git archive --format=tar.gz HEAD > "$out/source.tar.gz"
           git rev-parse HEAD > "$out/COMMIT"
+          git rev-parse 'HEAD^{tree}' > "$out/SOURCE-TREE"
           git ls-tree -rz HEAD > "$out/TREE"
           cd "$out"
-          sha256sum source.tar.gz COMMIT TREE > SHA256SUMS
+          sha256sum source.tar.gz COMMIT SOURCE-TREE TREE > SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: zevune-tracked-source
