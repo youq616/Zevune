@@ -3,7 +3,7 @@
 //! Every replay and commit rechecks actual authorization; hashes are not finality.
 use std::collections::{BTreeSet, VecDeque};
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use incrementalmerkletree::frontier::Frontier;
@@ -318,12 +318,22 @@ impl PoolStore {
         if !info.file_type().is_file() || info.len() > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
         }
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .read(true)
             .append(true)
             .open(path)
             .map_err(|_| PoolError::Storage)?;
         file.try_lock().map_err(|_| PoolError::Locked)?;
+        Self::replay_locked_file(file, initial, signing_domain)
+    }
+    // The caller owns the file and its lock for the entire replay. Recovery
+    // readers keep the returned store private and never expose a write API.
+    fn replay_locked_file(
+        mut file: File,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+    ) -> Result<Self, PoolError> {
+        file.rewind().map_err(|_| PoolError::Storage)?;
         let length = file.metadata().map_err(|_| PoolError::Storage)?.len();
         if length > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
@@ -643,3 +653,6 @@ pub mod selection;
 mod capacity_tests;
 
 mod budget;
+
+/// Checkpoint-pinned, create-only recovery copies; not snapshots or finality.
+pub mod recovery;
