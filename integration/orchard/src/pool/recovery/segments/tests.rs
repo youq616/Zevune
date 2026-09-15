@@ -270,6 +270,7 @@ fn empty_read_does_not_advance_and_segment_eof_is_not_journal_eof() {
         entries: &entries,
         index: 0,
         position: 0,
+        failed: false,
     };
     assert_eq!(reader.read(&mut []).unwrap(), 0);
     assert_eq!(reader.index, 0);
@@ -286,6 +287,7 @@ fn empty_read_does_not_advance_and_segment_eof_is_not_journal_eof() {
             entries: &entries,
             index: 0,
             position: 0,
+            failed: false,
         };
         let result = reader.read_exact(&mut out);
         assert!(result.is_err() || require_eof(&mut reader).is_err());
@@ -406,3 +408,7 @@ fn real_payment_restore_continues_but_rehashed_bad_signature_is_still_rejected()
     ));
     assert!(SegmentedArchive::open(&folder, pin).is_err());
 }
+
+#[cfg(feature = "local-funding-lab")]
+#[path = "payment_boundary_tests.rs"]
+mod payment_boundary_tests;

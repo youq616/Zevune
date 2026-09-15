@@ -240,6 +240,7 @@ impl SegmentedArchive {
             entries: &self.entries,
             index: 0,
             position: 0,
+            failed: false,
         })
     }
     /// Revalidates every original record using the same genuine state machine.
@@ -325,12 +326,14 @@ impl RecoveryArchive {
         if fingerprint(&mut self.store.file, pin.length)? != pin.journal_hash {
             return Err(PoolError::Corrupt);
         }
-        let mut builder = fs::DirBuilder::new();
+        let builder = fs::DirBuilder::new();
         #[cfg(unix)]
-        {
+        let builder = {
             use std::os::unix::fs::DirBuilderExt;
+            let mut builder = builder;
             builder.mode(0o700);
-        }
+            builder
+        };
         builder.create(target).map_err(|_| PoolError::Storage)?;
         let mut entries = Vec::new();
         let mut files = Vec::new();
@@ -411,19 +414,46 @@ impl RecoveryArchive {
 
 // Only this private reader feeds replay/copy. Crossing a segment is not EOF;
 // truncation and unexpected suffixes are errors, not skippable missing chunks.
-struct SegmentReader<'a> {
-    files: &'a mut [File],
+struct SegmentReader<'a, R: Read = File> {
+    files: &'a mut [R],
     entries: &'a [Entry],
     index: usize,
     position: u64,
+    failed: bool,
 }
-impl Read for SegmentReader<'_> {
+impl<R: Read> Read for SegmentReader<'_, R> {
     fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
         if out.is_empty() {
             return Ok(0);
         }
+        if self.failed {
+            return Err(io::Error::other(
+                "segmented input unavailable after read failure",
+            ));
+        }
+        let result = self.read_next(out);
+        // Interrupted consumes no bytes and remains retryable. Every other
+        // failure invalidates this reader, even if its source later recovers.
+        // Replay already discards failed state; this is a second, lower boundary.
+        if result
+            .as_ref()
+            .is_err_and(|err| err.kind() != io::ErrorKind::Interrupted)
+        {
+            self.failed = true;
+        }
+        result
+    }
+}
+impl<R: Read> SegmentReader<'_, R> {
+    fn read_next(&mut self, out: &mut [u8]) -> io::Result<usize> {
+        if self.files.len() != self.entries.len() {
+            return Err(io::ErrorKind::InvalidData.into());
+        }
         while self.index < self.files.len() {
             let size = self.entries[self.index].length as u64;
+            if size == 0 || size > SEGMENT_BYTES || self.position > size {
+                return Err(io::ErrorKind::InvalidData.into());
+            }
             let file = &mut self.files[self.index];
             if self.position == size {
                 require_eof(file).map_err(|_| io::Error::other("invalid segment EOF"))?;
@@ -445,3 +475,6 @@ impl Read for SegmentReader<'_> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod reader_tests;
