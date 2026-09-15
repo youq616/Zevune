@@ -275,3 +275,6 @@ fn verify_locked(mut file: File, checkpoint: RecoveryCheckpoint) -> Result<PoolS
 
 #[cfg(test)]
 mod tests;
+
+/// Immutable segmented backup format; does not change live journal capacity.
+pub mod segments;

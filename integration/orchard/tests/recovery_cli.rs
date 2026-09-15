@@ -197,3 +197,46 @@ fn recovery_cli_bad_options_do_not_touch_source_or_existing_target() {
     }
     assert!(call(&["--help"]).status.success());
 }
+
+#[test]
+fn segmented_cli_pack_verify_restore_and_reject_overwrite() {
+    let d = Dir::new();
+    let source = d.path("pool");
+    let folder = d.path("archive");
+    let target = d.path("restored");
+    let mut pool = zevune_orchard_lab::pool::PoolStore::create(&source).unwrap();
+    let prepared = pool.prepare(1, [1; 32], &[]).unwrap();
+    pool.commit(prepared).unwrap();
+    let cp = pool.recovery_checkpoint().unwrap();
+    let encoded = hex(&cp.to_bytes());
+    drop(pool);
+    let before = fs::read(&source).unwrap();
+    for (mode, input, output) in [
+        ("pack", &source, Some(&folder)),
+        ("verify-segments", &folder, None),
+        ("restore-segments", &folder, Some(&target)),
+    ] {
+        let mut args = vec![
+            mode,
+            "--no-real-funds",
+            "--source",
+            text(input),
+            "--checkpoint",
+            &encoded,
+        ];
+        if let Some(output) = output {
+            args.extend(["--output", text(output)]);
+        }
+        assert_eq!(pin(&call(&args)), encoded);
+        if output.is_some() {
+            let refused = call(&args);
+            assert!(!refused.status.success());
+            assert!(refused.stdout.is_empty());
+        }
+        // Explicit no-funds acknowledgement cannot be omitted on new commands.
+        args.retain(|x| *x != "--no-real-funds");
+        assert!(!call(&args).status.success());
+    }
+    assert_eq!(fs::read(&source).unwrap(), before);
+    assert_eq!(fs::read(&target).unwrap(), before);
+}
