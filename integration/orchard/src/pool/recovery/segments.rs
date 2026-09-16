@@ -4,6 +4,11 @@ use super::*;
 use crate::pool::replay::{read_header, require_eof, Replay};
 use std::io;
 
+mod namespace;
+
+/// Full-replay-derived historical record navigation; not a state import format.
+pub mod index;
+
 const MAGIC: &[u8; 8] = b"ZVPSEG01";
 const MANIFEST: &str = "MANIFEST";
 pub const SEGMENT_BYTES: u64 = 1024 * 1024;
@@ -103,7 +108,10 @@ fn open_read(path: &Path, length: u64) -> Result<File, PoolError> {
     if !regular(&before) || before.len() != length {
         return Err(PoolError::Bounds);
     }
-    let file = File::open(path).map_err(|_| PoolError::Storage)?;
+    let mut options = OpenOptions::new();
+    options.read(true);
+    namespace::retain_name(&mut options);
+    let file = options.open(path).map_err(|_| PoolError::Storage)?;
     file.try_lock_shared().map_err(|_| PoolError::Locked)?;
     let after = file.metadata().map_err(|_| PoolError::Storage)?;
     if !regular(&after) || after.len() != length {
@@ -116,11 +124,13 @@ fn open_read(path: &Path, length: u64) -> Result<File, PoolError> {
             return Err(PoolError::Corrupt);
         }
     }
+    namespace::check_file(path, &file, length)?;
     Ok(file)
 }
 fn create_file(path: &Path) -> Result<File, PoolError> {
     let mut opts = OpenOptions::new();
     opts.create_new(true).read(true).write(true);
+    namespace::retain_name(&mut opts);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
@@ -136,6 +146,7 @@ fn create_file(path: &Path) -> Result<File, PoolError> {
 /// writer handles until dropped. Trusted local parent directories/OS are required.
 pub struct SegmentedArchive {
     path: std::path::PathBuf,
+    location: namespace::Directory,
     manifest: File,
     raw_manifest: Vec<u8>,
     entries: Vec<Entry>,
@@ -148,10 +159,18 @@ impl SegmentedArchive {
     /// `pin` must be independently authenticated. Manifest hashes are NOT a
     /// substitute for this pin, genuine journal replay, or consensus finality.
     pub fn open(path: &Path, pin: RecoveryCheckpoint) -> Result<Self, PoolError> {
+        let mut archive = Self::open_unverified(path, pin)?;
+        archive.verify()?;
+        Ok(archive)
+    }
+    // Private construction only. No caller may publish this before full replay.
+    // open() and open_indexed() both apply that same verification gate.
+    fn open_unverified(path: &Path, pin: RecoveryCheckpoint) -> Result<Self, PoolError> {
         if !path.is_absolute() {
             return Err(PoolError::Bounds);
         }
         let n = count(pin);
+        let location = namespace::Directory::open(path)?;
         directory(path, n)?;
         let size = FIXED_BYTES + n * 36;
         if n == 0 || n > MAX_SEGMENTS || size > MAX_MANIFEST {
@@ -169,8 +188,9 @@ impl SegmentedArchive {
         for (i, entry) in entries.iter().enumerate() {
             files.push(open_read(&path.join(name(i)), entry.length as u64)?);
         }
-        let mut archive = Self {
+        let archive = Self {
             path: path.to_path_buf(),
+            location,
             manifest,
             raw_manifest: raw,
             entries,
@@ -179,15 +199,28 @@ impl SegmentedArchive {
             #[cfg(test)]
             fault: 0,
         };
-        archive.verify()?;
         Ok(archive)
     }
     pub fn checkpoint(&self) -> RecoveryCheckpoint {
         self.pin
     }
 
-    fn check_bytes(&mut self) -> Result<(), PoolError> {
+    fn check_namespace(&self) -> Result<(), PoolError> {
+        self.location.check(&self.path)?;
         directory(&self.path, self.entries.len())?;
+        namespace::check_file(
+            &self.path.join(MANIFEST),
+            &self.manifest,
+            self.raw_manifest.len() as u64,
+        )?;
+        for (i, (file, entry)) in self.files.iter().zip(&self.entries).enumerate() {
+            namespace::check_file(&self.path.join(name(i)), file, entry.length as u64)?;
+        }
+        Ok(())
+    }
+
+    fn check_bytes(&mut self) -> Result<(), PoolError> {
+        self.check_namespace()?;
         let meta = self.manifest.metadata().map_err(|_| PoolError::Storage)?;
         if !regular(&meta) || meta.len() != self.raw_manifest.len() as u64 {
             return Err(PoolError::Corrupt);
@@ -229,7 +262,7 @@ impl SegmentedArchive {
         if Hash::from(total.finalize()) != self.pin.journal_hash {
             return Err(PoolError::Corrupt);
         }
-        Ok(())
+        self.check_namespace()
     }
     fn reader(&mut self) -> Result<SegmentReader<'_>, PoolError> {
         for file in &mut self.files {
@@ -246,6 +279,14 @@ impl SegmentedArchive {
     /// Revalidates every original record using the same genuine state machine.
     /// Nothing is accepted on segment checksums alone and no partial tip escapes.
     pub fn verify(&mut self) -> Result<(), PoolError> {
+        self.replay_checked(|_, _, _, _| Ok(())).map(|_| ())
+    }
+    // Private visitors only discard metadata or build an UNPUBLISHED index.
+    // Both paths verify the complete archive, including final bytes/namespace.
+    fn replay_checked(
+        &mut self,
+        mut visit: impl FnMut(u64, u64, &Summary, &Summary) -> Result<(), PoolError>,
+    ) -> Result<u64, PoolError> {
         self.check_bytes()?;
         let pin = self.pin;
         let mut reader = self.reader()?;
@@ -254,14 +295,22 @@ impl SegmentedArchive {
         if state.genesis != pin.genesis {
             return Err(PoolError::Genesis);
         }
+        let mut before = state.summary();
+        let mut start = header.length;
         let verifier = AuthorizationVerifier::new();
         let mut replay = Replay::new(&mut reader, pin.length, header.length, state)?;
-        while replay.next_block(&verifier)?.is_some() {}
+        while let Some(block) = replay.next_block(&verifier)? {
+            let end = replay.byte_position()?;
+            visit(start, end, &before, &block.result)?;
+            before = block.result;
+            start = end;
+        }
         let (_, summary) = replay.finish()?;
         if summary.height != pin.height || summary.app_hash != pin.app_hash {
             return Err(PoolError::Stale);
         }
-        self.check_bytes()
+        self.check_bytes()?;
+        Ok(header.length)
     }
     /// Restores the original flat journal ONLY to a new file. Neither the
     /// archive nor any existing target is overwritten or automatically repaired.
@@ -269,6 +318,9 @@ impl SegmentedArchive {
         if !target.is_absolute() {
             return Err(PoolError::Bounds);
         }
+        // Detect a persistently replaced source path before destination checks
+        // or creating output. Never validate detached old handles as new names.
+        self.check_namespace()?;
         // A new output INSIDE this archive would change its exact file set and
         // invalidate the source. Resolve trusted parent aliases before writing.
         let parent = fs::canonicalize(target.parent().ok_or(PoolError::Bounds)?)
@@ -335,6 +387,7 @@ impl RecoveryArchive {
             builder
         };
         builder.create(target).map_err(|_| PoolError::Storage)?;
+        let location = namespace::Directory::open(target)?;
         let mut entries = Vec::new();
         let mut files = Vec::new();
         entries
@@ -396,6 +449,7 @@ impl RecoveryArchive {
         }
         let mut archive = SegmentedArchive {
             path: target.to_path_buf(),
+            location,
             manifest,
             raw_manifest,
             entries,

@@ -236,6 +236,13 @@ impl<R: Read> Replay<R> {
         }))
     }
 
+    // Position after the last completely replayed frame, for internal navigation.
+    // Never expose a consumed prefix offset after a failed reconstruction.
+    pub(super) fn byte_position(&self) -> Result<u64, PoolError> {
+        self.state.as_ref().ok_or(PoolError::Unavailable)?;
+        Ok(self.records.consumed)
+    }
+
     pub(super) fn finish(self) -> Result<(State, Summary), PoolError> {
         if !self.records.exhausted {
             return Err(PoolError::Unavailable);

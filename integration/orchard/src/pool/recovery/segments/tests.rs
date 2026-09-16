@@ -412,3 +412,30 @@ fn real_payment_restore_continues_but_rehashed_bad_signature_is_still_rejected()
 #[cfg(feature = "local-funding-lab")]
 #[path = "payment_boundary_tests.rs"]
 mod payment_boundary_tests;
+
+#[cfg(unix)]
+#[test]
+fn persistent_segment_path_replacement_is_rejected_before_restore() {
+    let d = Dir::new();
+    let source = d.path("source");
+    let folder = d.path("archive");
+    let (pin, _) = fixture(&source, 1);
+    pack(&source, &folder, pin);
+    let mut archive = SegmentedArchive::open(&folder, pin).unwrap();
+    let part = folder.join(name(0));
+    let old = d.path("old-segment");
+    let mut replacement = fs::read(&part).unwrap();
+    replacement[0] ^= 1;
+    fs::rename(&part, &old).unwrap();
+    fs::write(&part, &replacement).unwrap();
+    // Rechecking the directory must not validate an unlinked old descriptor
+    // while reporting that the newly replaced archive path was verified.
+    assert!(matches!(archive.verify(), Err(PoolError::Corrupt)));
+    let output = d.path("must-not-create");
+    assert!(archive.restore_new(&output).is_err());
+    assert!(!output.exists());
+    assert_eq!(fs::read(part).unwrap(), replacement);
+}
+
+#[path = "namespace_tests.rs"]
+mod namespace_tests;

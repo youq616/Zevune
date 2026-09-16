@@ -5,6 +5,9 @@ use zevune_orchard_lab::pool::recovery::segments::SegmentedArchive;
 use zevune_orchard_lab::pool::recovery::{RecoveryArchive, RecoveryCheckpoint, CHECKPOINT_BYTES};
 use zevune_orchard_lab::pool::testnet::TestGenesis;
 
+#[path = "../recovery_index_output.rs"]
+mod index_output;
+
 const HELP: &str = "Zevune PUBLIC journal recovery (NO FUNDS; NOT full validator recovery)\n\
 checkpoint --no-real-funds --source <absolute journal> --genesis <absolute manifest> --genesis-sha256 <64 hex> --height <trusted height> --app-hash <trusted hash>\n\
 verify --no-real-funds --source <absolute backup> --checkpoint <240 hex independently retained pin>\n\
@@ -12,6 +15,8 @@ backup|restore --no-real-funds --source <absolute journal/backup> --output <new 
 pack --no-real-funds --source <absolute journal> --output <NEW absolute directory> --checkpoint <240 hex pin>\n\
 verify-segments --no-real-funds --source <absolute archive directory> --checkpoint <240 hex pin>\n\
 restore-segments --no-real-funds --source <absolute archive directory> --output <NEW absolute journal> --checkpoint <240 hex pin>\n\
+index --no-real-funds --source <absolute archive directory> --checkpoint <240 hex pin> (JSON to stdout)\n\
+locate-height --no-real-funds --source <absolute archive directory> --checkpoint <240 hex pin> --height <1..tip>\n\
 Stop the owning writer before use. No consensus database or signer state is copied.\n\
 A failed copy may leave a partial or complete target. No automatic retry or repair.\n";
 
@@ -49,6 +54,8 @@ fn run(args: &[String]) -> Result<(), ()> {
         "pack",
         "verify-segments",
         "restore-segments",
+        "index",
+        "locate-height",
     ]
     .contains(&mode.as_str())
         || rest.len() > 13
@@ -83,7 +90,8 @@ fn run(args: &[String]) -> Result<(), ()> {
             "--height",
             "--app-hash",
         ],
-        "verify" | "verify-segments" => &["--source", "--checkpoint"],
+        "locate-height" => &["--source", "--checkpoint", "--height"],
+        "verify" | "verify-segments" | "index" => &["--source", "--checkpoint"],
         _ => &["--source", "--output", "--checkpoint"],
     };
     if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {
@@ -116,6 +124,23 @@ fn run(args: &[String]) -> Result<(), ()> {
             RecoveryCheckpoint::from_bytes(&unhex::<CHECKPOINT_BYTES>(options["--checkpoint"])?)
                 .map_err(|_| ())?;
         match mode.as_str() {
+            "index" | "locate-height" => {
+                let height = if mode == "locate-height" {
+                    let value: u64 = options["--height"].parse().map_err(|_| ())?;
+                    if value == 0
+                        || value > pin.height()
+                        || value.to_string() != options["--height"]
+                    {
+                        return Err(());
+                    }
+                    Some(value)
+                } else {
+                    None
+                };
+                let (_archive, index) =
+                    SegmentedArchive::open_indexed(source, pin).map_err(|_| ())?;
+                return index_output::emit(&index, height);
+            }
             "verify-segments" | "restore-segments" => {
                 let mut archive = SegmentedArchive::open(source, pin).map_err(|_| ())?;
                 if mode == "restore-segments" {
