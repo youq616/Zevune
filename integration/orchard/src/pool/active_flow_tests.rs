@@ -149,7 +149,10 @@ fn assert_noncanonical_layouts_reject(
     write_directory(&path, original);
     let mut reopened = genesis.open_pool(&path).unwrap();
     assert_eq!(&reopened.summary().unwrap(), expected);
-    assert_eq!(genesis.wallet_history(&mut reopened).unwrap().tip(), expected);
+    assert_eq!(
+        genesis.wallet_history(&mut reopened).unwrap().tip(),
+        expected
+    );
     drop(reopened);
     assert_eq!(directory_bytes(&path), *original);
 }
@@ -167,7 +170,10 @@ fn active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contr
     assert_eq!(&genesis.bytes()[..8], b"ZVTGEN03");
     assert_eq!(genesis.storage_profile(), StorageProfile::ActiveSegmentsV1);
     assert_eq!(genesis.storage_profile().max_records(), 1_000_000);
-    assert_eq!(genesis.storage_profile().max_journal_bytes(), 1024 * 1024 * 1024);
+    assert_eq!(
+        genesis.storage_profile().max_journal_bytes(),
+        1024 * 1024 * 1024
+    );
     assert_eq!(genesis.signing_domain(), Some(genesis.digest()));
 
     // Keep every public allocation, opening and deployment nonce identical:
@@ -182,7 +188,10 @@ fn active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contr
     assert_eq!(legacy.storage_profile(), StorageProfile::LegacyJournal);
     assert_eq!(old.storage_profile(), StorageProfile::LegacyJournal);
     assert_eq!(legacy.storage_profile().max_records(), 10_000);
-    assert_eq!(legacy.storage_profile().max_journal_bytes(), 64 * 1024 * 1024);
+    assert_eq!(
+        legacy.storage_profile().max_journal_bytes(),
+        64 * 1024 * 1024
+    );
     assert_eq!(legacy.signing_domain(), Some(legacy.digest()));
     assert_eq!(old.signing_domain(), None);
     let initial = genesis.initial_summary().unwrap();
@@ -445,10 +454,19 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     drop(pool);
     let persisted = directory_bytes(&path);
     assert_eq!(persisted.len(), 3);
-    assert_eq!(persisted["00000000.journal"].len(), padding * EMPTY_FRAME_BYTES);
-    assert_eq!(persisted["00000001.journal"].len(), before_reopen.3 as usize);
     assert_eq!(
-        persisted.values().map(|bytes| bytes.len() as u64).sum::<u64>(),
+        persisted["00000000.journal"].len(),
+        padding * EMPTY_FRAME_BYTES
+    );
+    assert_eq!(
+        persisted["00000001.journal"].len(),
+        before_reopen.3 as usize
+    );
+    assert_eq!(
+        persisted
+            .values()
+            .map(|bytes| bytes.len() as u64)
+            .sum::<u64>(),
         before_reopen.1
     );
     assert!(persisted["00000000.journal"].len() + first_frame_bytes > SEGMENT_LIMIT);
@@ -464,7 +482,12 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
         Err(PoolError::DoubleSpend)
     ));
     let rejected = pool
-        .select_proposal(10002, block_id(10002), selection::MAX_PROPOSAL_BYTES, &[second])
+        .select_proposal(
+            10002,
+            block_id(10002),
+            selection::MAX_PROPOSAL_BYTES,
+            &[second],
+        )
         .unwrap();
     assert_eq!(rejected.mask, 0);
     assert_eq!(pool.active_capacity().unwrap(), before_reopen);

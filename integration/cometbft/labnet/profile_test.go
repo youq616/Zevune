@@ -145,7 +145,7 @@ func TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds(t *testing.T) {
 
 func TestActiveCapacityReportsLogicalBytesAndExactCheckpoint(t *testing.T) {
 	snapshot := poolbridge.ActiveStorage{
-		Summary: poolbridge.Summary{Height: 10001, AppHash: Hash{1}, Commitments: 2},
+		Summary:      poolbridge.Summary{Height: 10001, AppHash: Hash{1}, Commitments: 2},
 		LogicalBytes: 108 + 10001*150, Segments: 2, TailBytes: 3011 * 150,
 	}
 	c := StorageCheckpoint{Height: snapshot.Summary.Height, AppHash: snapshot.Summary.AppHash}

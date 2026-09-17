@@ -110,9 +110,7 @@ impl TestGenesis {
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, PoolError> {
         if !(LEGACY_HEADER + ENTRY..=MAX_GENESIS_BYTES).contains(&bytes.len())
-            || (&bytes[..8] != MAGIC
-                && &bytes[..8] != LEGACY_MAGIC
-                && &bytes[..8] != ACTIVE_MAGIC)
+            || (&bytes[..8] != MAGIC && &bytes[..8] != LEGACY_MAGIC && &bytes[..8] != ACTIVE_MAGIC)
             || bytes[8..40] != Sha256::digest(crate::NETWORK.as_bytes())[..]
             || bytes[40..48] != TEST_SUPPLY.to_be_bytes()
         {

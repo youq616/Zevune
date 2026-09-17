@@ -188,12 +188,15 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
             if b.len() != 17 {
                 Err(PoolError::Bounds)
             } else {
-                session.store.active_capacity().map(|(state, length, segments, tail)| {
-                    capacity[..8].copy_from_slice(&length.to_be_bytes());
-                    capacity[8..12].copy_from_slice(&segments.to_be_bytes());
-                    capacity[12..].copy_from_slice(&tail.to_be_bytes());
-                    state
-                })
+                session
+                    .store
+                    .active_capacity()
+                    .map(|(state, length, segments, tail)| {
+                        capacity[..8].copy_from_slice(&length.to_be_bytes());
+                        capacity[8..12].copy_from_slice(&segments.to_be_bytes());
+                        capacity[12..].copy_from_slice(&tail.to_be_bytes());
+                        state
+                    })
             }
         } else {
             session.apply(b[16], &b[17..])

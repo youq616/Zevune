@@ -136,7 +136,9 @@ fn inventory(path: &Path) -> Result<usize, PoolError> {
         {
             return Err(PoolError::Corrupt);
         }
-        let index = value[..8].parse::<usize>().map_err(|_| PoolError::Corrupt)?;
+        let index = value[..8]
+            .parse::<usize>()
+            .map_err(|_| PoolError::Corrupt)?;
         if index >= MAX_SEGMENTS || found[index] {
             return Err(PoolError::Bounds);
         }
@@ -223,7 +225,10 @@ fn read_at(file: &File, bytes: &mut [u8], offset: u64) -> io::Result<usize> {
     #[cfg(not(any(unix, windows)))]
     {
         let _ = (file, bytes, offset);
-        Err(io::Error::new(io::ErrorKind::Unsupported, "unsupported filesystem"))
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "unsupported filesystem",
+        ))
     }
 }
 
@@ -300,11 +305,15 @@ impl ActiveJournal {
         verify_header(&genesis, expected_header)?;
         let count = inventory(path)?;
         let mut segments = Vec::new();
-        segments.try_reserve_exact(count).map_err(|_| PoolError::Storage)?;
+        segments
+            .try_reserve_exact(count)
+            .map_err(|_| PoolError::Storage)?;
         let mut length = header_length;
         for index in 0..count {
             let segment = open_file(&path.join(name(index)), None)?;
-            length = length.checked_add(segment.length).ok_or(PoolError::Bounds)?;
+            length = length
+                .checked_add(segment.length)
+                .ok_or(PoolError::Bounds)?;
             if length > TOTAL_BYTES {
                 return Err(PoolError::Bounds);
             }
@@ -432,7 +441,9 @@ impl ActiveJournal {
         )?;
         let mut created = if rotate {
             self.check(genesis)?;
-            self.segments.try_reserve(1).map_err(|_| PoolError::Storage)?;
+            self.segments
+                .try_reserve(1)
+                .map_err(|_| PoolError::Storage)?;
             Some(create_file(&self.path.join(name(self.segments.len())))?)
         } else {
             None
@@ -441,16 +452,26 @@ impl ActiveJournal {
         if rotate && self.fault == 1 {
             return Err(PoolError::Storage);
         }
-        let index = if rotate { self.segments.len() } else { self.segments.len() - 1 };
-        let previous = if rotate { 0 } else { self.segments.last().ok_or(PoolError::Corrupt)?.length };
+        let index = if rotate {
+            self.segments.len()
+        } else {
+            self.segments.len() - 1
+        };
+        let previous = if rotate {
+            0
+        } else {
+            self.segments.last().ok_or(PoolError::Corrupt)?.length
+        };
         let file = match created.as_mut() {
             Some(file) => file,
             None => &mut self.segments.last_mut().ok_or(PoolError::Corrupt)?.file,
         };
-        file.seek(SeekFrom::Start(previous)).map_err(|_| PoolError::Storage)?;
+        file.seek(SeekFrom::Start(previous))
+            .map_err(|_| PoolError::Storage)?;
         #[cfg(test)]
         if self.fault == 2 {
-            file.write_all(&frame[..frame.len() / 2]).map_err(|_| PoolError::Storage)?;
+            file.write_all(&frame[..frame.len() / 2])
+                .map_err(|_| PoolError::Storage)?;
             return Err(PoolError::Storage);
         }
         file.write_all(frame).map_err(|_| PoolError::Storage)?;
@@ -475,7 +496,10 @@ impl ActiveJournal {
         }
         // No committed metadata changes occur before every write/sync/check.
         if let Some(file) = created {
-            self.segments.push(Segment { file, length: next_length });
+            self.segments.push(Segment {
+                file,
+                length: next_length,
+            });
         } else {
             self.segments.last_mut().ok_or(PoolError::Corrupt)?.length = next_length;
         }
@@ -487,7 +511,9 @@ impl ActiveJournal {
         (
             self.length,
             self.segments.len() as u32,
-            self.segments.last().map_or(0, |segment| segment.length as u32),
+            self.segments
+                .last()
+                .map_or(0, |segment| segment.length as u32),
         )
     }
 }
@@ -523,7 +549,9 @@ impl ActiveReader {
                     self.header_length,
                     &self.segments,
                 )
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "active journal changed"))?;
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "active journal changed")
+                })?;
                 self.finished = true;
                 return Ok(0);
             };
@@ -535,14 +563,24 @@ impl ActiveReader {
                         self.offset = 0;
                         continue;
                     }
-                    Ok(_) => return Err(io::Error::new(io::ErrorKind::InvalidData, "extra journal bytes")),
+                    Ok(_) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            "extra journal bytes",
+                        ))
+                    }
                     Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                     Err(error) => return Err(error),
                 }
             }
             let take = (length - self.offset).min(bytes.len() as u64) as usize;
             match read_at(file, &mut bytes[..take], self.offset) {
-                Ok(0) => return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "truncated journal")),
+                Ok(0) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "truncated journal",
+                    ))
+                }
                 Ok(n) => {
                     self.offset += n as u64;
                     return Ok(n);
@@ -557,7 +595,10 @@ impl ActiveReader {
 impl Read for ActiveReader {
     fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
         if self.failed {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "failed journal reader"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "failed journal reader",
+            ));
         }
         if bytes.is_empty() || self.finished {
             return Ok(0);

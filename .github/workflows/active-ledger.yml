@@ -29,11 +29,12 @@ jobs:
                    'integration/cometbft/labnet', 'integration/cometbft/cmd/zevune-network']
           result = subprocess.run(['gofmt', '-l', *paths], check=True,
                                   stdout=subprocess.PIPE, text=True)
+          go_diff_code = 0
           if result.stdout.strip():
-              subprocess.run(['gofmt', '-d', *paths], check=True)
+              go_diff_code = subprocess.run(['gofmt', '-d', *paths]).returncode
           rust = subprocess.run(['cargo', '+1.98.1', 'fmt', '--manifest-path',
                                  'integration/orchard/Cargo.toml', '--all', '--', '--check'])
-          raise SystemExit(bool(result.stdout.strip()) or rust.returncode != 0)
+          raise SystemExit(bool(result.stdout.strip()) or go_diff_code != 0 or rust.returncode != 0)
           PY
       - name: Compile both Go modules and preserve locks
         run: |

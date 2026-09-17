@@ -116,8 +116,7 @@ impl PoolStore {
         committed: &Summary,
         mut visit: impl FnMut(replay::ReplayedBlock) -> Result<(), PoolError>,
     ) -> Result<HistoryOrigin, PoolError> {
-        let header =
-            replay::read_header_profile(&mut reader, self.length, self.state.profile)?;
+        let header = replay::read_header_profile(&mut reader, self.length, self.state.profile)?;
         let signing_domain = header.signing_domain;
         if signing_domain != self.state.signing_domain {
             return Err(PoolError::Domain);

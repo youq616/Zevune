@@ -251,6 +251,7 @@ func (p StorageProfile) decodeSummary(b []byte) (Summary, error) {
 	}
 	return s, nil
 }
+
 // BlockBytes retains the legacy single-journal bounds. Use a pinned Client's
 // method when encoding an active-profile candidate for an ABCI commit tag.
 func BlockBytes(height uint64, hash Hash, txs [][]byte) ([]byte, error) {

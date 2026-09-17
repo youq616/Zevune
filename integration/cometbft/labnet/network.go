@@ -45,9 +45,9 @@ type Network struct {
 	profile    poolbridge.StorageProfile
 }
 
-func (n *Network) ConfigDigest() Hash { return n.configPin }
-func (n *Network) AssetDigest() Hash  { return n.assetPin }
-func (n *Network) AssetPath() string  { return filepath.Join(n.home, assetName) }
+func (n *Network) ConfigDigest() Hash                 { return n.configPin }
+func (n *Network) AssetDigest() Hash                  { return n.assetPin }
+func (n *Network) AssetPath() string                  { return filepath.Join(n.home, assetName) }
 func (n *Network) Profile() poolbridge.StorageProfile { return n.profile }
 
 func configVersion(profile poolbridge.StorageProfile) uint32 {

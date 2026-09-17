@@ -52,8 +52,8 @@ func TestActiveCapacityHeaderAndPhysicalSegmentRelations(t *testing.T) {
 		{1, 258, 0, 150},                   // Records require a physical segment.
 		{1, 258, 2, 150},                   // More nonempty segments than records.
 		{2, 408, 2, 150},                   // Premature rollover is inconsistent.
-		{6991, 1048758, 1, 1048650},         // A tail may not exceed 1 MiB.
-		{10001, 1500257, 2, 451649},         // Logical count omits one framing byte.
+		{6991, 1048758, 1, 1048650},        // A tail may not exceed 1 MiB.
+		{10001, 1500257, 2, 451649},        // Logical count omits one framing byte.
 		{10001, 1500258, 2, 0},             // A zero tail is not silently repairable.
 		{10001, 1500258, 2, 149},           // A partial tail cannot be accepted.
 		{10001, 1500258, 2049, 150},        // Physical segment-count bound.
