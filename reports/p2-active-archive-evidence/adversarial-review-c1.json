@@ -1,0 +1,297 @@
+{
+  "schema": "zevune-independent-adversarial-review-v1",
+  "reviewer_task": "/root/p2_archive_adversarial_review",
+  "independent_non_author": true,
+  "completed_at_utc": "2026-09-17T08:29:02.242706+00:00",
+  "repository": "youq616/Zevune",
+  "pull_request": 13,
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "head": "c5f60ac440ac39032f8f8efefc2fbfbf6e299a90",
+  "tree": "10fb6d729c610aa1c935c96891c99e05f81d7dd1",
+  "parent": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "candidate_code_modified_by_reviewer": false,
+  "verdict": "REQUEST_CHANGES",
+  "scope": "Data integrity, independent source authentication by trusted pin, exact create-only copy, platform locks/names, failure boundaries, frozen test coverage; static code review with independent Python digest vector only.",
+  "findings": [
+    {
+      "id": "AR-C1-01",
+      "priority": "P2",
+      "kind": "frozen_acceptance_test_gap",
+      "blocks_stage_acceptance": true,
+      "confirmed_runtime_acceptance_bug": false,
+      "title": "Missing active archive segment-swap regression",
+      "evidence": [
+        "docs/ACTIVE_ARCHIVE_V1.zh-CN.md frozen acceptance item 4",
+        "No swapped-content test in C1 ActiveArchive core, CLI or active-flow tests",
+        "Only matching swapped test found by exact-object grep belongs to legacy ZVPSEG01"
+      ],
+      "requested_fix": "Reuse genuine two-segment fixture, swap exact segment bytes; assert original pin rejection and recomputed-layout pin Corrupt rejection; retain original and candidate byte-unchanged checks; native CI and exact new candidate review required."
+    }
+  ],
+  "checks": [
+    {
+      "id": "codec",
+      "result": "PASS_STATIC",
+      "detail": "Exact 128-byte distinct magic, hashes and checked bounded integer relationships before input-driven allocation."
+    },
+    {
+      "id": "layout_vector",
+      "result": "PASS_EXECUTED_PYTHON_ONLY",
+      "detail": "Independent 76-byte genesis / 92-byte layout hashlib vector matches fixed source constants."
+    },
+    {
+      "id": "physical_header",
+      "result": "PASS_STATIC",
+      "detail": "Parse retained physical genesis, exact length and EOF before logical stream."
+    },
+    {
+      "id": "independent_genesis",
+      "result": "PASS_STATIC",
+      "detail": "Actual reconstructed State.genesis compared with independently expected caller digest."
+    },
+    {
+      "id": "real_replay",
+      "result": "PASS_STATIC",
+      "detail": "New AuthorizationVerifier, all records, physical frame checks, actual EOF, unpublished state, full pin checks."
+    },
+    {
+      "id": "checkpoint_export",
+      "result": "PASS_STATIC",
+      "detail": "Entire committed Summary and capacity compared; prepared work untouched; errors poison active store, unsupported legacy does not."
+    },
+    {
+      "id": "source_locks",
+      "result": "PASS_STATIC",
+      "detail": "Read-only archive shared root lock and normal writer exclusive root lock; no re-lock of owning/cloned handles."
+    },
+    {
+      "id": "namespace",
+      "result": "PASS_STATIC",
+      "detail": "Unix inode/device and nlink checks; Windows retained no-delete sharing and native rename/delete positive controls."
+    },
+    {
+      "id": "copy_create_only",
+      "result": "PASS_STATIC",
+      "detail": "Source/path checks and full verify before new target; no overwrite, deletion or repair; original creation handles remain locked."
+    },
+    {
+      "id": "cursor_eof",
+      "result": "PASS_STATIC",
+      "detail": "Explicit read offsets / rewind; each actual physical EOF; failed readers cannot resume."
+    },
+    {
+      "id": "faults",
+      "result": "PASS_STATIC",
+      "detail": "Private faults 1..6 assert partial/complete leftovers and final source/target namespace rejection with explicit scope."
+    },
+    {
+      "id": "real_restore_cli",
+      "result": "PASS_STATIC",
+      "detail": "Existing real two-segment growth recovery and new CLI two-payment restore/spend; original legacy behavior retained."
+    },
+    {
+      "id": "active_segment_swap",
+      "result": "FAIL_TEST_COVERAGE",
+      "detail": "AR-C1-01: No exact two-segment swapped-content rejection test for ActiveArchive with original and recomputed layout pin."
+    },
+    {
+      "id": "native_ci",
+      "result": "NOT_EXECUTED_BY_REVIEWER",
+      "detail": "No local Rust/Cargo/Go or native Windows test execution; reviewer did not read or certify CI results."
+    }
+  ],
+  "independent_vector": {
+    "header_bytes": 76,
+    "header_sha256": "07782393f4021cabba3a8a09f0d2747e6ae4404457475c6e9df85100f734bc1e",
+    "layout_bytes": 92,
+    "layout_sha256": "325fba79e5d367646d57a58c594264ae5b0d216af5ce1858e88b0f26a6a882ed"
+  },
+  "tools_present": {
+    "rustc": false,
+    "cargo": false,
+    "go": false
+  },
+  "executed_checks": [
+    "Read repository git base/head/tree identities",
+    "Read source and tests without candidate mutation",
+    "Exact C1 object file SHA-256 inventory",
+    "Exact C1 source search for segment-swap coverage",
+    "Python hashlib independent header/layout recomputation",
+    "Official Rust 1.98.1 and Microsoft documentation read"
+  ],
+  "native_tests_executed": false,
+  "ci_results_certified": false,
+  "stage_accepted": false,
+  "review_applies_to_later_commits": false,
+  "source_documents": [
+    "https://doc.rust-lang.org/std/fs/struct.File.html",
+    "https://doc.rust-lang.org/std/os/windows/fs/trait.OpenOptionsExt.html",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex"
+  ],
+  "review_report": {
+    "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c1.md",
+    "bytes": 12848,
+    "sha256": "1b2f12b42dffb0a5bd5bea9c7f48945062534d46580c43ea194b9d6766b9b915"
+  },
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 3240,
+      "sha256": "bc5a7f3ba26bb99da6264427effd12b7df03a6f48c4c1a21281ade0b4c0b5f96",
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/STAGE_REVIEW.zh-CN.md",
+      "bytes": 2139,
+      "sha256": "738d92594cb0851975bd05b5746edba9cd10512ea049cbdb02e1be8e2020bb46",
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "bytes": 29008,
+      "sha256": "62a5257f4e8f7cec291564341435a769c2dbdc463b642e0b21b513cde9d8e316",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "bytes": 29320,
+      "sha256": "21d4eced8a20ee33f110b327737afd7ee07fd0990d62931992a9fc674600b4ff",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active/tests.rs",
+      "bytes": 22612,
+      "sha256": "9359290fe212650ce0223840a2e2fe7314f9291d642d033e900d4dd14195c3b5",
+      "test_function_source_names": [
+        "create_is_exclusive_bounded_and_preserves_existing_bytes",
+        "full_segment_and_next_frame_rotate_canonically_without_crossing",
+        "budgets_include_framing_total_tail_and_the_independent_segment_cap",
+        "malformed_frame_and_capacity_rejection_create_no_files_or_bytes",
+        "early_rotation_and_split_frames_are_rejected_even_with_valid_checksums",
+        "unknown_missing_empty_and_truncated_segments_fail_closed_without_repair",
+        "readers_retain_the_exclusive_root_lock_and_have_independent_positions",
+        "another_process_cannot_open_held_genesis_lock",
+        "captured_reader_requires_each_real_eof_and_poisoned_readers_cannot_resume",
+        "unknown_entry_after_open_is_not_ignored_or_removed",
+        "interruption_leaves_metadata_unchanged_and_preserves_the_recoverable_prefix",
+        "failed_next_segment_publication_keeps_all_sealed_prefix_bytes_and_no_repair",
+        "symlinks_hard_links_and_replaced_names_are_rejected",
+        "adding_a_hard_link_after_open_poison_checks_without_modifying_ledger_bytes",
+        "windows_retained_handles_block_file_and_directory_rename_until_drop"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/replay.rs",
+      "bytes": 9818,
+      "sha256": "4c25dcd5d92cf5e0ab592b11ae790dba8f3ab7761d3d7cbf7f5e94b13b9b3d64",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "bytes": 10944,
+      "sha256": "687bf63b9b464220fc7610970dbaa94e35d4fd386841642ca3b65158ce93229d",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+      "bytes": 4949,
+      "sha256": "7927596f061d3d0fc4e05bf0f5cfd63d53cfdab4d382c1f10a2050c4689b3b3b",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "bytes": 10331,
+      "sha256": "2d51b1bc017e3a926a3f52e983e0e428bfabe8a8f892d71922a4d134ede37a95",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "bytes": 27339,
+      "sha256": "3f5e7ef617798a817ed1a30c174e811a4345217ec8d2dca5aa144e4a413cbca8",
+      "test_function_source_names": [
+        "checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic",
+        "exported_genesis_checkpoint_matches_independent_fixed_layout_vector",
+        "genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally",
+        "checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes",
+        "incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores",
+        "checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state",
+        "retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change",
+        "repinned_headers_are_bounded_inside_the_physical_genesis_file",
+        "repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state",
+        "creating_a_target_is_exclusive_and_source_validation_precedes_creation",
+        "partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair",
+        "final_source_and_target_namespace_changes_cannot_return_success"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "bytes": 12621,
+      "sha256": "fb7c394b1e99a0f6003cca74796197dccac6927b8c684475ccf3f5c3f47699ec",
+      "test_function_source_names": [
+        "active_archive_locks_coordinate_real_processes",
+        "readonly_source_files_copy_into_a_normally_writable_active_directory",
+        "persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified",
+        "parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive",
+        "failed_open_releases_all_acquired_file_and_directory_handles",
+        "unknown_entry_after_open_prevents_verification_and_creates_no_target",
+        "windows_files_and_directory_cannot_be_renamed_or_deleted_until_last_reader_drops"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "bytes": 32672,
+      "sha256": "0217f420a097557cc19c951d8dc56f84b14cff7f6c7d9b9ae65db14f1a687154",
+      "test_function_source_names": [
+        "active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contract",
+        "real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002",
+        "legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal",
+        "active_write_failures_poison_store_without_publishing_partial_state"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "bytes": 10866,
+      "sha256": "8359d8611b346abb1e74d1fb947fcf7b3818c5e3f824f54eb3968cc7b62998f1",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "bytes": 10771,
+      "sha256": "959419cb6d56bb48201d02ff01657d03a504f2fbf84ea7b6899e7cb41d128b55",
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "bytes": 25209,
+      "sha256": "ae72a0dee14bf655a9e3eb8f8c4f095d163be7300d4cc805ddd75e67e2961194",
+      "test_function_source_names": [
+        "active_cli_real_payment_backup_restore_and_receiver_spend",
+        "active_cli_genesis_without_segments_is_an_explicit_checkpoint",
+        "active_cli_bad_options_and_exact_tip_fail_without_changes",
+        "active_cli_locked_sources_and_existing_or_nested_targets_are_refused",
+        "active_cli_keeps_legacy_profiles_pins_commands_and_json_separate",
+        "active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation",
+        "active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable"
+      ]
+    },
+    {
+      "path": "scripts/run_funded_rust.py",
+      "bytes": 5739,
+      "sha256": "d7020b399362a56cbad7578255e9973a9c5be5592dcc2410624f46a0f639c97f",
+      "test_function_source_names": []
+    },
+    {
+      "path": ".github/workflows/funded-wallet.yml",
+      "bytes": 5263,
+      "sha256": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296",
+      "test_function_source_names": []
+    }
+  ]
+}

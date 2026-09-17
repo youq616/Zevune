@@ -6,7 +6,8 @@
 
 当前活动账本分段的实现、双平台增长与付款恢复、独立复审和准确源码证据，见
 [P2活动账本验收记录](reports/p2-active-ledger-validation.md)。固定32+1笔真实付款、恢复及进程资源观测另见
-[P2付款资源基线验收](reports/p2-payment-resource-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
+[P2付款资源基线验收](reports/p2-payment-resource-validation.md)。活动目录归档的冻结合同、已验收实现及证据另见
+[P2活动归档与完整恢复](reports/p2-active-archive-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
 [2026-09-16接手记录](reports/project-handoff-2026-09-16.md)。
 统一开发入口仍是 `dev/m12-genesis-domain`；整体交付范围见
 [八工作包计划](docs/DELIVERY_PLAN.zh-CN.md)。
@@ -124,7 +125,7 @@ P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完
 历史索引由完整区块记录派生，支持记录跨越分段边界，不接受外部索引作为状态或授权。
 
 这些旧单文件备份/索引接口仍受原64 MiB日志、10000条记录等限制；每次CLI索引调用都重新完整校验，明确拒绝活动profile。
-活动节点分段存储已作为独立增量实现；活动归档迁移、快照和增量备份尚未完成，P2继续保持开发中。
+活动节点分段存储已作为独立增量实现；活动目录的完整归档使用独立合同和验收记录，旧命令不自动扩宽。迁移、快照和增量备份仍未完成，P2继续保持开发中。
 [分段备份](docs/SEGMENTED_BACKUP.zh-CN.md) · [重放派生索引](docs/REPLAY_DERIVED_INDEX.zh-CN.md)。
 
 
@@ -151,7 +152,7 @@ P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完
 
 State复用从真实承诺树推导的当前根，减少空块和完整重放的重复根计算；缓存不落盘，
 不改变摘要、授权或anchor规则，等价性由优化前完整摘要算法核对。见[派生根复用](docs/DERIVED_COMMITMENT_ROOT.zh-CN.md)。
-固定32+1笔的内存与恢复历史成本基线已验收；持续真实交易增长、容量边界、活动归档、快照、增量备份、真实断电和长期多机运行仍需验收。
+固定32+1笔的内存与恢复历史成本基线已验收；活动归档的单独实现和验证见下节。持续真实交易增长、容量边界、快照、增量备份、真实断电和长期多机运行仍需验收。
 2048是分段数上限，完整读取器还会复制整组文件句柄；峰值资源并非限制在2048个句柄。
 Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-ledger-validation.md)。
 
@@ -161,4 +162,18 @@ Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-l
 
 双平台验收记录9个检查点与181项操作的开始/完成进度，分别观测两代worker和同一场景进程的OS驻留内存生命周期高水位。每进程1 GiB是本次样本的观测门槛；场景包含prover、独立账本、两个钱包和Argon2，Go/Python协调进程不在该统计中。33笔不会触达全部容量、缓存或历史边界，也不代表TPS、冷磁盘或长期多机验收。
 
-[冻结设计](docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md) · [原生数据、独立审核与失败修复记录](reports/p2-payment-resource-validation.md)。P2整体继续开发，下一优先项为活动账本归档与备份恢复合同。
+[冻结设计](docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md) · [原生数据、独立审核与失败修复记录](reports/p2-payment-resource-validation.md)。这些历史测量不包含活动归档操作，P2整体继续开发。
+
+## P2 活动目录归档与完整恢复
+
+本运行阶段已验收并通过 [PR #13](https://github.com/youq616/Zevune/pull/13) 合入。准确 C7 经过两路非作者完整代码审核及独立原生审核，10 个 PR 工作流、23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致。默认／funded 测试、平台条件跳过、历史失败及精确 source/tree/merge 身份见[本阶段记录](reports/p2-active-archive-validation.md)。最终文档的独立复核及合入记录见 PR #13 所链接的文档 PR。
+
+活动归档保留活动目录的原 `genesis`、连续完整记录段及逐文件精确字节，不增加 MANIFEST 或重新分片。独立保留的 `ZVARCP01` 检查点固定128字节，命令行使用256个小写hex字符，绑定可信高度、AppHash及完整物理布局；随不可信归档一起收到的未认证pin不证明来源，也不证明最新状态。
+
+`zevune-pool-recovery` 的 `checkpoint-active`、`backup-active`、`verify-active` 和 `restore-active` 明确选择活动profile，均要求 `--no-real-funds` 和绝对路径。备份与恢复共用只创建新目标的完整复制路径；只读源共享锁、目标原创建句柄持锁验证、每次使用全新验证器完整重放及源/目标前后检查均由冻结合同要求。旧命令仍保持原格式、输出和活动profile拒绝。
+
+新增的[固定公共验证密钥合同](docs/FIXED_VERIFYING_KEY.zh-CN.md)已通过两路独立设计审核：`wire::AuthorizationVerifier` 只将编译期固定电路的不可变公共密钥保留在进程私有 `OnceLock`，每个新实例仍新建独立空授权缓存。复制中的源、目标和末次源三次完整真实重放、原测试与时间预算全部保留；密钥常驻至进程退出，不能导入或选择外部密钥。新增真实证明回归检查并发使用与缓存隔离，不宣称冷首次初始化竞争、构建panic或归档资源峰值已经测量；实现及完整双平台原生证据已按准确 C7 核对，范围见本阶段记录。
+
+创建后失败可能留下部分或完整目标，不能自动清除或覆盖；完整副本可以按原pin另行验证。归档不含钱包、密钥、共识数据库/WAL或最后签名状态，成功也明确 `validator_ready:false`，不能直接当成可启动的完整验证者备份。Windows目录持久化、真实断电、磁盘满、快照、增量备份和长期全容量仍需后续验收；本阶段没有新增归档资源测量。
+
+[冻结合同](docs/ACTIVE_ARCHIVE_V1.zh-CN.md) · [实现、原生CI与独立审核记录](reports/p2-active-archive-validation.md)。P2保持开发中。

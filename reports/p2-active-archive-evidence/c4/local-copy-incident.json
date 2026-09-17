@@ -1,0 +1,18 @@
+{
+  "scope": "Local incomplete-copy incident only; not a CI job, attempt, failure or cancellation",
+  "job_id": 105145580979,
+  "complete_original": {
+    "file": "job-105145580979.log",
+    "bytes": 59816,
+    "sha256": "531b5b631e40bb5d4bc08fb3e31fb7db43374cdb5e6ca65b343f7123ca8c1751"
+  },
+  "observed_incomplete_copy": {
+    "file": "local-incomplete-job-105145580979.prefix.log",
+    "bytes": 45002,
+    "sha256": "f4c4769ded27fdf5e82047e8e013cb0d31ffbf0f7827aedf8d7044a67ff47934",
+    "provenance": "The incomplete file was independently reported by the documentation reviewer and confirmed locally. The complete official log had already been restored before the later request to rename the partial copy arrived. This retained diagnostic is reconstructed from the first 45000 characters of the original tool content, with exact bytes and SHA256 matching the independently observed incomplete copy."
+  },
+  "cause": "Not established. Earlier complete-size/hash verification and later incomplete-prefix observation disagree; no actor or filesystem mechanism is inferred.",
+  "repair": "Wrote original tool content into a separate part file, verified expected length and SHA256, then atomically replaced the canonical log. Recompared every byte of all 22 current canonical logs with their original tool content; all matched. Future logs publish only after complete part-file verification and atomic replacement.",
+  "acceptance": "This diagnostic receives no test or CI credit; the job remains the same cancelled attempt recorded by GitHub."
+}

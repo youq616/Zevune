@@ -1,0 +1,540 @@
+﻿2026-09-17T08:21:36.3898128Z Current runner version: '2.337.0'
+2026-09-17T08:21:36.3919175Z ##[group]Runner Image Provisioner
+2026-09-17T08:21:36.3919920Z Hosted Compute Agent
+2026-09-17T08:21:36.3920456Z Version: 20260828.587
+2026-09-17T08:21:36.3920992Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-17T08:21:36.3921585Z Build Date: 2026-08-28T16:44:25Z
+2026-09-17T08:21:36.3922182Z Worker ID: {19468fc1-4a5d-4a2c-a857-490ef81dbb8d}
+2026-09-17T08:21:36.3922795Z Azure Region: westus3
+2026-09-17T08:21:36.3923255Z ##[endgroup]
+2026-09-17T08:21:36.3924696Z ##[group]Operating System
+2026-09-17T08:21:36.3925218Z Ubuntu
+2026-09-17T08:21:36.3925725Z 24.04.5
+2026-09-17T08:21:36.3926185Z LTS
+2026-09-17T08:21:36.3926595Z ##[endgroup]
+2026-09-17T08:21:36.3927110Z ##[group]Runner Image
+2026-09-17T08:21:36.3927595Z Image: ubuntu-24.04
+2026-09-17T08:21:36.3928082Z Version: 20260907.300.1
+2026-09-17T08:21:36.3929160Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-17T08:21:36.3930457Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-17T08:21:36.3931245Z ##[endgroup]
+2026-09-17T08:21:36.3932210Z ##[group]GITHUB_TOKEN Permissions
+2026-09-17T08:21:36.3933731Z Contents: read
+2026-09-17T08:21:36.3934498Z Metadata: read
+2026-09-17T08:21:36.3934999Z ##[endgroup]
+2026-09-17T08:21:36.3936756Z Secret source: Actions
+2026-09-17T08:21:36.3937623Z Cache mode: write
+2026-09-17T08:21:36.3938194Z Prepare workflow directory
+2026-09-17T08:21:36.4298028Z Prepare all required actions
+2026-09-17T08:21:36.4336255Z Getting action download info
+2026-09-17T08:21:36.7189480Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-17T08:21:36.9196485Z Complete job name: tests (ubuntu-latest)
+2026-09-17T08:21:36.9782753Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-17T08:21:36.9783554Z with:
+2026-09-17T08:21:36.9783919Z   persist-credentials: false
+2026-09-17T08:21:36.9784516Z   repository: youq616/Zevune
+2026-09-17T08:21:36.9787694Z   token: ***
+2026-09-17T08:21:36.9788048Z   ssh-strict: true
+2026-09-17T08:21:36.9788404Z   ssh-user: git
+2026-09-17T08:21:36.9788742Z   clean: true
+2026-09-17T08:21:36.9789095Z   sparse-checkout-cone-mode: true
+2026-09-17T08:21:36.9789499Z   fetch-depth: 1
+2026-09-17T08:21:36.9789841Z   fetch-tags: false
+2026-09-17T08:21:36.9790191Z   show-progress: true
+2026-09-17T08:21:36.9790544Z   lfs: false
+2026-09-17T08:21:36.9790874Z   submodules: false
+2026-09-17T08:21:36.9791230Z   set-safe-directory: true
+2026-09-17T08:21:36.9791775Z env:
+2026-09-17T08:21:36.9792099Z   RAYON_NUM_THREADS: 2
+2026-09-17T08:21:36.9792464Z   CARGO_BUILD_JOBS: 2
+2026-09-17T08:21:36.9792824Z ##[endgroup]
+2026-09-17T08:21:37.0579958Z Syncing repository: youq616/Zevune
+2026-09-17T08:21:37.0582194Z ##[group]Getting Git version info
+2026-09-17T08:21:37.0583016Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-17T08:21:37.0583839Z [command]/usr/bin/git version
+2026-09-17T08:21:37.0638613Z git version 2.55.0
+2026-09-17T08:21:37.0656719Z ##[endgroup]
+2026-09-17T08:21:37.0669566Z Temporarily overriding HOME='/home/runner/work/_temp/3159c05f-8305-451c-a39a-57865ea4b372' before making global git config changes
+2026-09-17T08:21:37.0671321Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T08:21:37.0696863Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T08:21:37.0746782Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-17T08:21:37.0751061Z ##[group]Initializing the repository
+2026-09-17T08:21:37.0754628Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-17T08:21:37.0826447Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-17T08:21:37.0829707Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-17T08:21:37.0830916Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-17T08:21:37.0832151Z hint: call:
+2026-09-17T08:21:37.0832656Z hint:
+2026-09-17T08:21:37.0833289Z hint: 	git config --global init.defaultBranch <name>
+2026-09-17T08:21:37.0834225Z hint:
+2026-09-17T08:21:37.0834957Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-17T08:21:37.0836104Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-17T08:21:37.0837015Z hint:
+2026-09-17T08:21:37.0837511Z hint: 	git branch -m <name>
+2026-09-17T08:21:37.0838073Z hint:
+2026-09-17T08:21:37.0838840Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-17T08:21:37.0840183Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-17T08:21:37.0843529Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-17T08:21:37.0880990Z ##[endgroup]
+2026-09-17T08:21:37.0881962Z ##[group]Disabling automatic garbage collection
+2026-09-17T08:21:37.0883715Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-17T08:21:37.0911882Z ##[endgroup]
+2026-09-17T08:21:37.0912809Z ##[group]Setting up auth
+2026-09-17T08:21:37.0917613Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T08:21:37.0946097Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T08:21:37.1230109Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T08:21:37.1264297Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T08:21:37.1459100Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-17T08:21:37.1492698Z ##[endgroup]
+2026-09-17T08:21:37.1500463Z ##[group]Fetching the repository
+2026-09-17T08:21:37.1501759Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +604e1d5ebd44093d9e1337de61e3e47297dd4223:refs/remotes/pull/13/merge
+2026-09-17T08:21:38.1462184Z From https://github.com/youq616/Zevune
+2026-09-17T08:21:38.1464318Z  * [new ref]         604e1d5ebd44093d9e1337de61e3e47297dd4223 -> pull/13/merge
+2026-09-17T08:21:38.1468776Z ##[endgroup]
+2026-09-17T08:21:38.1470628Z ##[group]Determining the checkout info
+2026-09-17T08:21:38.1472526Z ##[endgroup]
+2026-09-17T08:21:38.1475628Z [command]/usr/bin/git sparse-checkout disable
+2026-09-17T08:21:38.1520471Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-17T08:21:38.1548169Z ##[group]Checking out the ref
+2026-09-17T08:21:38.1552449Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/13/merge
+2026-09-17T08:21:38.1962885Z Note: switching to 'refs/remotes/pull/13/merge'.
+2026-09-17T08:21:38.1963729Z 
+2026-09-17T08:21:38.1964627Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-17T08:21:38.1966055Z changes and commit them, and you can discard any commits you make in this
+2026-09-17T08:21:38.1967471Z state without impacting any branches by switching back to a branch.
+2026-09-17T08:21:38.1968271Z 
+2026-09-17T08:21:38.1968836Z If you want to create a new branch to retain commits you create, you may
+2026-09-17T08:21:38.1970209Z do so (now or later) by using -c with the switch command. Example:
+2026-09-17T08:21:38.1971023Z 
+2026-09-17T08:21:38.1971357Z   git switch -c <new-branch-name>
+2026-09-17T08:21:38.1972015Z 
+2026-09-17T08:21:38.1972484Z Or undo this operation with:
+2026-09-17T08:21:38.1973084Z 
+2026-09-17T08:21:38.1973476Z   git switch -
+2026-09-17T08:21:38.1974141Z 
+2026-09-17T08:21:38.1974907Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-17T08:21:38.1975923Z 
+2026-09-17T08:21:38.1977328Z HEAD is now at 604e1d5 Merge c5f60ac440ac39032f8f8efefc2fbfbf6e299a90 into 6913d4ab2fda6956db37e0ceb49790a4518c2762
+2026-09-17T08:21:38.1981424Z ##[endgroup]
+2026-09-17T08:21:38.2009648Z [command]/usr/bin/git log -1 --format=%H
+2026-09-17T08:21:38.2033500Z 604e1d5ebd44093d9e1337de61e3e47297dd4223
+2026-09-17T08:21:38.2041609Z ##[group]Removing auth
+2026-09-17T08:21:38.2044290Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T08:21:38.2072117Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T08:21:38.2264855Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T08:21:38.2288836Z http.https://github.com/.extraheader
+2026-09-17T08:21:38.2294387Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-17T08:21:38.2324686Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T08:21:38.2507676Z ##[endgroup]
+2026-09-17T08:21:38.2710314Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+2026-09-17T08:21:38.2712699Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy[0m
+2026-09-17T08:21:38.2752189Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T08:21:38.2753411Z env:
+2026-09-17T08:21:38.2754348Z   RAYON_NUM_THREADS: 2
+2026-09-17T08:21:38.2755171Z   CARGO_BUILD_JOBS: 2
+2026-09-17T08:21:38.2755938Z ##[endgroup]
+2026-09-17T08:21:38.3104940Z info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+2026-09-17T08:21:38.4926032Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T08:21:38.4927722Z info: downloading 5 components
+2026-09-17T08:21:45.5467480Z 
+2026-09-17T08:21:45.5531475Z   1.98.1-x86_64-unknown-linux-gnu installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T08:21:45.5531913Z 
+2026-09-17T08:21:45.5600430Z ##[group]Run rustc --version
+2026-09-17T08:21:45.5600732Z [36;1mrustc --version[0m
+2026-09-17T08:21:45.5600974Z [36;1mcargo fmt --all -- --check[0m
+2026-09-17T08:21:45.5601287Z [36;1mcargo metadata --locked --format-version=1 > /dev/null[0m
+2026-09-17T08:21:45.5601658Z [36;1mtest -z "$(git status --porcelain --untracked-files=no)"[0m
+2026-09-17T08:21:45.5635328Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T08:21:45.5635656Z env:
+2026-09-17T08:21:45.5635859Z   RAYON_NUM_THREADS: 2
+2026-09-17T08:21:45.5636073Z   CARGO_BUILD_JOBS: 2
+2026-09-17T08:21:45.5636283Z ##[endgroup]
+2026-09-17T08:21:45.5971646Z rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T08:21:45.6521741Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/bin/zevune-pool-recovery.rs:148:
+2026-09-17T08:21:45.6522680Z              "--app-hash",
+2026-09-17T08:21:45.6523034Z          ],
+2026-09-17T08:21:45.6523512Z          "locate-height" => &["--source", "--checkpoint", "--height"],
+2026-09-17T08:21:45.6524321Z -        "verify" | "verify-segments" | "index" | "verify-active" => {
+2026-09-17T08:21:45.6524844Z -            &["--source", "--checkpoint"]
+2026-09-17T08:21:45.6525254Z -        }
+2026-09-17T08:21:45.6525760Z +        "verify" | "verify-segments" | "index" | "verify-active" => &["--source", "--checkpoint"],
+2026-09-17T08:21:45.6526656Z          _ => &["--source", "--output", "--checkpoint"],
+2026-09-17T08:21:45.6527099Z      };
+2026-09-17T08:21:45.6527625Z      if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {
+2026-09-17T08:21:45.6970436Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active.rs:364:
+2026-09-17T08:21:45.6971261Z          expected_header_length: u32,
+2026-09-17T08:21:45.6971750Z      ) -> Result<(File, Self), PoolError> {
+2026-09-17T08:21:45.6978201Z          let header_length = u64::from(expected_header_length);
+2026-09-17T08:21:45.6978863Z -        if !(76..=MAX_HEADER_BYTES).contains(&header_length)
+2026-09-17T08:21:45.6979378Z -            || (header_length - 76) % 32 != 0
+2026-09-17T08:21:45.6979799Z -        {
+2026-09-17T08:21:45.6980356Z +        if !(76..=MAX_HEADER_BYTES).contains(&header_length) || (header_length - 76) % 32 != 0 {
+2026-09-17T08:21:45.6980992Z              return Err(PoolError::Bounds);
+2026-09-17T08:21:45.6981390Z          }
+2026-09-17T08:21:45.6981775Z          let location = namespace::Directory::open(path)?;
+2026-09-17T08:21:45.6982432Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active.rs:373:
+2026-09-17T08:21:45.6983033Z -        let genesis =
+2026-09-17T08:21:45.6983539Z -            open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
+2026-09-17T08:21:45.6984504Z +        let genesis = open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
+2026-09-17T08:21:45.6985251Z          genesis.try_lock_shared().map_err(|_| PoolError::Locked)?;
+2026-09-17T08:21:45.6985759Z -        let (genesis, journal) =
+2026-09-17T08:21:45.6986279Z -            Self::finish_open(path, location, genesis, header_length, false)?;
+2026-09-17T08:21:45.6987038Z +        let (genesis, journal) = Self::finish_open(path, location, genesis, header_length, false)?;
+2026-09-17T08:21:45.6987679Z          journal.read_header(&genesis)?;
+2026-09-17T08:21:45.6988090Z          Ok((genesis, journal))
+2026-09-17T08:21:45.6988446Z      }
+2026-09-17T08:21:45.7022460Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active_flow_tests.rs:125:
+2026-09-17T08:21:45.7023221Z      let header = &entries["genesis"];
+2026-09-17T08:21:45.7023632Z      let mut raw = original.to_bytes();
+2026-09-17T08:21:45.7024269Z      raw[8..40].copy_from_slice(&Sha256::digest(header));
+2026-09-17T08:21:45.7024891Z -    let length = entries.values().map(|bytes| bytes.len() as u64).sum::<u64>();
+2026-09-17T08:21:45.7025482Z +    let length = entries
+2026-09-17T08:21:45.7025826Z +        .values()
+2026-09-17T08:21:45.7026477Z +        .map(|bytes| bytes.len() as u64)
+2026-09-17T08:21:45.7026897Z +        .sum::<u64>();
+2026-09-17T08:21:45.7027295Z      raw[80..88].copy_from_slice(&length.to_be_bytes());
+2026-09-17T08:21:45.7027833Z      raw[88..92].copy_from_slice(&(header.len() as u32).to_be_bytes());
+2026-09-17T08:21:45.7028348Z      let segments = entries.len() - 1;
+2026-09-17T08:21:45.7073122Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:41:
+2026-09-17T08:21:45.7073931Z      let d = Dir::new();
+2026-09-17T08:21:45.7074457Z      let source = d.path("source");
+2026-09-17T08:21:45.7074885Z      let (pin, original) = fixture(&source, 2);
+2026-09-17T08:21:45.7075323Z -    let encoded: String = pin
+2026-09-17T08:21:45.7075694Z -        .to_bytes()
+2026-09-17T08:21:45.7076025Z -        .iter()
+2026-09-17T08:21:45.7076403Z -        .map(|b| format!("{b:02x}"))
+2026-09-17T08:21:45.7076784Z -        .collect();
+2026-09-17T08:21:45.7077293Z +    let encoded: String = pin.to_bytes().iter().map(|b| format!("{b:02x}")).collect();
+2026-09-17T08:21:45.7077868Z      let probe = |mode: &str| {
+2026-09-17T08:21:45.7078404Z          let output = std::process::Command::new(std::env::current_exe().unwrap())
+2026-09-17T08:21:45.7078996Z              .args(["--exact", TEST_NAME, "--nocapture"])
+2026-09-17T08:21:45.7079762Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:184:
+2026-09-17T08:21:45.7080476Z              drop(archive);
+2026-09-17T08:21:45.7080854Z              if kind == "replacement" {
+2026-09-17T08:21:45.7081355Z                  // A deliberate reopen may authenticate the same bytes anew.
+2026-09-17T08:21:45.7081903Z -                ActiveArchive::open(&source, pin)
+2026-09-17T08:21:45.7082342Z -                    .unwrap()
+2026-09-17T08:21:45.7082715Z -                    .verify()
+2026-09-17T08:21:45.7083268Z -                    .unwrap();
+2026-09-17T08:21:45.7083767Z +                ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
+2026-09-17T08:21:45.7084433Z              } else {
+2026-09-17T08:21:45.7084870Z                  assert!(ActiveArchive::open(&source, pin).is_err());
+2026-09-17T08:21:45.7085379Z                  if kind == "hardlink" {
+2026-09-17T08:21:45.7086106Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:231:
+2026-09-17T08:21:45.7086890Z      assert_eq!(directory_bytes(&source), original);
+2026-09-17T08:21:45.7087383Z      assert_eq!(directory_bytes(&moved), original);
+2026-09-17T08:21:45.7087817Z      drop(archive);
+2026-09-17T08:21:45.7088167Z -    ActiveArchive::open(&source, pin)
+2026-09-17T08:21:45.7088539Z -        .unwrap()
+2026-09-17T08:21:45.7088867Z -        .verify()
+2026-09-17T08:21:45.7089296Z -        .unwrap();
+2026-09-17T08:21:45.7089661Z -    ActiveArchive::open(&moved, pin)
+2026-09-17T08:21:45.7090068Z -        .unwrap()
+2026-09-17T08:21:45.7090381Z -        .verify()
+2026-09-17T08:21:45.7090703Z -        .unwrap();
+2026-09-17T08:21:45.7091184Z +    ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
+2026-09-17T08:21:45.7091826Z +    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
+2026-09-17T08:21:45.7092306Z  }
+2026-09-17T08:21:45.7092581Z  
+2026-09-17T08:21:45.7092857Z  #[test]
+2026-09-17T08:21:45.7093551Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:324:
+2026-09-17T08:21:45.7094471Z          fs::rename(&to, source.join(name)).unwrap();
+2026-09-17T08:21:45.7094882Z      }
+2026-09-17T08:21:45.7095233Z      fs::rename(&source, &moved).unwrap();
+2026-09-17T08:21:45.7095688Z -    ActiveArchive::open(&moved, pin)
+2026-09-17T08:21:45.7096066Z -        .unwrap()
+2026-09-17T08:21:45.7096357Z -        .verify()
+2026-09-17T08:21:45.7096665Z -        .unwrap();
+2026-09-17T08:21:45.7097132Z +    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
+2026-09-17T08:21:45.7097716Z      assert_eq!(directory_bytes(&moved), original);
+2026-09-17T08:21:45.7098568Z      // Positive delete controls use normal files after every archive is dropped.
+2026-09-17T08:21:45.7099175Z      for name in original.keys() {
+2026-09-17T08:21:45.7126451Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:101:
+2026-09-17T08:21:45.7127418Z  // framing or state-replay rejection instead of merely failing the old hash.
+2026-09-17T08:21:45.7128229Z  // This does NOT authenticate an externally supplied checkpoint. The hard-coded
+2026-09-17T08:21:45.7129014Z  // independent vector below separately checks the production layout encoding.
+2026-09-17T08:21:45.7129580Z -fn repin(
+2026-09-17T08:21:45.7129989Z -    mut pin: ActiveRecoveryCheckpoint,
+2026-09-17T08:21:45.7130443Z -    entries: &DirectoryBytes,
+2026-09-17T08:21:45.7130864Z -) -> ActiveRecoveryCheckpoint {
+2026-09-17T08:21:45.7131640Z +fn repin(mut pin: ActiveRecoveryCheckpoint, entries: &DirectoryBytes) -> ActiveRecoveryCheckpoint {
+2026-09-17T08:21:45.7132365Z      let header = &entries["genesis"];
+2026-09-17T08:21:45.7132864Z      pin.genesis = Sha256::digest(header).into();
+2026-09-17T08:21:45.7133446Z      pin.header_length = u32::try_from(header.len()).unwrap();
+2026-09-17T08:21:45.7134464Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:295:
+2026-09-17T08:21:45.7135149Z              );
+2026-09-17T08:21:45.7135523Z              for name in original.keys() {
+2026-09-17T08:21:45.7135946Z                  assert_eq!(
+2026-09-17T08:21:45.7136544Z -                    fs::metadata(restored.join(name)).unwrap().permissions().mode() & 0o777,
+2026-09-17T08:21:45.7137179Z +                    fs::metadata(restored.join(name))
+2026-09-17T08:21:45.7137626Z +                        .unwrap()
+2026-09-17T08:21:45.7138033Z +                        .permissions()
+2026-09-17T08:21:45.7138435Z +                        .mode()
+2026-09-17T08:21:45.7139032Z +                        & 0o777,
+2026-09-17T08:21:45.7139405Z                      0o600
+2026-09-17T08:21:45.7139750Z                  );
+2026-09-17T08:21:45.7140063Z              }
+2026-09-17T08:21:45.7140685Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:335:
+2026-09-17T08:21:45.7141374Z      assert_ne!(fresh, pin);
+2026-09-17T08:21:45.7141741Z      drop(pool);
+2026-09-17T08:21:45.7142178Z      assert!(ActiveArchive::open(&source, pin).is_err());
+2026-09-17T08:21:45.7142818Z -    ActiveArchive::open(&source, fresh).unwrap().verify().unwrap();
+2026-09-17T08:21:45.7143388Z +    ActiveArchive::open(&source, fresh)
+2026-09-17T08:21:45.7143778Z +        .unwrap()
+2026-09-17T08:21:45.7144203Z +        .verify()
+2026-09-17T08:21:45.7144498Z +        .unwrap();
+2026-09-17T08:21:45.7144778Z  }
+2026-09-17T08:21:45.7145028Z  
+2026-09-17T08:21:45.7145307Z  #[test]
+2026-09-17T08:21:45.7145943Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:394:
+2026-09-17T08:21:45.7146712Z      writer.write_all(&replacement[SEGMENT]).unwrap();
+2026-09-17T08:21:45.7147202Z      writer.sync_all().unwrap();
+2026-09-17T08:21:45.7147573Z      drop(writer);
+2026-09-17T08:21:45.7148153Z -    assert_eq!(fs::read(source.join(SEGMENT)).unwrap(), replacement[SEGMENT]);
+2026-09-17T08:21:45.7148679Z +    assert_eq!(
+2026-09-17T08:21:45.7149034Z +        fs::read(source.join(SEGMENT)).unwrap(),
+2026-09-17T08:21:45.7149467Z +        replacement[SEGMENT]
+2026-09-17T08:21:45.7149807Z +    );
+2026-09-17T08:21:45.7150295Z      assert_eq!(pool.active_recovery_checkpoint(), Err(PoolError::Corrupt));
+2026-09-17T08:21:45.7150915Z      assert_eq!(pool.state.summary(), committed);
+2026-09-17T08:21:45.7151495Z      assert_eq!(pool.summary(), Err(PoolError::Unavailable));
+2026-09-17T08:21:45.7152318Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:454:
+2026-09-17T08:21:45.7153094Z          let header = changed.get_mut("genesis").unwrap();
+2026-09-17T08:21:45.7153572Z          match label {
+2026-09-17T08:21:45.7154556Z              "borrow-segment-for-commitment" => header[72..76].copy_from_slice(&1u32.to_be_bytes()),
+2026-09-17T08:21:45.7155296Z -            "unbounded-commitment-count" => {
+2026-09-17T08:21:45.7155875Z -                header[72..76].copy_from_slice(&u32::MAX.to_be_bytes())
+2026-09-17T08:21:45.7156355Z -            }
+2026-09-17T08:21:45.7157003Z +            "unbounded-commitment-count" => header[72..76].copy_from_slice(&u32::MAX.to_be_bytes()),
+2026-09-17T08:21:45.7157842Z              "extra-physical-header-bytes" => header.extend_from_slice(&[0; 32]),
+2026-09-17T08:21:45.7158557Z              "wrong-profile" => header[..8].copy_from_slice(b"ZVOPOL02"),
+2026-09-17T08:21:45.7159158Z              "wrong-network" => header[8] ^= 1,
+2026-09-17T08:21:45.7159910Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:506:
+2026-09-17T08:21:45.7160570Z          ));
+2026-09-17T08:21:45.7160951Z          assert_eq!(directory_bytes(&path), changed);
+2026-09-17T08:21:45.7161370Z      }
+2026-09-17T08:21:45.7161902Z -    for label in ["wrong-record-checksum", "wrong-final-state", "trailing-byte"] {
+2026-09-17T08:21:45.7162486Z +    for label in [
+2026-09-17T08:21:45.7162851Z +        "wrong-record-checksum",
+2026-09-17T08:21:45.7163262Z +        "wrong-final-state",
+2026-09-17T08:21:45.7163637Z +        "trailing-byte",
+2026-09-17T08:21:45.7164144Z +    ] {
+2026-09-17T08:21:45.7164495Z          let mut changed = original.clone();
+2026-09-17T08:21:45.7165010Z          let records = changed.get_mut(SEGMENT).unwrap();
+2026-09-17T08:21:45.7165512Z          match label {
+2026-09-17T08:21:45.7166174Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active.rs:96:
+2026-09-17T08:21:45.7166806Z              }
+2026-09-17T08:21:45.7167143Z          } else if segments == 0
+2026-09-17T08:21:45.7167549Z              || segments > self.height
+2026-09-17T08:21:45.7168416Z -            || records < MIN_FRAME.checked_mul(self.height).ok_or(PoolError::Bounds)?
+2026-09-17T08:21:45.7168989Z              || records
+2026-09-17T08:21:45.7169348Z +                < MIN_FRAME
+2026-09-17T08:21:45.7169760Z +                    .checked_mul(self.height)
+2026-09-17T08:21:45.7170241Z +                    .ok_or(PoolError::Bounds)?
+2026-09-17T08:21:45.7170659Z +            || records
+2026-09-17T08:21:45.7170996Z                  > segments
+2026-09-17T08:21:45.7171477Z                      .checked_mul(super::super::active::SEGMENT_BYTES)
+2026-09-17T08:21:45.7172005Z                      .ok_or(PoolError::Bounds)?
+2026-09-17T08:21:45.7172723Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active.rs:120:
+2026-09-17T08:21:45.7173380Z          let result = (|| {
+2026-09-17T08:21:45.7173900Z              let journal = self.active.as_ref().ok_or(PoolError::Bounds)?;
+2026-09-17T08:21:45.7174654Z              let before = journal.layout_hash(&self.file)?;
+2026-09-17T08:21:45.7175142Z -            let (state, _) =
+2026-09-17T08:21:45.7175720Z -                Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
+2026-09-17T08:21:45.7176548Z +            let (state, _) = Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
+2026-09-17T08:21:45.7177219Z              if state.genesis != self.state.genesis
+2026-09-17T08:21:45.7177700Z                  || state.summary() != committed
+2026-09-17T08:21:45.7178180Z                  || journal.length() != self.length
+2026-09-17T08:21:45.7750199Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:130:
+2026-09-17T08:21:45.7751047Z  fn unchanged(path: &Path, expected: &DirectoryBytes) {
+2026-09-17T08:21:45.7751746Z      // Avoid printing complete public journal/transaction bytes on assertion
+2026-09-17T08:21:45.7752497Z      // failure; the contract being checked is byte equality, not their content.
+2026-09-17T08:21:45.7753305Z -    assert!(directory_bytes(path) == *expected, "directory bytes changed");
+2026-09-17T08:21:45.7753831Z +    assert!(
+2026-09-17T08:21:45.7754646Z +        directory_bytes(path) == *expected,
+2026-09-17T08:21:45.7755089Z +        "directory bytes changed"
+2026-09-17T08:21:45.7755450Z +    );
+2026-09-17T08:21:45.7755810Z  }
+2026-09-17T08:21:45.7756083Z  
+2026-09-17T08:21:45.7756507Z  fn write_fixture(path: &Path, entries: &DirectoryBytes) {
+2026-09-17T08:21:45.7757314Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:262:
+2026-09-17T08:21:45.7758012Z          ("verify-active", &backup, None),
+2026-09-17T08:21:45.7758528Z          ("restore-active", &backup, Some(restored.as_path())),
+2026-09-17T08:21:45.7758988Z      ] {
+2026-09-17T08:21:45.7759491Z -        success(&call(&archive_args(mode, input, &encoded, output)), mode, pin);
+2026-09-17T08:21:45.7760046Z +        success(
+2026-09-17T08:21:45.7760485Z +            &call(&archive_args(mode, input, &encoded, output)),
+2026-09-17T08:21:45.7760972Z +            mode,
+2026-09-17T08:21:45.7761294Z +            pin,
+2026-09-17T08:21:45.7761591Z +        );
+2026-09-17T08:21:45.7761949Z          unchanged(&source, &original);
+2026-09-17T08:21:45.7762384Z          unchanged(&backup, &original);
+2026-09-17T08:21:45.7762824Z      }
+2026-09-17T08:21:45.7763434Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:286:
+2026-09-17T08:21:45.7764283Z      assert!(alice.pending_id().is_none());
+2026-09-17T08:21:45.7764710Z      drop(history);
+2026-09-17T08:21:45.7765038Z      let second = bob
+2026-09-17T08:21:45.7765600Z -        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)
+2026-09-17T08:21:45.7766181Z +        .build_payment(
+2026-09-17T08:21:45.7766576Z +            carol.receive_address(0).unwrap(),
+2026-09-17T08:21:45.7766985Z +            40_000,
+2026-09-17T08:21:45.7767307Z +            1_000,
+2026-09-17T08:21:45.7767622Z +            100,
+2026-09-17T08:21:45.7768162Z +            &prover,
+2026-09-17T08:21:45.7768485Z +        )
+2026-09-17T08:21:45.7768791Z          .unwrap()
+2026-09-17T08:21:45.7769117Z          .bytes()
+2026-09-17T08:21:45.7769419Z          .to_vec();
+2026-09-17T08:21:45.7770026Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:354:
+2026-09-17T08:21:45.7770717Z      assert_eq!(f.pin.segment_count(), 0);
+2026-09-17T08:21:45.7771272Z      assert_eq!(f.pin.length(), f.original["genesis"].len() as u64);
+2026-09-17T08:21:45.7771768Z      success(
+2026-09-17T08:21:45.7772275Z -        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
+2026-09-17T08:21:45.7772845Z +        &call(&checkpoint_args(
+2026-09-17T08:21:45.7773223Z +            &f.source,
+2026-09-17T08:21:45.7773555Z +            &f.manifest,
+2026-09-17T08:21:45.7773914Z +            &f.genesis,
+2026-09-17T08:21:45.7774399Z +            &f.state,
+2026-09-17T08:21:45.7774706Z +        )),
+2026-09-17T08:21:45.7775038Z          "checkpoint-active",
+2026-09-17T08:21:45.7775419Z          f.pin,
+2026-09-17T08:21:45.7775712Z      );
+2026-09-17T08:21:45.7776325Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:390:
+2026-09-17T08:21:45.7777020Z      let target = f.dir.path("not-created");
+2026-09-17T08:21:45.7777474Z      let encoded = hex(&f.pin.to_bytes());
+2026-09-17T08:21:45.7778091Z      let base = archive_args("backup-active", &f.source, &encoded, Some(&target));
+2026-09-17T08:21:45.7778679Z -    let mut cases = vec![
+2026-09-17T08:21:45.7779040Z -        vec![],
+2026-09-17T08:21:45.7779414Z -        vec!["unknown".into()],
+2026-09-17T08:21:45.7779829Z -        vec!["backup-active".into()],
+2026-09-17T08:21:45.7780209Z -    ];
+2026-09-17T08:21:45.7780716Z +    let mut cases = vec![vec![], vec!["unknown".into()], vec!["backup-active".into()]];
+2026-09-17T08:21:45.7781309Z      let mut missing_ack = base.clone();
+2026-09-17T08:21:45.7781793Z      missing_ack.retain(|arg| arg != "--no-real-funds");
+2026-09-17T08:21:45.7782284Z      cases.push(missing_ack);
+2026-09-17T08:21:45.7782953Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:485:
+2026-09-17T08:21:45.7783871Z          ("restore-active", Some(target.as_path())),
+2026-09-17T08:21:45.7784529Z          ("verify-active", None),
+2026-09-17T08:21:45.7784893Z      ] {
+2026-09-17T08:21:45.7785397Z -        failure(&call(&archive_args(mode, &f.source, &encoded, output)), &f.dir);
+2026-09-17T08:21:45.7785946Z +        failure(
+2026-09-17T08:21:45.7786397Z +            &call(&archive_args(mode, &f.source, &encoded, output)),
+2026-09-17T08:21:45.7786881Z +            &f.dir,
+2026-09-17T08:21:45.7787196Z +        );
+2026-09-17T08:21:45.7787524Z          assert!(!target.exists());
+2026-09-17T08:21:45.7787895Z      }
+2026-09-17T08:21:45.7788188Z      failure(
+2026-09-17T08:21:45.7788808Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:492:
+2026-09-17T08:21:45.7789656Z -        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
+2026-09-17T08:21:45.7790249Z +        &call(&checkpoint_args(
+2026-09-17T08:21:45.7790624Z +            &f.source,
+2026-09-17T08:21:45.7790970Z +            &f.manifest,
+2026-09-17T08:21:45.7791316Z +            &f.genesis,
+2026-09-17T08:21:45.7791643Z +            &f.state,
+2026-09-17T08:21:45.7791953Z +        )),
+2026-09-17T08:21:45.7792249Z          &f.dir,
+2026-09-17T08:21:45.7792546Z      );
+2026-09-17T08:21:45.7792917Z      assert_eq!(owner.summary().unwrap(), f.state);
+2026-09-17T08:21:45.7793661Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:528:
+2026-09-17T08:21:45.7794443Z          }
+2026-09-17T08:21:45.7794729Z      }
+2026-09-17T08:21:45.7795013Z      success(
+2026-09-17T08:21:45.7795507Z -        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
+2026-09-17T08:21:45.7796063Z +        &call(&archive_args(
+2026-09-17T08:21:45.7796436Z +            "backup-active",
+2026-09-17T08:21:45.7796989Z +            &f.source,
+2026-09-17T08:21:45.7797320Z +            &encoded,
+2026-09-17T08:21:45.7797660Z +            Some(&target),
+2026-09-17T08:21:45.7798013Z +        )),
+2026-09-17T08:21:45.7798347Z          "backup-active",
+2026-09-17T08:21:45.7798690Z          f.pin,
+2026-09-17T08:21:45.7798987Z      );
+2026-09-17T08:21:45.7799572Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:553:
+2026-09-17T08:21:45.7800302Z      let legacy_encoded = hex(&legacy_pin.to_bytes());
+2026-09-17T08:21:45.7800802Z      let active_encoded = hex(&f.pin.to_bytes());
+2026-09-17T08:21:45.7801333Z      let target = f.dir.path("profile-mismatch-output");
+2026-09-17T08:21:45.7802012Z -    failure(&call(&checkpoint_args(&source, &manifest, &legacy, &state)), &f.dir);
+2026-09-17T08:21:45.7802564Z +    failure(
+2026-09-17T08:21:45.7803020Z +        &call(&checkpoint_args(&source, &manifest, &legacy, &state)),
+2026-09-17T08:21:45.7803521Z +        &f.dir,
+2026-09-17T08:21:45.7803843Z +    );
+2026-09-17T08:21:45.7804576Z      let mut old_checkpoint = checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state);
+2026-09-17T08:21:45.7805251Z      old_checkpoint[0] = "checkpoint".into();
+2026-09-17T08:21:45.7805753Z      failure(&call(&old_checkpoint), &f.dir);
+2026-09-17T08:21:45.7806464Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:608:
+2026-09-17T08:21:45.7807198Z      bad_header.get_mut("genesis").unwrap()[0] ^= 1;
+2026-09-17T08:21:45.7807665Z      cases.push(bad_header);
+2026-09-17T08:21:45.7808084Z      let mut damaged = f.original.clone();
+2026-09-17T08:21:45.7808686Z -    *damaged.get_mut("00000000.journal").unwrap().last_mut().unwrap() ^= 1;
+2026-09-17T08:21:45.7809223Z +    *damaged
+2026-09-17T08:21:45.7809565Z +        .get_mut("00000000.journal")
+2026-09-17T08:21:45.7809947Z +        .unwrap()
+2026-09-17T08:21:45.7810268Z +        .last_mut()
+2026-09-17T08:21:45.7810593Z +        .unwrap() ^= 1;
+2026-09-17T08:21:45.7810949Z      cases.push(damaged);
+2026-09-17T08:21:45.7811354Z      let mut missing = f.original.clone();
+2026-09-17T08:21:45.7811786Z      missing.remove("00000000.journal");
+2026-09-17T08:21:45.7812663Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:623:
+2026-09-17T08:21:45.7813435Z      appended.get_mut("00000000.journal").unwrap().push(0);
+2026-09-17T08:21:45.7813930Z      cases.push(appended);
+2026-09-17T08:21:45.7814512Z      let mut early_rotation = f.original.clone();
+2026-09-17T08:21:45.7815165Z -    let second = early_rotation.get_mut("00000000.journal").unwrap().split_off(150);
+2026-09-17T08:21:45.7815756Z +    let second = early_rotation
+2026-09-17T08:21:45.7816152Z +        .get_mut("00000000.journal")
+2026-09-17T08:21:45.7816545Z +        .unwrap()
+2026-09-17T08:21:45.7816863Z +        .split_off(150);
+2026-09-17T08:21:45.7817320Z      early_rotation.insert("00000001.journal".into(), second);
+2026-09-17T08:21:45.7817823Z      cases.push(early_rotation);
+2026-09-17T08:21:45.7818339Z      for (number, entries) in cases.into_iter().enumerate() {
+2026-09-17T08:21:45.7819120Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:635:
+2026-09-17T08:21:45.7819844Z              ("backup-active", Some(target.as_path())),
+2026-09-17T08:21:45.7820365Z              ("restore-active", Some(target.as_path())),
+2026-09-17T08:21:45.7820811Z          ] {
+2026-09-17T08:21:45.7821349Z -            failure(&call(&archive_args(mode, &candidate, &encoded, output)), &f.dir);
+2026-09-17T08:21:45.7821934Z +            failure(
+2026-09-17T08:21:45.7822414Z +                &call(&archive_args(mode, &candidate, &encoded, output)),
+2026-09-17T08:21:45.7822924Z +                &f.dir,
+2026-09-17T08:21:45.7823263Z +            );
+2026-09-17T08:21:45.7823619Z              assert!(!target.exists());
+2026-09-17T08:21:45.7824215Z              unchanged(&candidate, &entries);
+2026-09-17T08:21:45.7824683Z              unchanged(&f.source, &f.original);
+2026-09-17T08:21:45.7825652Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:662:
+2026-09-17T08:21:45.7826489Z      // fail on both supported platforms. Process creation still gets a valid
+2026-09-17T08:21:45.7827227Z      // inherited handle; this tests publication followed by a failed receipt.
+2026-09-17T08:21:45.7827978Z      let output = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
+2026-09-17T08:21:45.7828716Z -        .args(archive_args("backup-active", &f.source, &encoded, Some(&target)))
+2026-09-17T08:21:45.7829299Z +        .args(archive_args(
+2026-09-17T08:21:45.7829685Z +            "backup-active",
+2026-09-17T08:21:45.7830052Z +            &f.source,
+2026-09-17T08:21:45.7830391Z +            &encoded,
+2026-09-17T08:21:45.7830733Z +            Some(&target),
+2026-09-17T08:21:45.7831074Z +        ))
+2026-09-17T08:21:45.7831472Z          .stdout(Stdio::from(File::open(&sink).unwrap()))
+2026-09-17T08:21:45.7831913Z          .output()
+2026-09-17T08:21:45.7832247Z          .unwrap();
+2026-09-17T08:21:45.7832873Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:677:
+2026-09-17T08:21:45.7833492Z      );
+2026-09-17T08:21:45.7834156Z      // A later explicit command cannot replace the already complete target.
+2026-09-17T08:21:45.7834670Z      failure(
+2026-09-17T08:21:45.7835033Z -        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
+2026-09-17T08:21:45.7835409Z +        &call(&archive_args(
+2026-09-17T08:21:45.7835666Z +            "backup-active",
+2026-09-17T08:21:45.7835903Z +            &f.source,
+2026-09-17T08:21:45.7836128Z +            &encoded,
+2026-09-17T08:21:45.7836358Z +            Some(&target),
+2026-09-17T08:21:45.7836580Z +        )),
+2026-09-17T08:21:45.7836784Z          &f.dir,
+2026-09-17T08:21:45.7836982Z      );
+2026-09-17T08:21:45.7837220Z      unchanged(&target, &f.original);
+2026-09-17T08:21:45.8007458Z ##[error]Process completed with exit code 1.
+2026-09-17T08:21:45.8128421Z Post job cleanup.
+2026-09-17T08:21:45.8801102Z [command]/usr/bin/git version
+2026-09-17T08:21:45.8835258Z git version 2.55.0
+2026-09-17T08:21:45.8864817Z Temporarily overriding HOME='/home/runner/work/_temp/2d8cdad9-31dd-48f5-8f93-5f9b293d016f' before making global git config changes
+2026-09-17T08:21:45.8865934Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T08:21:45.8868812Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T08:21:45.8904671Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T08:21:45.8935719Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T08:21:45.9135078Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T08:21:45.9166082Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T08:21:45.9529152Z Cleaning up orphan processes

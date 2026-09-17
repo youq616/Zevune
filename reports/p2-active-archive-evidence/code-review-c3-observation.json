@@ -1,0 +1,213 @@
+{
+  "reviewer_task": "/root/p2_archive_review",
+  "generated_at": "2026-09-17T08:32:06.454293+00:00",
+  "review_type": "independent_frozen_full_scope_code_review",
+  "reviewed_base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "reviewed_source": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+  "reviewed_parent": "7477d9e0656ed751f525a4b6fe9f6649b995ede6",
+  "reviewed_tree": "4017bee976c18767ed568d7ec8a33f6d668b8c22",
+  "pr_url": "https://github.com/youq616/Zevune/pull/13",
+  "conclusion": "PASS_CODE_REVIEW",
+  "stage_acceptance": false,
+  "native_ci_acceptance": "PENDING_NOT_ASSERTED_BY_THIS_REVIEW",
+  "non_author": true,
+  "candidate_edited_by_reviewer": false,
+  "source_identity_verified": true,
+  "clean_worktree": true,
+  "reviewed_files": [
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+      "git_blob": "b45bab9dde5acb2f09bc47b05196e9ee8961ef74",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "bytes": 10748,
+      "sha256": "9fe928fe7b32e0c423435386cc6f0539dcb8760382fafe57dfdb0c456cfb8d6b",
+      "git_blob": "5d177ddceed445628ce3c6809d894c03f89e6def",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "bytes": 29008,
+      "sha256": "62a5257f4e8f7cec291564341435a769c2dbdc463b642e0b21b513cde9d8e316",
+      "git_blob": "9f71c2a74e74e57be0fb59571d40fa8fc5113a05",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "bytes": 29276,
+      "sha256": "62f470f20534a649b04b0f08f538782b927a7e446172c4f5b397f5057f061586",
+      "git_blob": "ce44ffa4f1626d8d4b118ed99c36c59a5fed84ee",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "bytes": 34453,
+      "sha256": "4426a8b978649de8811a92ded3cf5957924b01db0600bb45af12c6d053796fce",
+      "git_blob": "57b1a11149e31a90f93db33bb0b4635636e831a9",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "bytes": 10944,
+      "sha256": "687bf63b9b464220fc7610970dbaa94e35d4fd386841642ca3b65158ce93229d",
+      "git_blob": "1b832808ea6d0765eac4608d5786f906e0d7b831",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "bytes": 10383,
+      "sha256": "77f47005568fad097edd6f563d3e1d0962957fe932dbd8565b0b4126ebe75137",
+      "git_blob": "d90e7a8e9483940ba82e3c5af12316a4ce83b9bb",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "bytes": 12441,
+      "sha256": "87602e83dd78343bcbeb981c37532d3c91f284c5a79d22103b869cafae16487b",
+      "git_blob": "724d788f6efd524f55f8e3544504de8783153a3e",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "bytes": 27476,
+      "sha256": "96823dcd24bc4832d69f8639fff093da3b753950618bb90f4048923f798eba7e",
+      "git_blob": "017ca249655321965eb4df148a16b99adf9b92cc",
+      "manifest_and_worktree_match": true
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "bytes": 25781,
+      "sha256": "adc96e1e009e00f238809c29559ffd27afe9b2726f41721ae1162d7e003d8dc1",
+      "git_blob": "99857bc45e04692a77605697e6f001ed018f0447",
+      "manifest_and_worktree_match": true
+    }
+  ],
+  "findings": [],
+  "blocking_findings": 0,
+  "prior_findings": [
+    {
+      "id": "AR-C1-01",
+      "severity": "medium",
+      "description": "Missing direct active-archive swapped-existing-segments regression",
+      "status": "CLOSED_IN_C3_CODE_AND_TEST_DESIGN",
+      "native_execution_status": "PENDING",
+      "closure": [
+        "Actual two physical segments at height10001 exchanged byte-for-byte",
+        "Original checkpoint explicitly rejects Corrupt",
+        "Repinned checkpoint actual production layout_hash equals pin bytes96..128",
+        "First complete record decodes; its base_hash differs from independently initialized genesis summary",
+        "Repinned ActiveArchive open explicitly rejects Corrupt at history replay boundary",
+        "Original source and bad candidate bytes unchanged",
+        "Temporary readonly locks released before main verification"
+      ]
+    },
+    {
+      "id": "C1_NATIVE_FORMAT",
+      "status": "C1_REJECTED_NOT_RELABELED",
+      "note": "C2 applies all30 reported hunks across7 files; C3 requires its own native format acceptance"
+    },
+    {
+      "id": "C2_NATIVE_CLIPPY",
+      "status": "SOURCE_FIX_REVIEWED_NATIVE_EXECUTION_PENDING",
+      "note": "Negated is_multiple_of(32) preserves guarded u64 modulo predicate and -D warnings remains"
+    }
+  ],
+  "nonblocking_observations": [
+    {
+      "severity": "informational",
+      "file": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "line": 185,
+      "description": "Frozen design EOF blank-line diagnostic retained; no runtime/contract impact."
+    }
+  ],
+  "actual_checks": {
+    "complete_diff_check": {
+      "exit_code": 2,
+      "stdout": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md:185: new blank line at EOF.\n",
+      "stderr": ""
+    },
+    "source_diff_check_excluding_frozen_design": {
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "protected_paths_byte_identical_to_base": [
+      ".github",
+      "scripts",
+      "internal",
+      "integration/cometbft",
+      "integration/orchard/Cargo.toml",
+      "integration/orchard/Cargo.lock",
+      "go.mod",
+      "go.sum",
+      "AGENTS.md",
+      "docs/STAGE_REVIEW.zh-CN.md"
+    ],
+    "new_patch_from_parent": "44\t0\tintegration/orchard/src/pool/active_flow_tests.rs\n1\t1\tintegration/orchard/src/pool/recovery/active.rs\n",
+    "independent_fixed_vector": "Previously recomputed independently with Python; C3 hash implementation/input/constants rechecked unchanged; not re-executed Rust test"
+  },
+  "historical_raw_evidence_read": [
+    {
+      "path": "code-review-c1.md",
+      "bytes": 13228,
+      "sha256": "7571183736041b27d855d98d250d6fba3d85eb2845b83e68dd1b769cd586f571"
+    },
+    {
+      "path": "code-review-c1-observation.json",
+      "bytes": 5942,
+      "sha256": "1ccd3f9c3b8f7c785f26e578222d18aec07b84516b0e409af4cf53edf4ee4898"
+    },
+    {
+      "path": "code-review-c1-addendum.md",
+      "bytes": 3452,
+      "sha256": "e906768fd9bbf0b1d5b2598ed586b65285edb71144691b5f82f8f49e2124bacb"
+    },
+    {
+      "path": "c1/job-105129273810.log",
+      "bytes": 40234,
+      "sha256": "8cd0b609521e305ec52552a59c0730f1b34c6a4dbbc6193be17148305bdae54d"
+    },
+    {
+      "path": "c1/rustfmt-diagnostic.txt",
+      "bytes": 16762,
+      "sha256": "6af83d3a2df95b2de46fc17fbc431c84022319130f0335c1d8a9ede680cf4638"
+    },
+    {
+      "path": "c1/rustfmt-applied.json",
+      "bytes": 9693,
+      "sha256": "1499913de01cb24c77c9fcad04c33c86f37c800bda9b36026e5c806c00f636ee"
+    },
+    {
+      "path": "c2/job-105130677319.log",
+      "bytes": 63569,
+      "sha256": "67fa4d451492b8958ee1750e81c6a2fd261dea5cdf326048fc87de5ba916375c"
+    },
+    {
+      "path": "c2/native-audit-rejected.json",
+      "bytes": 1626,
+      "sha256": "7139cda8a8f8ef3bb03442792fcc59e9bda3139403894f83e0b07cb545f1419a"
+    }
+  ],
+  "not_executed": [
+    "Rust compilation",
+    "Rust test execution",
+    "cargo fmt",
+    "cargo clippy",
+    "Go tests/vet/race/fuzz",
+    "native Windows runtime validation",
+    "native Ubuntu runtime validation",
+    "CI rerun"
+  ],
+  "known_limits": [
+    "Trusted parents/OS/filesystem",
+    "No latest-tip or finality authentication",
+    "No full validator or wallet backup",
+    "No real-power-loss/disk-full test",
+    "No full-capacity or descriptor-limit benchmark",
+    "No specialist external audit"
+  ]
+}
