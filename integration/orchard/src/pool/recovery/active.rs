@@ -85,7 +85,7 @@ impl ActiveRecoveryCheckpoint {
             || self.length > profile.max_journal_bytes()
             || segments > super::super::active::MAX_SEGMENTS as u64
             || !(MIN_HEADER..=max_header).contains(&header)
-            || (header - MIN_HEADER) % 32 != 0
+            || !(header - MIN_HEADER).is_multiple_of(32)
         {
             return Err(PoolError::Bounds);
         }

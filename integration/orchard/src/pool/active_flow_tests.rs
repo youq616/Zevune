@@ -593,6 +593,50 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert!(persisted["00000000.journal"].len() + first_frame_bytes > SEGMENT_LIMIT);
     assert!(persisted["00000001.journal"].len() <= SEGMENT_LIMIT);
 
+    // Swap the two ACTUAL existing segments, retaining each complete record's
+    // bytes and checksum. The old pin rejects the changed layout; even a newly
+    // supplied matching pin cannot make the later segment begin at genesis.
+    let mut swapped = persisted.clone();
+    swapped.insert(
+        "00000000.journal".into(),
+        persisted["00000001.journal"].clone(),
+    );
+    swapped.insert(
+        "00000001.journal".into(),
+        persisted["00000000.journal"].clone(),
+    );
+    let swapped_path = dir.path("swapped-active-segments");
+    write_directory(&swapped_path, &swapped);
+    assert!(matches!(
+        ActiveArchive::open(&swapped_path, above_legacy_pin),
+        Err(PoolError::Corrupt)
+    ));
+    assert_eq!(directory_bytes(&path), persisted);
+    assert_eq!(directory_bytes(&swapped_path), swapped);
+    let swapped_pin = repin_layout(above_legacy_pin, &swapped);
+    assert_ne!(swapped_pin, above_legacy_pin);
+    let (header, journal) =
+        active::ActiveJournal::open_readonly(&swapped_path, swapped_pin.header_length()).unwrap();
+    assert_eq!(
+        journal.layout_hash(&header).unwrap().as_slice(),
+        &swapped_pin.to_bytes()[96..128]
+    );
+    drop(journal);
+    drop(header);
+    let first_body = &swapped["00000000.journal"][4..first_frame_bytes - 32];
+    let first_record = Record::decode(first_body).unwrap();
+    assert_eq!(first_record.height, first_height);
+    assert_ne!(
+        first_record.base_hash,
+        genesis.initial_summary().unwrap().app_hash
+    );
+    assert!(matches!(
+        ActiveArchive::open(&swapped_path, swapped_pin),
+        Err(PoolError::Corrupt)
+    ));
+    assert_eq!(directory_bytes(&path), persisted);
+    assert_eq!(directory_bytes(&swapped_path), swapped);
+
     let path = archive_and_restore(&dir, &path, above_legacy_pin, "above-legacy-limit");
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.summary().unwrap(), at_10001);
