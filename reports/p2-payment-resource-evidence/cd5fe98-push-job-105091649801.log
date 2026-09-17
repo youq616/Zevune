@@ -1,0 +1,647 @@
+﻿2026-09-17T05:55:06.3740965Z Current runner version: '2.337.0'
+2026-09-17T05:55:06.3776451Z ##[group]Runner Image Provisioner
+2026-09-17T05:55:06.3777664Z Hosted Compute Agent
+2026-09-17T05:55:06.3778765Z Version: 20260828.587
+2026-09-17T05:55:06.3779840Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-17T05:55:06.3781435Z Build Date: 2026-08-28T16:44:25Z
+2026-09-17T05:55:06.3782647Z Worker ID: {ac647693-c212-422f-9dae-67f7a2e8a1d3}
+2026-09-17T05:55:06.3783842Z Azure Region: eastus
+2026-09-17T05:55:06.3784911Z ##[endgroup]
+2026-09-17T05:55:06.3787268Z ##[group]Operating System
+2026-09-17T05:55:06.3788393Z Ubuntu
+2026-09-17T05:55:06.3789284Z 24.04.5
+2026-09-17T05:55:06.3790178Z LTS
+2026-09-17T05:55:06.3791253Z ##[endgroup]
+2026-09-17T05:55:06.3792214Z ##[group]Runner Image
+2026-09-17T05:55:06.3793418Z Image: ubuntu-24.04
+2026-09-17T05:55:06.3794344Z Version: 20260907.300.1
+2026-09-17T05:55:06.3796482Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-17T05:55:06.3799147Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-17T05:55:06.3800941Z ##[endgroup]
+2026-09-17T05:55:06.3803108Z ##[group]GITHUB_TOKEN Permissions
+2026-09-17T05:55:06.3805737Z Contents: read
+2026-09-17T05:55:06.3806750Z Metadata: read
+2026-09-17T05:55:06.3807804Z ##[endgroup]
+2026-09-17T05:55:06.3810750Z Secret source: Actions
+2026-09-17T05:55:06.3812593Z Cache mode: write
+2026-09-17T05:55:06.3813859Z Prepare workflow directory
+2026-09-17T05:55:06.4587202Z Prepare all required actions
+2026-09-17T05:55:06.4636904Z Getting action download info
+2026-09-17T05:55:06.6349438Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-17T05:55:06.7471671Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-17T05:55:06.9116629Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-09-17T05:55:07.1115766Z Complete job name: resources (ubuntu-latest)
+2026-09-17T05:55:07.1849210Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-17T05:55:07.1850272Z with:
+2026-09-17T05:55:07.1850722Z   persist-credentials: false
+2026-09-17T05:55:07.1851443Z   fetch-depth: 2
+2026-09-17T05:55:07.1851889Z   repository: youq616/Zevune
+2026-09-17T05:55:07.1855837Z   token: ***
+2026-09-17T05:55:07.1856262Z   ssh-strict: true
+2026-09-17T05:55:07.1856683Z   ssh-user: git
+2026-09-17T05:55:07.1857096Z   clean: true
+2026-09-17T05:55:07.1857529Z   sparse-checkout-cone-mode: true
+2026-09-17T05:55:07.1858040Z   fetch-tags: false
+2026-09-17T05:55:07.1858480Z   show-progress: true
+2026-09-17T05:55:07.1858921Z   lfs: false
+2026-09-17T05:55:07.1859329Z   submodules: false
+2026-09-17T05:55:07.1859773Z   set-safe-directory: true
+2026-09-17T05:55:07.1860488Z env:
+2026-09-17T05:55:07.1860895Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:07.1861816Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:07.1862483Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:07.1863246Z ##[endgroup]
+2026-09-17T05:55:07.2918097Z Syncing repository: youq616/Zevune
+2026-09-17T05:55:07.2920496Z ##[group]Getting Git version info
+2026-09-17T05:55:07.2921847Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-17T05:55:07.2923439Z [command]/usr/bin/git version
+2026-09-17T05:55:07.2990956Z git version 2.55.0
+2026-09-17T05:55:07.3013993Z ##[endgroup]
+2026-09-17T05:55:07.3039201Z Temporarily overriding HOME='/home/runner/work/_temp/db04323c-139b-45ab-a4cb-38ce41537cc0' before making global git config changes
+2026-09-17T05:55:07.3041613Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T05:55:07.3043448Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T05:55:07.3096534Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-17T05:55:07.3102500Z ##[group]Initializing the repository
+2026-09-17T05:55:07.3105980Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-17T05:55:07.3244138Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-17T05:55:07.3246353Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-17T05:55:07.3253853Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-17T05:55:07.3255457Z hint: call:
+2026-09-17T05:55:07.3256392Z hint:
+2026-09-17T05:55:07.3257477Z hint: 	git config --global init.defaultBranch <name>
+2026-09-17T05:55:07.3258822Z hint:
+2026-09-17T05:55:07.3260027Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-17T05:55:07.3262997Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-17T05:55:07.3272224Z hint:
+2026-09-17T05:55:07.3272970Z hint: 	git branch -m <name>
+2026-09-17T05:55:07.3273848Z hint:
+2026-09-17T05:55:07.3274951Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-17T05:55:07.3276673Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-17T05:55:07.3293871Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-17T05:55:07.3366032Z ##[endgroup]
+2026-09-17T05:55:07.3367879Z ##[group]Disabling automatic garbage collection
+2026-09-17T05:55:07.3373642Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-17T05:55:07.3410476Z ##[endgroup]
+2026-09-17T05:55:07.3411714Z ##[group]Setting up auth
+2026-09-17T05:55:07.3418906Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T05:55:07.3459962Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T05:55:07.3943575Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T05:55:07.3988642Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T05:55:07.4255085Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-17T05:55:07.4295248Z ##[endgroup]
+2026-09-17T05:55:07.4296134Z ##[group]Fetching the repository
+2026-09-17T05:55:07.4306125Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=2 origin +cd5fe98053ce64e1acc6796dae44ec0e822c124f:refs/remotes/origin/dev/m12-genesis-domain
+2026-09-17T05:55:07.8336642Z From https://github.com/youq616/Zevune
+2026-09-17T05:55:07.8338714Z  * [new ref]         cd5fe98053ce64e1acc6796dae44ec0e822c124f -> origin/dev/m12-genesis-domain
+2026-09-17T05:55:07.8343107Z ##[endgroup]
+2026-09-17T05:55:07.8344604Z ##[group]Determining the checkout info
+2026-09-17T05:55:07.8346568Z ##[endgroup]
+2026-09-17T05:55:07.8352805Z [command]/usr/bin/git sparse-checkout disable
+2026-09-17T05:55:07.8421868Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-17T05:55:07.8455313Z ##[group]Checking out the ref
+2026-09-17T05:55:07.8462170Z [command]/usr/bin/git checkout --progress --force -B dev/m12-genesis-domain refs/remotes/origin/dev/m12-genesis-domain
+2026-09-17T05:55:07.8709790Z Switched to a new branch 'dev/m12-genesis-domain'
+2026-09-17T05:55:07.8714747Z branch 'dev/m12-genesis-domain' set up to track 'origin/dev/m12-genesis-domain'.
+2026-09-17T05:55:07.8726972Z ##[endgroup]
+2026-09-17T05:55:07.8769019Z [command]/usr/bin/git log -1 --format=%H
+2026-09-17T05:55:07.8805637Z cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:07.8815055Z ##[group]Removing auth
+2026-09-17T05:55:07.8818292Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T05:55:07.8852894Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T05:55:07.9076120Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T05:55:07.9106505Z http.https://github.com/.extraheader
+2026-09-17T05:55:07.9115459Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-17T05:55:07.9154421Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T05:55:07.9435677Z ##[endgroup]
+2026-09-17T05:55:07.9752650Z ##[group]Run python - <<'PY'
+2026-09-17T05:55:07.9753884Z [36;1mpython - <<'PY'[0m
+2026-09-17T05:55:07.9755151Z [36;1mimport datetime, json, os, pathlib, subprocess[0m
+2026-09-17T05:55:07.9756577Z [36;1mdef git(*args):[0m
+2026-09-17T05:55:07.9758130Z [36;1m    return subprocess.check_output(['git', *args], text=True).strip()[0m
+2026-09-17T05:55:07.9759995Z [36;1moutput = pathlib.Path('ci-results')[0m
+2026-09-17T05:55:07.9761612Z [36;1moutput.mkdir(exist_ok=True)[0m
+2026-09-17T05:55:07.9762846Z [36;1msnapshot = {[0m
+2026-09-17T05:55:07.9827251Z [36;1m    'schema_version': 1,[0m
+2026-09-17T05:55:07.9828735Z [36;1m    'kind': 'workflow_setup_observation',[0m
+2026-09-17T05:55:07.9830677Z [36;1m    'observed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),[0m
+2026-09-17T05:55:07.9833256Z [36;1m    'source_head': os.environ['ZEVUNE_RESOURCE_SOURCE_HEAD'],[0m
+2026-09-17T05:55:07.9835028Z [36;1m    'checkout_commit': git('rev-parse', 'HEAD'),[0m
+2026-09-17T05:55:07.9836692Z [36;1m    'checkout_tree': git('rev-parse', 'HEAD^{tree}'),[0m
+2026-09-17T05:55:07.9838325Z [36;1m    'observed_execution_status': 'not_started',[0m
+2026-09-17T05:55:07.9840735Z [36;1m    'scope': 'initial observation only; final workflow steps and resource result determine completion',[0m
+2026-09-17T05:55:07.9843032Z [36;1m}[0m
+2026-09-17T05:55:07.9844541Z [36;1mwith (output / 'payment-resource-setup.json').open('x', encoding='utf-8') as f:[0m
+2026-09-17T05:55:07.9846551Z [36;1m    json.dump(snapshot, f, indent=2)[0m
+2026-09-17T05:55:07.9847834Z [36;1m    f.write('\n')[0m
+2026-09-17T05:55:07.9848828Z [36;1mPY[0m
+2026-09-17T05:55:07.9891732Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:07.9893225Z env:
+2026-09-17T05:55:07.9894027Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:07.9895002Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:07.9896408Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:07.9898067Z ##[endgroup]
+2026-09-17T05:55:08.0511299Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T05:55:08.0517411Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-17T05:55:08.0518881Z with:
+2026-09-17T05:55:08.0519638Z   go-version: 1.27.1
+2026-09-17T05:55:08.0520489Z   cache: false
+2026-09-17T05:55:08.0521580Z   check-latest: false
+2026-09-17T05:55:08.0532751Z   token: ***
+2026-09-17T05:55:08.0533575Z env:
+2026-09-17T05:55:08.0534322Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:08.0535213Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:08.0536510Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:08.0538012Z ##[endgroup]
+2026-09-17T05:55:08.1854250Z Setup go version spec 1.27.1
+2026-09-17T05:55:08.1864916Z Attempting to download 1.27.1...
+2026-09-17T05:55:08.1979842Z (node:2291) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T05:55:08.1983232Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T05:55:08.6292442Z matching 1.27.1...
+2026-09-17T05:55:08.6317606Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-linux-x64.tar.gz
+2026-09-17T05:55:09.1175998Z Extracting Go...
+2026-09-17T05:55:09.1325640Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/fe9fc3db-57bb-41aa-a621-fd688e4daa48 -f /home/runner/work/_temp/c66cf3f2-3d11-4182-8dcf-000b9c302b3b
+2026-09-17T05:55:10.8667307Z Successfully extracted go to /home/runner/work/_temp/fe9fc3db-57bb-41aa-a621-fd688e4daa48
+2026-09-17T05:55:10.8668251Z Adding to the cache ...
+2026-09-17T05:55:16.9694719Z Successfully cached go to /opt/hostedtoolcache/go/1.27.1/x64
+2026-09-17T05:55:16.9697416Z Added go to the path
+2026-09-17T05:55:16.9700079Z Successfully set up Go version 1.27.1
+2026-09-17T05:55:16.9975204Z go version go1.27.1 linux/amd64
+2026-09-17T05:55:16.9975531Z 
+2026-09-17T05:55:16.9975900Z ##[group]go env
+2026-09-17T05:55:17.1379315Z AR='ar'
+2026-09-17T05:55:17.1379654Z CC='gcc'
+2026-09-17T05:55:17.1380036Z CGO_CFLAGS='-O2 -g'
+2026-09-17T05:55:17.1380371Z CGO_CPPFLAGS=''
+2026-09-17T05:55:17.1380625Z CGO_CXXFLAGS='-O2 -g'
+2026-09-17T05:55:17.1380902Z CGO_ENABLED='1'
+2026-09-17T05:55:17.1381473Z CGO_FFLAGS='-O2 -g'
+2026-09-17T05:55:17.1382160Z CGO_LDFLAGS='-O2 -g'
+2026-09-17T05:55:17.1388802Z CXX='g++'
+2026-09-17T05:55:17.1389429Z GCCGO='gccgo'
+2026-09-17T05:55:17.1389809Z GO111MODULE=''
+2026-09-17T05:55:17.1390158Z GOAMD64='v1'
+2026-09-17T05:55:17.1390569Z GOARCH='amd64'
+2026-09-17T05:55:17.1390916Z GOAUTH='netrc'
+2026-09-17T05:55:17.1391565Z GOBIN='/home/runner/go/bin'
+2026-09-17T05:55:17.1392037Z GOCACHE='/home/runner/.cache/go-build'
+2026-09-17T05:55:17.1392528Z GOCACHEPROG=''
+2026-09-17T05:55:17.1392867Z GODEBUG=''
+2026-09-17T05:55:17.1393257Z GOENV='/home/runner/.config/go/env'
+2026-09-17T05:55:17.1393723Z GOEXE=''
+2026-09-17T05:55:17.1394073Z GOEXPERIMENT=''
+2026-09-17T05:55:17.1394469Z GOFIPS140='off'
+2026-09-17T05:55:17.1394799Z GOFLAGS=''
+2026-09-17T05:55:17.1395972Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build1957610921=/tmp/go-build -gno-record-gcc-switches'
+2026-09-17T05:55:17.1396718Z GOHOSTARCH='amd64'
+2026-09-17T05:55:17.1396939Z GOHOSTOS='linux'
+2026-09-17T05:55:17.1397147Z GOINSECURE=''
+2026-09-17T05:55:17.1397412Z GOMOD='/home/runner/work/Zevune/Zevune/go.mod'
+2026-09-17T05:55:17.1397739Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-09-17T05:55:17.1398032Z GONOPROXY=''
+2026-09-17T05:55:17.1398229Z GONOSUMDB=''
+2026-09-17T05:55:17.1398418Z GOOS='linux'
+2026-09-17T05:55:17.1398623Z GOPACKAGESDRIVER=''
+2026-09-17T05:55:17.1398850Z GOPATH='/home/runner/go'
+2026-09-17T05:55:17.1399365Z GOPRIVATE=''
+2026-09-17T05:55:17.1399670Z GOPROXY='https://proxy.golang.org,direct'
+2026-09-17T05:55:17.1400011Z GOROOT='/opt/hostedtoolcache/go/1.27.1/x64'
+2026-09-17T05:55:17.1400313Z GOSUMDB='sum.golang.org'
+2026-09-17T05:55:17.1400569Z GOTELEMETRY='local'
+2026-09-17T05:55:17.1400835Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-09-17T05:55:17.1401551Z GOTMPDIR=''
+2026-09-17T05:55:17.1401812Z GOTOOLCHAIN='local'
+2026-09-17T05:55:17.1402156Z GOTOOLDIR='/opt/hostedtoolcache/go/1.27.1/x64/pkg/tool/linux_amd64'
+2026-09-17T05:55:17.1402525Z GOVCS=''
+2026-09-17T05:55:17.1402728Z GOVERSION='go1.27.1'
+2026-09-17T05:55:17.1402948Z GOWORK=''
+2026-09-17T05:55:17.1403158Z PKG_CONFIG='pkg-config'
+2026-09-17T05:55:17.1403312Z 
+2026-09-17T05:55:17.1403670Z ##[endgroup]
+2026-09-17T05:55:17.1615371Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+2026-09-17T05:55:17.1615994Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt[0m
+2026-09-17T05:55:17.1657972Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:17.1658335Z env:
+2026-09-17T05:55:17.1658537Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:17.1658767Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:17.1659099Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:17.1659673Z   GOTOOLCHAIN: local
+2026-09-17T05:55:17.1659889Z ##[endgroup]
+2026-09-17T05:55:17.2253714Z info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+2026-09-17T05:55:17.3527776Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T05:55:17.3528245Z info: downloading 4 components
+2026-09-17T05:55:24.9177736Z 
+2026-09-17T05:55:24.9249251Z   1.98.1-x86_64-unknown-linux-gnu installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T05:55:24.9293505Z 
+2026-09-17T05:55:24.9324930Z ##[group]Run python -m unittest discover -s scripts/tests -p 'test_payment_resources*.py' -v
+2026-09-17T05:55:24.9325598Z [36;1mpython -m unittest discover -s scripts/tests -p 'test_payment_resources*.py' -v[0m
+2026-09-17T05:55:24.9362704Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:24.9363039Z env:
+2026-09-17T05:55:24.9363227Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:24.9363452Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:24.9363774Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:24.9364145Z   GOTOOLCHAIN: local
+2026-09-17T05:55:24.9364349Z ##[endgroup]
+2026-09-17T05:55:25.1660737Z test_memory_requires_exact_kib_fields_and_positive_consistent_values (test_payment_resources.LinuxParserTests.test_memory_requires_exact_kib_fields_and_positive_consistent_values) ... ok
+2026-09-17T05:55:25.1679276Z test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... ok
+2026-09-17T05:55:25.1681655Z test_proc_stat_parentheses_identity_and_creation (test_payment_resources.LinuxParserTests.test_proc_stat_parentheses_identity_and_creation) ... ok
+2026-09-17T05:55:25.1869996Z test_direct_child_parent_identity_exit_and_current_rss (test_payment_resources.NativeMemoryTests.test_direct_child_parent_identity_exit_and_current_rss) ... ok
+2026-09-17T05:55:25.1875846Z test_live_self_sample_uses_real_os_counters (test_payment_resources.NativeMemoryTests.test_live_self_sample_uses_real_os_counters) ... ok
+2026-09-17T05:55:25.1877773Z test_unsupported_platform_is_failure_not_skip_or_zero (test_payment_resources.NativeMemoryTests.test_unsupported_platform_is_failure_not_skip_or_zero) ... ok
+2026-09-17T05:55:25.1898394Z test_budget_failure_preserves_valid_sample_and_sends_negative_ack (test_payment_resources.PersistenceAndCollectorTests.test_budget_failure_preserves_valid_sample_and_sends_negative_ack) ... ok
+2026-09-17T05:55:25.1947324Z test_collector_initialization_failure_reaps_started_coordinator (test_payment_resources.PersistenceAndCollectorTests.test_collector_initialization_failure_reaps_started_coordinator) ... ok
+2026-09-17T05:55:25.6768158Z test_complete_evidence_requires_all_children_stopped_and_immutable_files (test_payment_resources.PersistenceAndCollectorTests.test_complete_evidence_requires_all_children_stopped_and_immutable_files) ... ok
+2026-09-17T05:55:25.6804058Z test_evidence_reservation_never_overwrites_user_file (test_payment_resources.PersistenceAndCollectorTests.test_evidence_reservation_never_overwrites_user_file) ... ok
+2026-09-17T05:55:25.6842502Z test_metadata_failure_still_saves_start_and_failure_without_exception_text (test_payment_resources.PersistenceAndCollectorTests.test_metadata_failure_still_saves_start_and_failure_without_exception_text) ... ok
+2026-09-17T05:55:25.6942483Z test_pid_change_parent_failure_and_missing_metric_cannot_be_success (test_payment_resources.PersistenceAndCollectorTests.test_pid_change_parent_failure_and_missing_metric_cannot_be_success) ... ok
+2026-09-17T05:55:26.0196758Z test_progress_failure_keeps_confirmed_count_and_uncertain_commit (test_payment_resources.PersistenceAndCollectorTests.test_progress_failure_keeps_confirmed_count_and_uncertain_commit) ... ok
+2026-09-17T05:55:26.0270537Z test_final_result_does_not_accept_empty_tests_missing_checks_or_edited_timings (test_payment_resources.ProgressAndResultTests.test_final_result_does_not_accept_empty_tests_missing_checks_or_edited_timings) ... ok
+2026-09-17T05:55:26.0296984Z test_full_operation_sequence_is_paired_and_final_result_matches (test_payment_resources.ProgressAndResultTests.test_full_operation_sequence_is_paired_and_final_result_matches) ... ok
+2026-09-17T05:55:26.0308968Z test_progress_completion_must_match_operation_payment_and_commit_count (test_payment_resources.ProgressAndResultTests.test_progress_completion_must_match_operation_payment_and_commit_count) ... ok
+2026-09-17T05:55:26.0322880Z test_unfinished_operation_has_no_fabricated_duration (test_payment_resources.ProgressAndResultTests.test_unfinished_operation_has_no_fabricated_duration) ... ok
+2026-09-17T05:55:26.0328470Z test_all_nine_exact_checkpoints_and_pending_wallet_record (test_payment_resources.ResourceSchemaTests.test_all_nine_exact_checkpoints_and_pending_wallet_record) ... ok
+2026-09-17T05:55:26.0330617Z test_budget_keeps_valid_over_budget_measurement (test_payment_resources.ResourceSchemaTests.test_budget_keeps_valid_over_budget_measurement) ... ok
+2026-09-17T05:55:26.0333068Z test_json_duplicates_nonfinite_scalars_and_oversize_rejected (test_payment_resources.ResourceSchemaTests.test_json_duplicates_nonfinite_scalars_and_oversize_rejected) ... ok
+2026-09-17T05:55:26.0335326Z test_unknown_and_missing_fields_cannot_enter_evidence (test_payment_resources.ResourceSchemaTests.test_unknown_and_missing_fields_cannot_enter_evidence) ... ok
+2026-09-17T05:55:26.0337628Z test_unsigned_numbers_reject_booleans_floats_and_out_of_bounds (test_payment_resources.ResourceSchemaTests.test_unsigned_numbers_reject_booleans_floats_and_out_of_bounds) ... ok
+2026-09-17T05:55:26.0339961Z test_wallet_and_capacity_counts_are_checked_not_just_types (test_payment_resources.ResourceSchemaTests.test_wallet_and_capacity_counts_are_checked_not_just_types) ... ok
+2026-09-17T05:55:26.0342514Z test_wrong_phase_height_generation_or_pid_cannot_claim_checkpoint (test_payment_resources.ResourceSchemaTests.test_wrong_phase_height_generation_or_pid_cannot_claim_checkpoint) ... ok
+2026-09-17T05:55:26.3395415Z test_bad_order_is_rejected_before_copying_it_over_a_valid_prefix (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_bad_order_is_rejected_before_copying_it_over_a_valid_prefix) ... ok
+2026-09-17T05:55:26.3403637Z test_cleanup_does_not_restart_its_existing_deadline (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_cleanup_does_not_restart_its_existing_deadline) ... ok
+2026-09-17T05:55:26.6598120Z test_commit_completion_changes_confirmed_count_without_inventing_apply_success (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_commit_completion_changes_confirmed_count_without_inventing_apply_success) ... ok
+2026-09-17T05:55:27.0819838Z test_complete_checkpoints_without_result_file_are_still_failure (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_complete_checkpoints_without_result_file_are_still_failure) ... ok
+2026-09-17T05:55:27.5047727Z test_numeric_measurement_complete_cannot_stand_in_for_true (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_numeric_measurement_complete_cannot_stand_in_for_true) ... ok
+2026-09-17T05:55:27.5080468Z test_report_save_failure_does_not_acknowledge_success (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_report_save_failure_does_not_acknowledge_success) ... ok
+2026-09-17T05:55:27.5169970Z test_same_height_recovery_cannot_change_capacity (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_same_height_recovery_cannot_change_capacity) ... ok
+2026-09-17T05:55:27.5229946Z test_second_role_over_budget_retains_both_samples_in_real_report (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_second_role_over_budget_retains_both_samples_in_real_report) ... ok
+2026-09-17T05:55:27.5256859Z test_unvalidated_fields_never_enter_failure_report_or_ack (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_unvalidated_fields_never_enter_failure_report_or_ack) ... ok
+2026-09-17T05:55:27.5306196Z test_zero_exit_without_checkpoints_is_not_successful_acceptance (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_zero_exit_without_checkpoints_is_not_successful_acceptance) ... ok
+2026-09-17T05:55:27.5602344Z test_close_disk_check_and_outbox_boundaries_cannot_move (test_payment_resources_evidence.EvidenceCompletenessTests.test_close_disk_check_and_outbox_boundaries_cannot_move) ... ok
+2026-09-17T05:55:27.5687475Z test_every_one_of_nine_checkpoints_is_required (test_payment_resources_evidence.EvidenceCompletenessTests.test_every_one_of_nine_checkpoints_is_required) ... ok
+2026-09-17T05:55:27.5709650Z test_fixture_has_exact_fixed_go_operation_contract (test_payment_resources_evidence.EvidenceCompletenessTests.test_fixture_has_exact_fixed_go_operation_contract) ... ok
+2026-09-17T05:55:27.5959654Z test_missing_or_repeated_recovery_pair_cannot_claim_complete_recovery (test_payment_resources_evidence.EvidenceCompletenessTests.test_missing_or_repeated_recovery_pair_cannot_claim_complete_recovery) ... ok
+2026-09-17T05:55:27.5967522Z test_recovery_cannot_be_recorded_at_a_different_committed_height (test_payment_resources_evidence.EvidenceCompletenessTests.test_recovery_cannot_be_recorded_at_a_different_committed_height) ... ok
+2026-09-17T05:55:27.6109257Z test_removing_whole_core_pair_cannot_be_hidden_by_matching_timings (test_payment_resources_evidence.EvidenceCompletenessTests.test_removing_whole_core_pair_cannot_be_hidden_by_matching_timings) ... ok
+2026-09-17T05:55:27.6140820Z test_reordering_complete_core_pairs_is_not_a_valid_timing_result (test_payment_resources_evidence.EvidenceCompletenessTests.test_reordering_complete_core_pairs_is_not_a_valid_timing_result) ... ok
+2026-09-17T05:55:27.6184766Z test_review_c1_wallet_recovery_after_new_payment_and_outbox_is_rejected (test_payment_resources_evidence.EvidenceCompletenessTests.test_review_c1_wallet_recovery_after_new_payment_and_outbox_is_rejected) ... ok
+2026-09-17T05:55:27.6213499Z test_review_c1_worker_reopen_before_scenario_start_is_rejected (test_payment_resources_evidence.EvidenceCompletenessTests.test_review_c1_worker_reopen_before_scenario_start_is_rejected) ... ok
+2026-09-17T05:55:27.6648605Z test_valid_partial_recovery_prefixes_remain_incomplete_without_fake_duration (test_payment_resources_evidence.EvidenceCompletenessTests.test_valid_partial_recovery_prefixes_remain_incomplete_without_fake_duration) ... ok
+2026-09-17T05:55:27.6696411Z test_all_io_stages_produce_only_bounded_public_diagnostics (test_payment_resources_windows.PublicReadDiagnosticTests.test_all_io_stages_produce_only_bounded_public_diagnostics) ... ok
+2026-09-17T05:55:27.6699600Z test_known_protocol_positions_and_os_codes_survive_without_private_context (test_payment_resources_windows.PublicReadDiagnosticTests.test_known_protocol_positions_and_os_codes_survive_without_private_context) ... ok
+2026-09-17T05:55:27.6707605Z test_read_error_is_preserved_when_closing_the_same_stream_also_fails (test_payment_resources_windows.PublicReadDiagnosticTests.test_read_error_is_preserved_when_closing_the_same_stream_also_fails) ... ok
+2026-09-17T05:55:27.6712942Z test_unknown_names_and_invalid_diagnostic_scalars_are_not_serialized (test_payment_resources_windows.PublicReadDiagnosticTests.test_unknown_names_and_invalid_diagnostic_scalars_are_not_serialized) ... ok
+2026-09-17T05:55:27.6727460Z test_failed_crt_handle_transfer_closes_only_the_owned_windows_handle (test_payment_resources_windows.WindowsHandleOwnershipTests.test_failed_crt_handle_transfer_closes_only_the_owned_windows_handle) ... ok
+2026-09-17T05:55:27.6736748Z test_failed_stream_creation_closes_crt_descriptor_not_raw_handle_twice (test_payment_resources_windows.WindowsHandleOwnershipTests.test_failed_stream_creation_closes_crt_descriptor_not_raw_handle_twice) ... ok
+2026-09-17T05:55:27.6738993Z test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'
+2026-09-17T05:55:27.6741678Z test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'
+2026-09-17T05:55:27.6743982Z test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'
+2026-09-17T05:55:27.6745130Z 
+2026-09-17T05:55:27.6745337Z ----------------------------------------------------------------------
+2026-09-17T05:55:27.6745766Z Ran 53 tests in 2.508s
+2026-09-17T05:55:27.6745922Z 
+2026-09-17T05:55:27.6746041Z OK (skipped=3)
+2026-09-17T05:55:27.6914205Z ##[group]Run test -z "$(gofmt -l internal/poolbridge)"
+2026-09-17T05:55:27.6914656Z [36;1mtest -z "$(gofmt -l internal/poolbridge)"[0m
+2026-09-17T05:55:27.6915135Z [36;1mcargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check[0m
+2026-09-17T05:55:27.6952032Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:27.6952370Z env:
+2026-09-17T05:55:27.6952559Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:27.6952778Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:27.6953108Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:27.6953479Z   GOTOOLCHAIN: local
+2026-09-17T05:55:27.6953689Z ##[endgroup]
+2026-09-17T05:55:27.9161587Z ##[group]Run python - <<'PY'
+2026-09-17T05:55:27.9161931Z [36;1mpython - <<'PY'[0m
+2026-09-17T05:55:27.9162184Z [36;1mimport os, pathlib, subprocess[0m
+2026-09-17T05:55:27.9162504Z [36;1mdirectory = pathlib.Path('.ci-build')[0m
+2026-09-17T05:55:27.9162832Z [36;1mdirectory.mkdir(exist_ok=True)[0m
+2026-09-17T05:55:27.9163218Z [36;1mname = 'payment-resources.test' + ('.exe' if os.name == 'nt' else '')[0m
+2026-09-17T05:55:27.9163765Z [36;1msubprocess.run(['go', 'test', '-c', '-mod=readonly', '-tags=payment_resource_e2e',[0m
+2026-09-17T05:55:27.9164279Z [36;1m                '-o', str(directory / name), './internal/poolbridge'], check=True)[0m
+2026-09-17T05:55:27.9164765Z [36;1msubprocess.run(['go', 'vet', '-mod=readonly', '-tags=payment_resource_e2e',[0m
+2026-09-17T05:55:27.9165191Z [36;1m                './internal/poolbridge'], check=True)[0m
+2026-09-17T05:55:27.9165484Z [36;1mPY[0m
+2026-09-17T05:55:27.9202498Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:27.9202830Z env:
+2026-09-17T05:55:27.9203019Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:27.9203234Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:27.9203554Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:27.9203926Z   GOTOOLCHAIN: local
+2026-09-17T05:55:27.9204129Z ##[endgroup]
+2026-09-17T05:55:37.2468396Z ##[group]Run cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins
+2026-09-17T05:55:37.2469381Z [36;1mcargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins[0m
+2026-09-17T05:55:37.2505653Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:55:37.2505989Z env:
+2026-09-17T05:55:37.2506186Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:55:37.2506399Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:55:37.2506717Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:55:37.2507099Z   GOTOOLCHAIN: local
+2026-09-17T05:55:37.2507311Z ##[endgroup]
+2026-09-17T05:55:37.2884767Z     Updating crates.io index
+2026-09-17T05:55:37.4756499Z  Downloading crates ...
+2026-09-17T05:55:37.5080020Z   Downloaded base16ct v0.2.0
+2026-09-17T05:55:37.5111663Z   Downloaded aead v0.5.2
+2026-09-17T05:55:37.5236004Z   Downloaded tap v1.0.1
+2026-09-17T05:55:37.5249305Z   Downloaded arrayvec v0.7.8
+2026-09-17T05:55:37.5281877Z   Downloaded digest v0.10.7
+2026-09-17T05:55:37.5304888Z   Downloaded zeroize_derive v1.5.0
+2026-09-17T05:55:37.5336538Z   Downloaded universal-hash v0.5.1
+2026-09-17T05:55:37.5337347Z   Downloaded visibility v0.1.1
+2026-09-17T05:55:37.5345436Z   Downloaded thiserror-impl v2.0.20
+2026-09-17T05:55:37.5371989Z   Downloaded version_check v0.9.5
+2026-09-17T05:55:37.5382490Z   Downloaded wyz v0.5.1
+2026-09-17T05:55:37.5422124Z   Downloaded uint v0.9.5
+2026-09-17T05:55:37.5452158Z   Downloaded zeroize v1.9.0
+2026-09-17T05:55:37.5462487Z   Downloaded thiserror v2.0.20
+2026-09-17T05:55:37.5559952Z   Downloaded zcash_spec v0.2.1
+2026-09-17T05:55:37.5583253Z   Downloaded zip32 v0.2.1
+2026-09-17T05:55:37.5612740Z   Downloaded tracing-attributes v0.1.31
+2026-09-17T05:55:37.5660915Z   Downloaded tracing-core v0.1.36
+2026-09-17T05:55:37.5689353Z   Downloaded unicode-ident v1.0.24
+2026-09-17T05:55:37.5719614Z   Downloaded zcash_note_encryption v0.4.2
+2026-09-17T05:55:37.5734091Z   Downloaded typenum v1.20.1
+2026-09-17T05:55:37.5770740Z   Downloaded syn v3.0.5
+2026-09-17T05:55:37.5880558Z   Downloaded const-crc32-nostd v1.3.1
+2026-09-17T05:55:37.5888054Z   Downloaded cpufeatures v0.2.17
+2026-09-17T05:55:37.5902376Z   Downloaded crunchy v0.2.4
+2026-09-17T05:55:37.5910939Z   Downloaded document-features v0.2.12
+2026-09-17T05:55:37.5924146Z   Downloaded embedded-io v0.6.1
+2026-09-17T05:55:37.5936623Z   Downloaded embedded-io v0.4.0
+2026-09-17T05:55:37.5953950Z   Downloaded crypto-common v0.1.7
+2026-09-17T05:55:37.5963349Z   Downloaded derive-getters v0.5.0
+2026-09-17T05:55:37.5991550Z   Downloaded lazy_static v1.5.0
+2026-09-17T05:55:37.6009602Z   Downloaded rustc_version v0.4.1
+2026-09-17T05:55:37.6023108Z   Downloaded zerocopy v0.8.57
+2026-09-17T05:55:37.6244087Z   Downloaded getset v0.1.7
+2026-09-17T05:55:37.6260049Z   Downloaded generic-array v0.14.7
+2026-09-17T05:55:37.6274587Z   Downloaded funty v2.0.0
+2026-09-17T05:55:37.6282615Z   Downloaded hex v0.4.3
+2026-09-17T05:55:37.6298634Z   Downloaded inout v0.1.4
+2026-09-17T05:55:37.6310073Z   Downloaded tracing v0.1.44
+2026-09-17T05:55:37.6468229Z   Downloaded cobs v0.3.0
+2026-09-17T05:55:37.6482828Z   Downloaded memuse v0.2.2
+2026-09-17T05:55:37.6496841Z   Downloaded nonempty v0.11.0
+2026-09-17T05:55:37.6510654Z   Downloaded opaque-debug v0.3.1
+2026-09-17T05:55:37.6520549Z   Downloaded rand_chacha v0.3.1
+2026-09-17T05:55:37.6532236Z   Downloaded subtle v2.6.1
+2026-09-17T05:55:37.6545420Z   Downloaded halo2_legacy_pdqsort v0.1.0
+2026-09-17T05:55:37.6556900Z   Downloaded hash32 v0.2.1
+2026-09-17T05:55:37.6571597Z   Downloaded serdect v0.2.0
+2026-09-17T05:55:37.6586042Z   Downloaded maybe-rayon v0.1.1
+2026-09-17T05:55:37.6594575Z   Downloaded stable_deref_trait v1.2.1
+2026-09-17T05:55:37.6603657Z   Downloaded block-buffer v0.10.4
+2026-09-17T05:55:37.6614428Z   Downloaded argon2 v0.5.3
+2026-09-17T05:55:37.6630564Z   Downloaded autocfg v1.5.1
+2026-09-17T05:55:37.6649989Z   Downloaded scopeguard v1.2.0
+2026-09-17T05:55:37.6662752Z   Downloaded constant_time_eq v0.4.2
+2026-09-17T05:55:37.6683127Z   Downloaded fpe v0.6.1
+2026-09-17T05:55:37.6703250Z   Downloaded corez v0.1.1
+2026-09-17T05:55:37.6721096Z   Downloaded ff v0.13.1
+2026-09-17T05:55:37.6736485Z   Downloaded base64ct v1.8.3
+2026-09-17T05:55:37.6762441Z   Downloaded frost-rerandomized v3.0.0
+2026-09-17T05:55:37.6772413Z   Downloaded quote v1.0.47
+2026-09-17T05:55:37.6799974Z   Downloaded ppv-lite86 v0.2.21
+2026-09-17T05:55:37.6813431Z   Downloaded static_assertions v1.1.0
+2026-09-17T05:55:37.6827754Z   Downloaded either v1.18.0
+2026-09-17T05:55:37.6843221Z   Downloaded incrementalmerkletree v0.8.1
+2026-09-17T05:55:37.6855932Z   Downloaded lock_api v0.4.14
+2026-09-17T05:55:37.6868711Z   Downloaded cbc v0.1.2
+2026-09-17T05:55:37.6884299Z   Downloaded rand_core v0.6.4
+2026-09-17T05:55:37.6897903Z   Downloaded cfg-if v1.0.4
+2026-09-17T05:55:37.6911337Z   Downloaded chacha20 v0.9.1
+2026-09-17T05:55:37.6930060Z   Downloaded cipher v0.4.4
+2026-09-17T05:55:37.6945493Z   Downloaded crossbeam-deque v0.8.8
+2026-09-17T05:55:37.6960517Z   Downloaded sha2 v0.10.9
+2026-09-17T05:55:37.6987002Z   Downloaded byteorder v1.5.0
+2026-09-17T05:55:37.7003822Z   Downloaded num-integer v0.1.47
+2026-09-17T05:55:37.7019909Z   Downloaded password-hash v0.5.0
+2026-09-17T05:55:37.7038153Z   Downloaded pin-project-lite v0.2.17
+2026-09-17T05:55:37.7098434Z   Downloaded radium v0.7.0
+2026-09-17T05:55:37.7108987Z   Downloaded crossbeam-utils v0.8.23
+2026-09-17T05:55:37.7136934Z   Downloaded semver v1.0.28
+2026-09-17T05:55:37.7160550Z   Downloaded spin v0.9.9
+2026-09-17T05:55:37.7184310Z   Downloaded getrandom v0.2.17
+2026-09-17T05:55:37.7214213Z   Downloaded litrs v1.0.0
+2026-09-17T05:55:37.7244607Z   Downloaded postcard v1.1.3
+2026-09-17T05:55:37.7268012Z   Downloaded group v0.13.0
+2026-09-17T05:55:37.7283872Z   Downloaded once_cell v1.21.4
+2026-09-17T05:55:37.7309733Z   Downloaded poly1305 v0.8.0
+2026-09-17T05:55:37.7334684Z   Downloaded blake2b_simd v1.0.5
+2026-09-17T05:55:37.7348858Z   Downloaded crossbeam-epoch v0.9.21
+2026-09-17T05:55:37.7373821Z   Downloaded serde_core v1.0.229
+2026-09-17T05:55:37.7401999Z   Downloaded blake2 v0.10.6
+2026-09-17T05:55:37.7427992Z   Downloaded halo2_poseidon v0.1.0
+2026-09-17T05:55:37.7442861Z   Downloaded num-traits v0.2.19
+2026-09-17T05:55:37.7469145Z   Downloaded jubjub v0.10.0
+2026-09-17T05:55:37.7502528Z   Downloaded proc-macro2 v1.0.107
+2026-09-17T05:55:37.7532489Z   Downloaded bech32 v0.11.1
+2026-09-17T05:55:37.7564008Z   Downloaded chacha20poly1305 v0.10.1
+2026-09-17T05:55:37.7580524Z   Downloaded rayon-core v1.13.0
+2026-09-17T05:55:37.7618475Z   Downloaded heapless v0.7.17
+2026-09-17T05:55:37.7656300Z   Downloaded indexmap v1.9.3
+2026-09-17T05:55:37.7688349Z   Downloaded serde_derive v1.0.229
+2026-09-17T05:55:37.7719749Z   Downloaded serde v1.0.229
+2026-09-17T05:55:37.7754560Z   Downloaded frost-core v3.0.0
+2026-09-17T05:55:37.7788092Z   Downloaded aes v0.8.4
+2026-09-17T05:55:37.7822818Z   Downloaded rand v0.8.5
+2026-09-17T05:55:37.7857354Z   Downloaded hashbrown v0.12.3
+2026-09-17T05:55:37.7895123Z   Downloaded reddsa v0.5.2
+2026-09-17T05:55:37.7947231Z   Downloaded sinsemilla v0.1.0
+2026-09-17T05:55:37.7969892Z   Downloaded num-bigint v0.4.8
+2026-09-17T05:55:37.8017964Z   Downloaded itertools v0.14.0
+2026-09-17T05:55:37.8089409Z   Downloaded libm v0.2.16
+2026-09-17T05:55:37.8201081Z   Downloaded rayon v1.12.0
+2026-09-17T05:55:37.8298424Z   Downloaded halo2_proofs v0.3.5
+2026-09-17T05:55:37.8377056Z   Downloaded bitvec v1.1.1
+2026-09-17T05:55:37.8549563Z   Downloaded syn v2.0.119
+2026-09-17T05:55:37.8656184Z   Downloaded halo2_gadgets v0.5.0
+2026-09-17T05:55:37.8772937Z   Downloaded pasta_curves v0.5.2
+2026-09-17T05:55:37.8847540Z   Downloaded bls12_381 v0.8.0
+2026-09-17T05:55:37.8908124Z   Downloaded orchard v0.15.5
+2026-09-17T05:55:37.9084550Z   Downloaded libc v0.2.189
+2026-09-17T05:55:37.9887564Z    Compiling libc v0.2.189
+2026-09-17T05:55:37.9888212Z    Compiling cfg-if v1.0.4
+2026-09-17T05:55:38.0074641Z    Compiling proc-macro2 v1.0.107
+2026-09-17T05:55:38.1703253Z    Compiling quote v1.0.47
+2026-09-17T05:55:38.2434099Z    Compiling unicode-ident v1.0.24
+2026-09-17T05:55:38.7356720Z    Compiling getrandom v0.2.17
+2026-09-17T05:55:38.7489634Z    Compiling subtle v2.6.1
+2026-09-17T05:55:38.8141539Z    Compiling rand_core v0.6.4
+2026-09-17T05:55:38.8562375Z    Compiling version_check v0.9.5
+2026-09-17T05:55:38.9369563Z    Compiling typenum v1.20.1
+2026-09-17T05:55:38.9902348Z    Compiling generic-array v0.14.7
+2026-09-17T05:55:39.0457086Z    Compiling syn v2.0.119
+2026-09-17T05:55:39.7517545Z    Compiling crypto-common v0.1.7
+2026-09-17T05:55:39.7969950Z    Compiling radium v0.7.0
+2026-09-17T05:55:39.8683085Z    Compiling tap v1.0.1
+2026-09-17T05:55:39.9033544Z    Compiling wyz v0.5.1
+2026-09-17T05:55:40.1088027Z    Compiling zerocopy v0.8.57
+2026-09-17T05:55:40.2370695Z    Compiling funty v2.0.0
+2026-09-17T05:55:40.9697230Z    Compiling autocfg v1.5.1
+2026-09-17T05:55:41.1669010Z    Compiling bitvec v1.1.1
+2026-09-17T05:55:42.0402377Z    Compiling zeroize_derive v1.5.0
+2026-09-17T05:55:42.9502692Z    Compiling ff v0.13.1
+2026-09-17T05:55:43.0099449Z    Compiling zeroize v1.9.0
+2026-09-17T05:55:43.0891818Z    Compiling crossbeam-utils v0.8.23
+2026-09-17T05:55:43.1722791Z    Compiling arrayvec v0.7.8
+2026-09-17T05:55:43.3038506Z    Compiling memuse v0.2.2
+2026-09-17T05:55:43.4059231Z    Compiling constant_time_eq v0.4.2
+2026-09-17T05:55:43.4821352Z    Compiling blake2b_simd v1.0.5
+2026-09-17T05:55:44.7886857Z    Compiling ppv-lite86 v0.2.21
+2026-09-17T05:55:44.9938312Z    Compiling crossbeam-epoch v0.9.21
+2026-09-17T05:55:45.0656541Z    Compiling rand_chacha v0.3.1
+2026-09-17T05:55:45.4401525Z    Compiling group v0.13.0
+2026-09-17T05:55:45.4610962Z    Compiling inout v0.1.4
+2026-09-17T05:55:45.5093173Z    Compiling spin v0.9.9
+2026-09-17T05:55:45.5346556Z    Compiling cpufeatures v0.2.17
+2026-09-17T05:55:45.5538390Z    Compiling static_assertions v1.1.0
+2026-09-17T05:55:45.5568234Z    Compiling crossbeam-deque v0.8.8
+2026-09-17T05:55:45.5736583Z    Compiling lazy_static v1.5.0
+2026-09-17T05:55:45.5940849Z    Compiling cipher v0.4.4
+2026-09-17T05:55:45.7235824Z    Compiling rand v0.8.5
+2026-09-17T05:55:45.8751653Z    Compiling rayon-core v1.13.0
+2026-09-17T05:55:46.0293668Z    Compiling num-traits v0.2.19
+2026-09-17T05:55:46.0770366Z    Compiling syn v3.0.5
+2026-09-17T05:55:46.2353734Z    Compiling pasta_curves v0.5.2
+2026-09-17T05:55:47.5144997Z    Compiling either v1.18.0
+2026-09-17T05:55:48.8113881Z    Compiling indexmap v1.9.3
+2026-09-17T05:55:48.8589450Z    Compiling once_cell v1.21.4
+2026-09-17T05:55:48.9715589Z    Compiling serde_core v1.0.229
+2026-09-17T05:55:49.0601652Z    Compiling crunchy v0.2.4
+2026-09-17T05:55:49.1435310Z    Compiling tracing-core v0.1.36
+2026-09-17T05:55:49.8158137Z    Compiling rayon v1.12.0
+2026-09-17T05:55:52.0123301Z    Compiling tracing-attributes v0.1.31
+2026-09-17T05:55:52.6547283Z    Compiling universal-hash v0.5.1
+2026-09-17T05:55:52.6998277Z    Compiling block-buffer v0.10.4
+2026-09-17T05:55:52.7497376Z    Compiling serde v1.0.229
+2026-09-17T05:55:52.8388263Z    Compiling hashbrown v0.12.3
+2026-09-17T05:55:53.2047863Z    Compiling opaque-debug v0.3.1
+2026-09-17T05:55:53.2229913Z    Compiling pin-project-lite v0.2.17
+2026-09-17T05:55:53.2478595Z    Compiling thiserror v2.0.20
+2026-09-17T05:55:53.3544030Z    Compiling hex v0.4.3
+2026-09-17T05:55:53.5050617Z    Compiling libm v0.2.16
+2026-09-17T05:55:53.6031980Z    Compiling byteorder v1.5.0
+2026-09-17T05:55:53.7635972Z    Compiling tracing v0.1.44
+2026-09-17T05:55:53.9564285Z    Compiling poly1305 v0.8.0
+2026-09-17T05:55:54.6821505Z    Compiling digest v0.10.7
+2026-09-17T05:55:54.8009634Z    Compiling num-integer v0.1.47
+2026-09-17T05:55:55.1323440Z    Compiling maybe-rayon v0.1.1
+2026-09-17T05:55:56.7499424Z    Compiling thiserror-impl v2.0.20
+2026-09-17T05:55:57.4191311Z    Compiling serde_derive v1.0.229
+2026-09-17T05:55:59.2400785Z    Compiling chacha20 v0.9.1
+2026-09-17T05:55:59.3513927Z    Compiling bls12_381 v0.8.0
+2026-09-17T05:55:59.6298372Z    Compiling aead v0.5.2
+2026-09-17T05:55:59.6964527Z    Compiling halo2_legacy_pdqsort v0.1.0
+2026-09-17T05:55:59.7605633Z    Compiling halo2_proofs v0.3.5
+2026-09-17T05:56:00.5994052Z    Compiling chacha20poly1305 v0.10.1
+2026-09-17T05:56:00.6460049Z    Compiling jubjub v0.10.0
+2026-09-17T05:56:03.0713059Z    Compiling uint v0.9.5
+2026-09-17T05:56:03.1238937Z    Compiling num-bigint v0.4.8
+2026-09-17T05:56:05.1165421Z    Compiling halo2_poseidon v0.1.0
+2026-09-17T05:56:05.5911626Z    Compiling sinsemilla v0.1.0
+2026-09-17T05:56:06.3967751Z    Compiling cbc v0.1.2
+2026-09-17T05:56:06.4496089Z    Compiling zcash_spec v0.2.1
+2026-09-17T05:56:06.4915563Z    Compiling base64ct v1.8.3
+2026-09-17T05:56:06.6583928Z    Compiling bech32 v0.11.1
+2026-09-17T05:56:06.7800478Z    Compiling halo2_gadgets v0.5.0
+2026-09-17T05:56:06.9605079Z    Compiling zip32 v0.2.1
+2026-09-17T05:56:07.2241208Z    Compiling password-hash v0.5.0
+2026-09-17T05:56:07.8702379Z    Compiling fpe v0.6.1
+2026-09-17T05:56:08.4564973Z    Compiling reddsa v0.5.2
+2026-09-17T05:56:08.7016564Z    Compiling zcash_note_encryption v0.4.2
+2026-09-17T05:56:08.8319343Z    Compiling blake2 v0.10.6
+2026-09-17T05:56:09.1730039Z    Compiling incrementalmerkletree v0.8.1
+2026-09-17T05:56:09.2835011Z    Compiling aes v0.8.4
+2026-09-17T05:56:09.9738776Z    Compiling getset v0.1.7
+2026-09-17T05:56:10.2429918Z    Compiling visibility v0.1.1
+2026-09-17T05:56:10.3313738Z    Compiling corez v0.1.1
+2026-09-17T05:56:10.3492872Z    Compiling nonempty v0.11.0
+2026-09-17T05:56:10.4244711Z    Compiling orchard v0.15.5
+2026-09-17T05:56:11.8363365Z    Compiling argon2 v0.5.3
+2026-09-17T05:56:12.5283824Z    Compiling sha2 v0.10.9
+2026-09-17T05:56:13.5939395Z    Compiling zevune-orchard-lab v0.1.0 (/home/runner/work/Zevune/Zevune/integration/orchard)
+2026-09-17T05:56:39.0410533Z     Finished `release` profile [optimized] target(s) in 1m 01s
+2026-09-17T05:56:39.0672080Z ##[group]Run python - <<'PY'
+2026-09-17T05:56:39.0673700Z [36;1mpython - <<'PY'[0m
+2026-09-17T05:56:39.0674223Z [36;1mimport os, pathlib, subprocess, sys[0m
+2026-09-17T05:56:39.0674808Z [36;1msuffix = '.exe' if os.name == 'nt' else ''[0m
+2026-09-17T05:56:39.0675353Z [36;1mroot = pathlib.Path.cwd()[0m
+2026-09-17T05:56:39.0675975Z [36;1mbinaries = root / 'integration/orchard/target/release'[0m
+2026-09-17T05:56:39.0676598Z [36;1msubprocess.run([[0m
+2026-09-17T05:56:39.0677143Z [36;1m    sys.executable, 'scripts/check_payment_resources.py',[0m
+2026-09-17T05:56:39.0678041Z [36;1m    '--test-executable', str(root / '.ci-build' / ('payment-resources.test' + suffix)),[0m
+2026-09-17T05:56:39.0678978Z [36;1m    '--worker', str(binaries / ('zevune-pool-worker' + suffix)),[0m
+2026-09-17T05:56:39.0679805Z [36;1m    '--scenario', str(binaries / ('zevune-funded-scenario' + suffix)),[0m
+2026-09-17T05:56:39.0680702Z [36;1m    '--output', str(root / 'ci-results/payment-resources.json'),[0m
+2026-09-17T05:56:39.0681658Z [36;1m], check=True)[0m
+2026-09-17T05:56:39.0682045Z [36;1mPY[0m
+2026-09-17T05:56:39.0735122Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:56:39.0735717Z env:
+2026-09-17T05:56:39.0736062Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:56:39.0736476Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:56:39.0737056Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:56:39.0737738Z   GOTOOLCHAIN: local
+2026-09-17T05:56:39.0738107Z ##[endgroup]
+2026-09-17T05:56:39.2285080Z === RUN   TestActivePaymentResources32AndRecovery
+2026-09-17T05:59:26.4354504Z     payment_resource_e2e_test.go:834: PAYMENT_RESOURCE_RESULT paid_blocks=33 actions_per_payment=2 commitments=68 nullifiers=66 fees=33000; complete Summary/capacity, full replay, receipt-bound wallets, exact outbox, physical frames and rejection non-mutation passed
+2026-09-17T05:59:26.4365699Z --- PASS: TestActivePaymentResources32AndRecovery (167.21s)
+2026-09-17T05:59:26.4366138Z PASS
+2026-09-17T05:59:26.5221554Z PAYMENT_RESOURCE_RESULT passed
+2026-09-17T05:59:26.5385211Z ##[group]Run git diff --exit-code
+2026-09-17T05:59:26.5385539Z [36;1mgit diff --exit-code[0m
+2026-09-17T05:59:26.5421923Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T05:59:26.5422258Z env:
+2026-09-17T05:59:26.5422460Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:59:26.5422674Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:59:26.5422987Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:59:26.5423351Z   GOTOOLCHAIN: local
+2026-09-17T05:59:26.5423551Z ##[endgroup]
+2026-09-17T05:59:26.5588769Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T05:59:26.5590154Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-09-17T05:59:26.5590530Z with:
+2026-09-17T05:59:26.5590889Z   name: payment-resources-ubuntu-latest-cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:59:26.5591722Z   path: ci-results/payment-resource-setup.json
+ci-results/payment-resources.json
+
+2026-09-17T05:59:26.5592352Z   if-no-files-found: error
+2026-09-17T05:59:26.5592578Z   retention-days: 14
+2026-09-17T05:59:26.5592783Z   compression-level: 6
+2026-09-17T05:59:26.5592990Z   overwrite: false
+2026-09-17T05:59:26.5593195Z   include-hidden-files: false
+2026-09-17T05:59:26.5593421Z env:
+2026-09-17T05:59:26.5593625Z   RAYON_NUM_THREADS: 2
+2026-09-17T05:59:26.5593831Z   CARGO_BUILD_JOBS: 2
+2026-09-17T05:59:26.5594134Z   ZEVUNE_RESOURCE_SOURCE_HEAD: cd5fe98053ce64e1acc6796dae44ec0e822c124f
+2026-09-17T05:59:26.5594497Z   GOTOOLCHAIN: local
+2026-09-17T05:59:26.5594750Z ##[endgroup]
+2026-09-17T05:59:26.7293303Z (node:6554) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T05:59:26.7294184Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T05:59:26.7346285Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-09-17T05:59:26.7349496Z The least common ancestor is /home/runner/work/Zevune/Zevune/ci-results. This will be the root directory of the artifact
+2026-09-17T05:59:26.7350710Z With the provided path, there will be 2 files uploaded
+2026-09-17T05:59:26.7357109Z Artifact name is valid!
+2026-09-17T05:59:26.7357938Z Root directory input is valid!
+2026-09-17T05:59:26.9430459Z Beginning upload of artifact content to blob storage
+2026-09-17T05:59:26.9743305Z (node:6554) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-17T05:59:27.0216557Z Uploaded bytes 9216
+2026-09-17T05:59:27.0411175Z Finished uploading artifact content to blob storage!
+2026-09-17T05:59:27.0412481Z SHA256 digest of uploaded artifact zip is 1ca963f2721b33553dea2831ce2dbb93eda18df5793a1c188f52c572e37182d1
+2026-09-17T05:59:27.0414560Z Finalizing artifact upload
+2026-09-17T05:59:27.2532747Z Artifact payment-resources-ubuntu-latest-cd5fe98053ce64e1acc6796dae44ec0e822c124f.zip successfully finalized. Artifact ID 10483180137
+2026-09-17T05:59:27.2534331Z Artifact payment-resources-ubuntu-latest-cd5fe98053ce64e1acc6796dae44ec0e822c124f has been successfully uploaded! Final size is 9216 bytes. Artifact ID is 10483180137
+2026-09-17T05:59:27.2535429Z Artifact download URL: https://github.com/youq616/Zevune/actions/runs/35187182290/artifacts/10483180137
+2026-09-17T05:59:27.2701451Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T05:59:27.2702736Z Post job cleanup.
+2026-09-17T05:59:27.3897071Z (node:6568) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T05:59:27.3897954Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T05:59:27.4070644Z Post job cleanup.
+2026-09-17T05:59:27.5002181Z [command]/usr/bin/git version
+2026-09-17T05:59:27.5040034Z git version 2.55.0
+2026-09-17T05:59:27.5107480Z Temporarily overriding HOME='/home/runner/work/_temp/4667570a-3445-409a-838c-21cd64f21581' before making global git config changes
+2026-09-17T05:59:27.5118087Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T05:59:27.5119244Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T05:59:27.5183625Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T05:59:27.5245991Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T05:59:27.5548704Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T05:59:27.5590975Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T05:59:27.6059335Z Cleaning up orphan processes
+2026-09-17T05:59:27.6381986Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

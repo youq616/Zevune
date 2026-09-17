@@ -1,0 +1,982 @@
+{
+  "schema_version": 1,
+  "document_kind": "historical_payment_resource_diagnostics",
+  "status": "archived_historical_observations_not_final_candidate_acceptance",
+  "assembled_at_utc": "2026-09-17T06:06:20.533759+00:00",
+  "assembler_task": "/root/p2_resource_docs",
+  "assembler_role": "document_author_not_independent_reviewer",
+  "repository": "youq616/Zevune",
+  "pull_request": 11,
+  "pull_request_url": "https://github.com/youq616/Zevune/pull/11",
+  "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+  "scope": "Historical candidates C1, C2 and C3 only. This is not a full CI matrix and grants no final-candidate acceptance. Later source candidates and their current or future passing results belong in the separate final evidence.",
+  "original_archive_root": "reports/p2-payment-resource-evidence",
+  "identity_and_integrity_method": "Source head/tree/parent checked against immutable local Git commit objects; synthetic tree and both parents checked against original GitHub Git-object JSON. Every referenced archived file byte count and SHA-256 was computed from its actual current bytes. Original diagnostics/reviews/reports were not rewritten.",
+  "candidates": [
+    {
+      "candidate": "C1",
+      "head": "8f0de0df649a0bae719b7ced789d8fc0857ca475",
+      "tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+      "parent": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+      "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+      "source_identity_verification": {
+        "method": "Read immutable local git commit object with git show -s --format=%H %T %P; matched all three fields.",
+        "commit_url": "https://github.com/youq616/Zevune/commit/8f0de0df649a0bae719b7ced789d8fc0857ca475"
+      },
+      "synthetic_checkout": {
+        "commit": "b829fa3f6a0acb614a79ed8195a8bd119da82b6a",
+        "tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+        "parents": [
+          "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+          "8f0de0df649a0bae719b7ced789d8fc0857ca475"
+        ],
+        "original": {
+          "original_filename": "8f0de0d-synthetic-merge-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-synthetic-merge-meta.json",
+          "bytes": 2772,
+          "sha256": "cf37be37b55bcf0b876d7810fcce7de946b7a82046f60a020e7555c29380e4a7"
+        }
+      },
+      "source_acceptance": "not_accepted",
+      "native_observation_time": "2026-09-17T05:24:14.107935+00:00",
+      "original_native_diagnostic": {
+        "original_filename": "8f0de0d-native-diagnostics.json",
+        "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-native-diagnostics.json",
+        "bytes": 4329,
+        "sha256": "cf7f75f5a32f750eb636094544b30f5d2a4f5aeeee9cb7136ec3d1cce4f0030c"
+      },
+      "resource_run": {
+        "id": 35184653050,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35184653050"
+      },
+      "independent_code_reviews": [
+        {
+          "task": "/root/p2_resource_review",
+          "verdict_as_recorded": "CHANGES_REQUESTED",
+          "blocking_finding": "R1: medium-severity full recovery chronology evidence-validation blocker",
+          "original": {
+            "original_filename": "8f0de0d-code-review.md",
+            "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-code-review.md",
+            "bytes": 11993,
+            "sha256": "348a1f8523b4f6eadfddad00802c350da67eb000ee188fb931d172397fe7be71"
+          }
+        },
+        {
+          "task": "/root/p2_resource_ci_review",
+          "verdict_as_recorded": "REQUEST_CHANGES",
+          "blocking_finding": "EVIDENCE-01: medium-severity full recovery chronology evidence-validation blocker",
+          "original": {
+            "original_filename": "8f0de0d-evidence-review.md",
+            "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-evidence-review.md",
+            "bytes": 9508,
+            "sha256": "2e4b26ca0040653f6af99029a6835761a72459e70f3db15b09f7056576ba866c"
+          }
+        }
+      ],
+      "review_failure": {
+        "actual_runtime_scope": "Real Rust/Go recovery execution order was correct; the defect was in Python acceptance of malformed chronology, not Orchard authorization or runtime payment-state mutation.",
+        "independently_reproduced_examples": [
+          "Move wallet_recover after prepare(33) and outbox_restore(33), resequence paired progress and matching result timings: incorrectly accepted.",
+          "Move worker_reopen at height32 before scenario_start at height0, resequence progress and matching timings: incorrectly accepted."
+        ],
+        "fix_requirement": "Bind every progress record to the fixed complete 181-operation/362-record schedule, preserve valid incomplete prefixes, and independently validate the full final sequence.",
+        "remediation_source": "b6df89561eb6f2a75ed6fdc630e38d366d299f44",
+        "remediation_final_reviewed_at": "9e46e03165250c6c51fa7031526d8de1bbdf27d6"
+      },
+      "native_windows": {
+        "job_id": 105084001321,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35184653050/job/105084001321",
+        "conclusion": "failure",
+        "started_at": "2026-09-17T05:19:12Z",
+        "completed_at": "2026-09-17T05:20:04Z",
+        "failed_step": "Test resource evidence validation and process measurement",
+        "failed_test": "test_cleanup_does_not_restart_its_existing_deadline",
+        "diagnostic": "AttributeError: module os does not have the attribute killpg while entering unittest.mock.patch.object",
+        "diagnostic_source": "scripts/tests/test_payment_resources_evidence.py:285",
+        "python_tests": {
+          "run": 39,
+          "errors": 1,
+          "failures": 0,
+          "skipped": 1
+        },
+        "platform_skip": "test_proc_pinned_identity_rechecks_both_sides_of_memory_read: Linux proc descriptor semantics",
+        "native_format_build_and_workload": "skipped after Python test failure",
+        "resource_report_present": false,
+        "artifact_id": 10482241079,
+        "artifact_entries": [
+          "payment-resource-setup.json"
+        ],
+        "workload_payments_or_memory_result": "not measured; no success claim",
+        "original_log": {
+          "original_filename": "8f0de0d-job-105084001321.log",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-job-105084001321.log",
+          "bytes": 34545,
+          "sha256": "5817f00333e332c20e793b9c8f31f08faefd47802ea91c894ff5f1f4fa0ac038"
+        },
+        "initial_setup": {
+          "original_filename": "8f0de0d-windows-payment-resource-setup.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-windows-payment-resource-setup.json",
+          "bytes": 466,
+          "sha256": "da00b308d6b136517e66bfd65d2d5cfb37fd292602e5bbc90a3c9f9674ef95c0"
+        },
+        "artifact_metadata": {
+          "original_filename": "8f0de0d-windows-artifact-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-windows-artifact-meta.json",
+          "bytes": 778,
+          "sha256": "5f1443b79f182c8fc402eacd34d1dd3b3e04b9bfff1412a58ba305b69cc55dca"
+        },
+        "test_count_scope": "The unittest run count includes the separately reported skipped test; an error is not a pass. No resource-workload result exists for this Windows run.",
+        "followup_fixture_fix": {
+          "commit": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+          "scope": "Synthetic Linux deadline fixture explicitly supplies absent os.killpg and signal.SIGKILL using create=True; deadline/wait/signal assertions remain and no platform skip or production budget was added."
+        },
+        "real_native_self_and_child_memory_tests": "both passed"
+      },
+      "native_ubuntu": {
+        "job_id": 105084001391,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35184653050/job/105084001391",
+        "conclusion": "success",
+        "python_tests": {
+          "run": 39,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "go_test_elapsed_seconds": 159.41,
+        "artifact_id": 10482041012,
+        "artifact_entries": [
+          "payment-resource-setup.json",
+          "payment-resources.json"
+        ],
+        "original_log": {
+          "original_filename": "8f0de0d-job-105084001391.log",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-job-105084001391.log",
+          "bytes": 51517,
+          "sha256": "f9b1b9f822d5b1cb23c5c36e9aa0c1e88ad88ef936ee8ffb32a0064b26338196"
+        },
+        "initial_setup": {
+          "original_filename": "8f0de0d-ubuntu-payment-resource-setup.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-ubuntu-payment-resource-setup.json",
+          "bytes": 456,
+          "sha256": "b4fa11bb737a8aeb0763b867183ac3f5ad25ebc4a2ef7cb48a95f0ec16bcc0a3"
+        },
+        "artifact_metadata": {
+          "original_filename": "8f0de0d-ubuntu-artifact-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-ubuntu-artifact-meta.json",
+          "bytes": 778,
+          "sha256": "758698fec524fd282431e0eaa15ab738f5821675aed43e4201cac534e36f8c0a"
+        },
+        "artifact_audit_original": {
+          "original_filename": "8f0de0d-ubuntu-independent-artifact-audit.json",
+          "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-ubuntu-independent-artifact-audit.json",
+          "bytes": 13557,
+          "sha256": "6204ab25ce3a123928de3881f240b07c3c7ea8039bc71f92c03762bc892ef089"
+        },
+        "resource_observation": {
+          "status": "passed",
+          "started_at_utc": "2026-09-17T05:12:24.587189+00:00",
+          "finished_at_utc": "2026-09-17T05:15:04.114651+00:00",
+          "metadata": {
+            "checkout_commit": "b829fa3f6a0acb614a79ed8195a8bd119da82b6a",
+            "checkout_tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+            "source_head": "8f0de0df649a0bae719b7ced789d8fc0857ca475",
+            "source_tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+            "toolchains": {
+              "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+              "go": "go version go1.27.1 linux/amd64",
+              "python": "3.12.3",
+              "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+            }
+          },
+          "platform": "linux",
+          "machine": "x86_64",
+          "go_exit_code": 0,
+          "supervised_process_elapsed_ms": 159462,
+          "supervisor_elapsed_ms": 159526,
+          "targets": {
+            "go_test_timeout_seconds": 1200,
+            "handshake_timeout_seconds": 15,
+            "paid_blocks_before_recovery": 32,
+            "paid_blocks_final": 33,
+            "resident_lifetime_peak_budget_bytes_per_process": 1073741824,
+            "roles": [
+              "worker",
+              "scenario"
+            ],
+            "scenario_response_timeout_seconds": 90,
+            "supervisor_timeout_seconds": 1230,
+            "worker_generations": 2,
+            "worker_request_timeout_seconds": 60,
+            "worker_start_timeout_seconds": 60
+          },
+          "failures": [],
+          "last_confirmed_committed_blocks": 33,
+          "unfinished_operation": null,
+          "commit_outcome_uncertain": false,
+          "cleanup": {
+            "initial_roles_registered": true,
+            "precheckpoint_child_tree_cleanup_confirmed": false,
+            "registered_children_exit_confirmed": true,
+            "registered_processes": 3,
+            "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+          },
+          "result": {
+            "actions_per_payment": 2,
+            "checks": {
+              "capacity_accounting": true,
+              "exact_outbox_recovery": true,
+              "genuine_payments": true,
+              "pending_cleared": true,
+              "pending_commit_preserved": true,
+              "physical_frames": true,
+              "post_recovery_payment": true,
+              "rejection_nonmutation": true,
+              "scenario_full_replay": true,
+              "summary_agreement": true,
+              "wallet_backup_recovery": true,
+              "wallet_file_bytes": true,
+              "wallet_records": true,
+              "worker_full_replay": true
+            },
+            "commitments": 68,
+            "complete": true,
+            "fees": 33000,
+            "height": 33,
+            "logical_bytes": 308756,
+            "nullifiers": 66,
+            "paid_blocks": 33,
+            "schema_version": 1,
+            "segments": 1,
+            "tail_bytes": 308616,
+            "wallet_bytes": [
+              1713368,
+              1680420
+            ],
+            "wallet_records": [
+              52,
+              51
+            ]
+          },
+          "raw_report": {
+            "original_filename": "8f0de0d-ubuntu-payment-resources.json",
+            "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-ubuntu-payment-resources.json",
+            "bytes": 130207,
+            "sha256": "0ab169c45dc3bcee60846c16263a207ed31483a7a0efaaaafd015578a61bfa3e"
+          },
+          "events_count": 9,
+          "event_sequence": [
+            {
+              "seq": 1,
+              "phase": "genesis",
+              "height": 0,
+              "paid_blocks": 0
+            },
+            {
+              "seq": 2,
+              "phase": "payment_8",
+              "height": 8,
+              "paid_blocks": 8
+            },
+            {
+              "seq": 3,
+              "phase": "payment_16",
+              "height": 16,
+              "paid_blocks": 16
+            },
+            {
+              "seq": 4,
+              "phase": "payment_24",
+              "height": 24,
+              "paid_blocks": 24
+            },
+            {
+              "seq": 5,
+              "phase": "payment_32",
+              "height": 32,
+              "paid_blocks": 32
+            },
+            {
+              "seq": 6,
+              "phase": "worker_reopened_32",
+              "height": 32,
+              "paid_blocks": 32
+            },
+            {
+              "seq": 7,
+              "phase": "wallet_recovered_32",
+              "height": 32,
+              "paid_blocks": 32
+            },
+            {
+              "seq": 8,
+              "phase": "pending_restored_33",
+              "height": 32,
+              "paid_blocks": 32
+            },
+            {
+              "seq": 9,
+              "phase": "complete_33",
+              "height": 33,
+              "paid_blocks": 33
+            }
+          ],
+          "memory_checkpoints_count": 9,
+          "complete_memory_checkpoints": 9,
+          "samples_count": 18,
+          "progress_records": 362,
+          "completed_operations": 181,
+          "last_completed_operation": {
+            "committed_blocks": 33,
+            "duration_ms": 2,
+            "operation": "finish",
+            "payment_index": 0,
+            "schema_version": 1,
+            "seq": 362,
+            "status": "completed"
+          },
+          "retained_memory_samples": [
+            {
+              "role": "worker",
+              "generation": 1,
+              "identity": {
+                "pid": 6521,
+                "parent_pid": 6512,
+                "creation_identity_kind": "linux_proc_starttime_ticks",
+                "creation_identity": "49065"
+              },
+              "checkpoint_sequences": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "sample_count": 5,
+              "max_observed_os_lifetime_peak_bytes": 11509760,
+              "last_observed_current_bytes": 11030528,
+              "method": "linux_proc_VmRSS_VmHWM"
+            },
+            {
+              "role": "scenario",
+              "generation": 1,
+              "identity": {
+                "pid": 6518,
+                "parent_pid": 6512,
+                "creation_identity_kind": "linux_proc_starttime_ticks",
+                "creation_identity": "48331"
+              },
+              "checkpoint_sequences": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "sample_count": 9,
+              "max_observed_os_lifetime_peak_bytes": 180658176,
+              "last_observed_current_bytes": 111374336,
+              "method": "linux_proc_VmRSS_VmHWM"
+            },
+            {
+              "role": "worker",
+              "generation": 2,
+              "identity": {
+                "pid": 6556,
+                "parent_pid": 6512,
+                "creation_identity_kind": "linux_proc_starttime_ticks",
+                "creation_identity": "62532"
+              },
+              "checkpoint_sequences": [
+                6,
+                7,
+                8,
+                9
+              ],
+              "sample_count": 4,
+              "max_observed_os_lifetime_peak_bytes": 11657216,
+              "last_observed_current_bytes": 11177984,
+              "method": "linux_proc_VmRSS_VmHWM"
+            }
+          ],
+          "completed_operation_timing_ms": {
+            "scenario_start": {
+              "count": 1,
+              "sum": 7330,
+              "min": 7330,
+              "max": 7330
+            },
+            "worker_create": {
+              "count": 1,
+              "sum": 1995,
+              "min": 1995,
+              "max": 1995
+            },
+            "wallet_sync": {
+              "count": 34,
+              "sum": 14370,
+              "min": 51,
+              "max": 594
+            },
+            "prepare": {
+              "count": 33,
+              "sum": 111624,
+              "min": 3050,
+              "max": 3756
+            },
+            "candidate": {
+              "count": 33,
+              "sum": 8422,
+              "min": 96,
+              "max": 408
+            },
+            "worker_commit": {
+              "count": 33,
+              "sum": 759,
+              "min": 10,
+              "max": 411
+            },
+            "scenario_apply": {
+              "count": 33,
+              "sum": 1270,
+              "min": 34,
+              "max": 50
+            },
+            "duplicate_rejection": {
+              "count": 5,
+              "sum": 1450,
+              "min": 134,
+              "max": 393
+            },
+            "worker_close": {
+              "count": 2,
+              "sum": 0,
+              "min": 0,
+              "max": 0
+            },
+            "disk_check": {
+              "count": 2,
+              "sum": 0,
+              "min": 0,
+              "max": 0
+            },
+            "worker_reopen": {
+              "count": 1,
+              "sum": 2957,
+              "min": 2957,
+              "max": 2957
+            },
+            "wallet_recover": {
+              "count": 1,
+              "sum": 5402,
+              "min": 5402,
+              "max": 5402
+            },
+            "outbox_restore": {
+              "count": 1,
+              "sum": 3245,
+              "min": 3245,
+              "max": 3245
+            },
+            "finish": {
+              "count": 1,
+              "sum": 2,
+              "min": 2,
+              "max": 2
+            }
+          },
+          "numeric_derivation": "Counts, maxima and operation timing summaries are recomputed from the referenced raw JSON. No missing sample, duration, result or process generation is imputed.",
+          "result_timings_total_ms": 159403
+        },
+        "acceptance_limit": "Historical native success only; C1 remained rejected by code review and failed Windows fixture validation. This result supplies no later-candidate acceptance credit."
+      },
+      "original_job_status": {
+        "original_filename": "8f0de0d-resource-final-jobs.json",
+        "archive_path": "reports/p2-payment-resource-evidence/8f0de0d-resource-final-jobs.json",
+        "bytes": 10891,
+        "sha256": "bd6f9f3ad86c798d0d84cb309915dc6c40738d3afc043d1bf3a3784f627d8e60"
+      }
+    },
+    {
+      "candidate": "C2",
+      "head": "b6df89561eb6f2a75ed6fdc630e38d366d299f44",
+      "tree": "629af7982da8ac9f2e8476308dbca86626d81490",
+      "parent": "8f0de0df649a0bae719b7ced789d8fc0857ca475",
+      "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+      "source_identity_verification": {
+        "method": "Read immutable local git commit object with git show -s --format=%H %T %P; matched all three fields.",
+        "commit_url": "https://github.com/youq616/Zevune/commit/b6df89561eb6f2a75ed6fdc630e38d366d299f44"
+      },
+      "synthetic_checkout": {
+        "commit": "dd5393aecf4d9071270ef07ef75961a8da43eb45",
+        "tree": "629af7982da8ac9f2e8476308dbca86626d81490",
+        "parents": [
+          "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+          "b6df89561eb6f2a75ed6fdc630e38d366d299f44"
+        ],
+        "original": {
+          "original_filename": "b6df895-synthetic-merge-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/b6df895-synthetic-merge-meta.json",
+          "bytes": 2772,
+          "sha256": "f97b3b6a3e01de36a5b524934d9979a0236e02273a7d23396bd6ff12312ff0ea"
+        }
+      },
+      "source_acceptance": "not_accepted",
+      "native_observation_time": "2026-09-17T05:33:15.521347+00:00",
+      "original_native_diagnostic": {
+        "original_filename": "b6df895-native-diagnostics.json",
+        "archive_path": "reports/p2-payment-resource-evidence/b6df895-native-diagnostics.json",
+        "bytes": 4922,
+        "sha256": "e7fdbdb695810c70e00d2d4472fedb7ea31f90debba39f7decf206c5a2e1a7d5"
+      },
+      "resource_run": {
+        "id": 35185484704,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35185484704"
+      },
+      "change_scope": "Order-validation correction and five additional semantic tests; the Windows missing-killpg fixture was still unfixed. This was a transition source, not an accepted stage.",
+      "independent_review_record_scope": "No standalone C2 final review verdict is included in these collected originals. C3 reviewers evaluated the C2 chronology change as part of the complete C1-to-C3 diff; that later review does not retroactively accept C2.",
+      "native_windows": {
+        "job_id": 105086527388,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35185484704/job/105086527388",
+        "conclusion": "failure",
+        "started_at": "2026-09-17T05:27:40Z",
+        "completed_at": "2026-09-17T05:28:43Z",
+        "failed_step": "Test resource evidence validation and process measurement",
+        "failed_test": "test_cleanup_does_not_restart_its_existing_deadline",
+        "diagnostic": "AttributeError: module os does not have the attribute killpg while entering unittest.mock.patch.object",
+        "diagnostic_source": "scripts/tests/test_payment_resources_evidence.py:390",
+        "python_tests": {
+          "run": 44,
+          "errors": 1,
+          "failures": 0,
+          "skipped": 1
+        },
+        "platform_skip": "test_proc_pinned_identity_rechecks_both_sides_of_memory_read: Linux proc descriptor semantics",
+        "native_format_build_and_workload": "skipped after Python test failure",
+        "resource_report_present": false,
+        "artifact_id": 10482421474,
+        "artifact_entries": [
+          "payment-resource-setup.json"
+        ],
+        "workload_payments_or_memory_result": "not measured; no success claim",
+        "original_log": {
+          "original_filename": "b6df895-job-105086527388.log",
+          "archive_path": "reports/p2-payment-resource-evidence/b6df895-job-105086527388.log",
+          "bytes": 35693,
+          "sha256": "29b40968fed386e8442fc98a78024386d26078015b1888720f1448adceb00311"
+        },
+        "initial_setup": {
+          "original_filename": "b6df895-windows-payment-resource-setup.json",
+          "archive_path": "reports/p2-payment-resource-evidence/b6df895-windows-payment-resource-setup.json",
+          "bytes": 466,
+          "sha256": "46c06c66b69e9ca8763a3d8eb8d44d4556dd3c435db1a4df6c1a3ae29e6f3e36"
+        },
+        "artifact_metadata": {
+          "original_filename": "b6df895-windows-artifact-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/b6df895-windows-artifact-meta.json",
+          "bytes": 778,
+          "sha256": "4f4c6be3d30a6a369dcc276e95b0770aa03d2f453b27beb74df82e6f236b03d1"
+        },
+        "test_count_scope": "The unittest run count includes the separately reported skipped test; an error is not a pass. No resource-workload result exists for this Windows run.",
+        "followup_fixture_fix": {
+          "commit": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+          "scope": "Synthetic Linux deadline fixture explicitly supplies absent os.killpg and signal.SIGKILL using create=True; deadline/wait/signal assertions remain and no platform skip or production budget was added."
+        }
+      },
+      "native_ubuntu_observation": {
+        "job_id": 105086527509,
+        "status": "completed",
+        "conclusion": "success",
+        "scope": "Only the recorded job completion is retained here. No C2 Ubuntu resource JSON, native timings or memory measurements are invented or used for later acceptance.",
+        "observed_at": "2026-09-17T05:33:15.521347+00:00",
+        "original_job_status": {
+          "original_filename": "b6df895-resource-jobs-status.json",
+          "archive_path": "reports/p2-payment-resource-evidence/b6df895-resource-jobs-status.json",
+          "bytes": 10891,
+          "sha256": "aa8f56c1511ed3a74dfb28a79d4ac964fe780c042a42b37de5699d2d1a1241be"
+        },
+        "resource_report_collected_in_this_history": false
+      },
+      "original_job_status": {
+        "original_filename": "b6df895-resource-jobs-status.json",
+        "archive_path": "reports/p2-payment-resource-evidence/b6df895-resource-jobs-status.json",
+        "bytes": 10891,
+        "sha256": "aa8f56c1511ed3a74dfb28a79d4ac964fe780c042a42b37de5699d2d1a1241be"
+      }
+    },
+    {
+      "candidate": "C3",
+      "head": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+      "tree": "072da4de0b426e619c80b504dedf019a0808201b",
+      "parent": "b6df89561eb6f2a75ed6fdc630e38d366d299f44",
+      "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+      "source_identity_verification": {
+        "method": "Read immutable local git commit object with git show -s --format=%H %T %P; matched all three fields.",
+        "commit_url": "https://github.com/youq616/Zevune/commit/9e46e03165250c6c51fa7031526d8de1bbdf27d6"
+      },
+      "synthetic_checkout": {
+        "commit": "f38a9a1a1d40bf650a25eea6b689c618f10d9121",
+        "tree": "072da4de0b426e619c80b504dedf019a0808201b",
+        "parents": [
+          "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+          "9e46e03165250c6c51fa7031526d8de1bbdf27d6"
+        ],
+        "original": {
+          "original_filename": "9e46e03-synthetic-merge-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/9e46e03-synthetic-merge-meta.json",
+          "bytes": 2772,
+          "sha256": "bea6081d3ff334f17b0a478398fb58a62b530d838e04cba502b057b9f54c19ff"
+        }
+      },
+      "source_acceptance": "not_accepted",
+      "native_observation_time": "2026-09-17T05:39:55.936601+00:00",
+      "original_native_diagnostic": {
+        "original_filename": "9e46e03-native-diagnostics.json",
+        "archive_path": "reports/p2-payment-resource-evidence/9e46e03-native-diagnostics.json",
+        "bytes": 7914,
+        "sha256": "18a7a0aee1865757d0e1323c346c6c7b580e965b6193ae2b0439f7e868e34ae7"
+      },
+      "resource_run": {
+        "id": 35185652786,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35185652786"
+      },
+      "independent_code_reviews": [
+        {
+          "task": "/root/p2_resource_review",
+          "verdict_as_recorded": "PASS for the independently reviewed code/design/cross-component scope",
+          "closed_finding": "R1",
+          "native_and_stage_acceptance": "separate_and_still_required",
+          "original": {
+            "original_filename": "9e46e03-code-review.md",
+            "archive_path": "reports/p2-payment-resource-evidence/9e46e03-code-review.md",
+            "bytes": 12092,
+            "sha256": "1261947e8dfa2d4918d934fb09b5b849e9fb1699a2c8c5f31bc031f3cd7a9012"
+          }
+        },
+        {
+          "task": "/root/p2_resource_ci_review",
+          "verdict_as_recorded": "PASS（本次代码与证据校验范围）",
+          "closed_finding": "EVIDENCE-01",
+          "native_and_stage_acceptance": "separate_and_still_required",
+          "original": {
+            "original_filename": "9e46e03-evidence-review.md",
+            "archive_path": "reports/p2-payment-resource-evidence/9e46e03-evidence-review.md",
+            "bytes": 7516,
+            "sha256": "75224a00940a88ce3b216cb6d15a2a7e82ecd7688cde92a4ec956e95b1d6cc0a"
+          }
+        }
+      ],
+      "change_scope": "C3 only makes the synthetic Linux cleanup deadline fixture portable to Windows after the C2 chronology correction; Rust, Go, workflow, design, production cleanup and all budgets were unchanged.",
+      "native_windows": {
+        "job_id": 105087032307,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35185652786/job/105087032307",
+        "conclusion": "failure",
+        "started_at": "2026-09-17T05:29:30Z",
+        "completed_at": "2026-09-17T05:35:45Z",
+        "failed_step": "Execute 32 real payments, full recovery and payment 33 with OS resource gates",
+        "python_tests": {
+          "run": 44,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 1
+        },
+        "platform_skip": "test_proc_pinned_identity_rechecks_both_sides_of_memory_read: Linux proc descriptor semantics",
+        "native_format_compile_vet_release_build": "all successful before the workload",
+        "diagnostic": "The public supervisor report records protocol_file_read_failed; the Go process subsequently reports real resource scenario exchange failed and nonzero scenario shutdown.",
+        "diagnostic_source": "scripts/check_payment_resources.py:read_public_json; internal/poolbridge/payment_resource_e2e_test.go:760 and :677",
+        "cause_limit": "C3 collapses all read/lstat/open OSError into one code; original report does not preserve errno, Windows error code, filename, or failed read stage. A concrete sharing violation or producer cause is not established by this record alone.",
+        "go_test_elapsed_seconds": 160.53,
+        "artifact_id": 10482372364,
+        "artifact_entries": [
+          "payment-resource-setup.json",
+          "payment-resources.json"
+        ],
+        "artifact_result": "public partial failure report retained; no fabricated final result",
+        "original_log": {
+          "original_filename": "9e46e03-job-105087032307.log",
+          "archive_path": "reports/p2-payment-resource-evidence/9e46e03-job-105087032307.log",
+          "bytes": 53753,
+          "sha256": "e3dc48e824ad3bff108a9427821e8be0ccf745d8b41d548b61545f5c15a4bbd5"
+        },
+        "initial_setup": {
+          "original_filename": "9e46e03-windows-payment-resource-setup.json",
+          "archive_path": "reports/p2-payment-resource-evidence/9e46e03-windows-payment-resource-setup.json",
+          "bytes": 466,
+          "sha256": "167ef25a68bdf6b27937f3eb26410b2ccaa24a15cd63dd25ad67d04a865554a4"
+        },
+        "artifact_metadata": {
+          "original_filename": "9e46e03-windows-artifact-meta.json",
+          "archive_path": "reports/p2-payment-resource-evidence/9e46e03-windows-artifact-meta.json",
+          "bytes": 779,
+          "sha256": "e26acd5c3d8ab6166054404105d8fd71b71897b28cc393adc750b0dc84a44615"
+        },
+        "resource_observation": {
+          "status": "failed",
+          "started_at_utc": "2026-09-17T05:32:56.973061+00:00",
+          "finished_at_utc": "2026-09-17T05:35:39.199087+00:00",
+          "metadata": {
+            "checkout_commit": "f38a9a1a1d40bf650a25eea6b689c618f10d9121",
+            "checkout_tree": "072da4de0b426e619c80b504dedf019a0808201b",
+            "source_head": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+            "source_tree": "072da4de0b426e619c80b504dedf019a0808201b",
+            "toolchains": {
+              "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+              "go": "go version go1.27.1 windows/amd64",
+              "python": "3.12.10",
+              "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+            }
+          },
+          "platform": "win32",
+          "machine": "AMD64",
+          "go_exit_code": 1,
+          "supervised_process_elapsed_ms": 161344,
+          "supervisor_elapsed_ms": 162188,
+          "targets": {
+            "go_test_timeout_seconds": 1200,
+            "handshake_timeout_seconds": 15,
+            "paid_blocks_before_recovery": 32,
+            "paid_blocks_final": 33,
+            "resident_lifetime_peak_budget_bytes_per_process": 1073741824,
+            "roles": [
+              "worker",
+              "scenario"
+            ],
+            "scenario_response_timeout_seconds": 90,
+            "supervisor_timeout_seconds": 1230,
+            "worker_generations": 2,
+            "worker_request_timeout_seconds": 60,
+            "worker_start_timeout_seconds": 60
+          },
+          "failures": [
+            {
+              "error_code": "protocol_file_read_failed"
+            }
+          ],
+          "last_confirmed_committed_blocks": 27,
+          "unfinished_operation": {
+            "committed_blocks": 27,
+            "operation": "prepare",
+            "payment_index": 28,
+            "schema_version": 1,
+            "seq": 283,
+            "status": "started"
+          },
+          "commit_outcome_uncertain": false,
+          "cleanup": {
+            "initial_roles_registered": true,
+            "precheckpoint_child_tree_cleanup_confirmed": false,
+            "registered_children_exit_confirmed": true,
+            "registered_processes": 2,
+            "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+          },
+          "result": null,
+          "raw_report": {
+            "original_filename": "9e46e03-windows-payment-resources.json",
+            "archive_path": "reports/p2-payment-resource-evidence/9e46e03-windows-payment-resources.json",
+            "bytes": 63255,
+            "sha256": "551c5eca212825f30b9fcfd04e9011a1ef9e237cc3a8789af468db3152d75a3b"
+          },
+          "events_count": 4,
+          "event_sequence": [
+            {
+              "seq": 1,
+              "phase": "genesis",
+              "height": 0,
+              "paid_blocks": 0
+            },
+            {
+              "seq": 2,
+              "phase": "payment_8",
+              "height": 8,
+              "paid_blocks": 8
+            },
+            {
+              "seq": 3,
+              "phase": "payment_16",
+              "height": 16,
+              "paid_blocks": 16
+            },
+            {
+              "seq": 4,
+              "phase": "payment_24",
+              "height": 24,
+              "paid_blocks": 24
+            }
+          ],
+          "memory_checkpoints_count": 4,
+          "complete_memory_checkpoints": 4,
+          "samples_count": 8,
+          "progress_records": 283,
+          "completed_operations": 141,
+          "last_completed_operation": {
+            "committed_blocks": 27,
+            "duration_ms": 893,
+            "operation": "wallet_sync",
+            "payment_index": 27,
+            "schema_version": 1,
+            "seq": 282,
+            "status": "completed"
+          },
+          "retained_memory_samples": [
+            {
+              "role": "worker",
+              "generation": 1,
+              "identity": {
+                "pid": 9124,
+                "parent_pid": 612,
+                "creation_identity_kind": "windows_creation_filetime_100ns",
+                "creation_identity": "134340967875303194"
+              },
+              "checkpoint_sequences": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "sample_count": 4,
+              "max_observed_os_lifetime_peak_bytes": 13090816,
+              "last_observed_current_bytes": 8544256,
+              "method": "windows_GetProcessMemoryInfo_WorkingSetSize_PeakWorkingSetSize"
+            },
+            {
+              "role": "scenario",
+              "generation": 1,
+              "identity": {
+                "pid": 2912,
+                "parent_pid": 612,
+                "creation_identity_kind": "windows_creation_filetime_100ns",
+                "creation_identity": "134340967778734573"
+              },
+              "checkpoint_sequences": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "sample_count": 4,
+              "max_observed_os_lifetime_peak_bytes": 118448128,
+              "last_observed_current_bytes": 48599040,
+              "method": "windows_GetProcessMemoryInfo_WorkingSetSize_PeakWorkingSetSize"
+            }
+          ],
+          "completed_operation_timing_ms": {
+            "scenario_start": {
+              "count": 1,
+              "sum": 9632,
+              "min": 9632,
+              "max": 9632
+            },
+            "worker_create": {
+              "count": 1,
+              "sum": 2735,
+              "min": 2735,
+              "max": 2735
+            },
+            "wallet_sync": {
+              "count": 28,
+              "sum": 13411,
+              "min": 70,
+              "max": 893
+            },
+            "prepare": {
+              "count": 27,
+              "sum": 119727,
+              "min": 3838,
+              "max": 6048
+            },
+            "candidate": {
+              "count": 27,
+              "sum": 8722,
+              "min": 137,
+              "max": 534
+            },
+            "worker_commit": {
+              "count": 27,
+              "sum": 961,
+              "min": 20,
+              "max": 386
+            },
+            "scenario_apply": {
+              "count": 27,
+              "sum": 1484,
+              "min": 50,
+              "max": 69
+            },
+            "duplicate_rejection": {
+              "count": 3,
+              "sum": 924,
+              "min": 190,
+              "max": 426
+            }
+          },
+          "numeric_derivation": "Counts, maxima and operation timing summaries are recomputed from the referenced raw JSON. No missing sample, duration, result or process generation is imputed."
+        },
+        "uncertainty": [
+          "protocol_file_read_failed is the original fixed error code. The report preserves neither errno nor Windows error code, filename or the failed lstat/open/read stage; a specific sharing violation or producer failure is not proven by this historical record alone.",
+          "27 is the last recorded confirmed committed count, not an independently inspected final on-disk height after failure. prepare(28) has only started; no successful duration or final result is available.",
+          "commit_outcome_uncertain=false is copied verbatim and corresponds to the unfinished prepare operation rather than worker_commit. It does not establish that payment28 had no saved pending outbox or that all later child-side work was absent.",
+          "The four observed memory checkpoints stop at payment24 and contain eight samples from worker generation1 and scenario generation1. Both observed OS lifetime maxima are below the fixed gate, but generation2 and complete33 have no measurement, so no full-run or recovery memory-budget pass exists.",
+          "Two registered process identities were confirmed exited. precheckpoint_child_tree_cleanup_confirmed=false remains explicit; this is not a claim that every unregistered child was cleaned up."
+        ]
+      },
+      "native_ubuntu_snapshot": {
+        "job_id": 105087032109,
+        "status": "queued",
+        "conclusion": null,
+        "scope": "This is the then-queued status at the original observation time, not a statement about its current or eventual state.",
+        "observed_at": "2026-09-17T05:39:55.936601+00:00"
+      },
+      "original_job_status": {
+        "original_filename": "9e46e03-resource-failure-job-status.json",
+        "archive_path": "reports/p2-payment-resource-evidence/9e46e03-resource-failure-job-status.json",
+        "bytes": 6578,
+        "sha256": "03a688c291bd9807695f7ef9762b6cb9a0ce5090f0de02c95445a253c4e0bc46"
+      },
+      "acceptance_disposition": "Both independent code scopes passed, but the exact candidate failed its Windows real resource workflow and remained unaccepted. A code PASS is not native success or full-stage acceptance."
+    }
+  ],
+  "design_and_preliminary_originals": [
+    {
+      "original_filename": "design-review-3f9bf22-changes-requested.md",
+      "archive_path": "reports/p2-payment-resource-evidence/design-review-3f9bf22-changes-requested.md",
+      "bytes": 8544,
+      "sha256": "85c9deeded8fc21d071da69b59c8173322a443fb3a0e3b621976e82f9ba3061c"
+    },
+    {
+      "original_filename": "design-review.md",
+      "archive_path": "reports/p2-payment-resource-evidence/design-review.md",
+      "bytes": 9243,
+      "sha256": "e2db677553229e4426d3d7fa5c62338f081ab21caacd03f29f0b295d5e96a4c9"
+    },
+    {
+      "original_filename": "rust-preliminary-review.md",
+      "archive_path": "reports/p2-payment-resource-evidence/rust-preliminary-review.md",
+      "bytes": 6790,
+      "sha256": "236fd10d97d9c78037ed2174ca3f7dbc63f3f48497257fcbe25fc25d98361e4a"
+    },
+    {
+      "original_filename": "go-preliminary-review.md",
+      "archive_path": "reports/p2-payment-resource-evidence/go-preliminary-review.md",
+      "bytes": 10356,
+      "sha256": "aea5f947c2a59d0fab167bfd27945bceaa5b7b36f4259e0a1f67fe7ea57c1388"
+    },
+    {
+      "original_filename": "handoff-preliminary-review.md",
+      "archive_path": "reports/p2-payment-resource-evidence/handoff-preliminary-review.md",
+      "bytes": 5166,
+      "sha256": "406aa842dd9fff0b0f263e43d0f7c5d39f126c523a264708c36ca83515094008"
+    }
+  ],
+  "observation_limits": [
+    "Original diagnostics retain their original observation times and historical candidate wording. A later summary does not update those old files or relabel their source identities.",
+    "Only observed resource-job facts are summarized. No conclusion is inferred for unrelated workflows, duplicate push runs, pending jobs, missing artifacts or later observations.",
+    "No cancellation action or cancellation cause is evidenced by the originals selected here; this summary does not claim that an author cancelled any run.",
+    "Initial setup JSON is an observed not_started setup state, never a final execution result. C1/C2 Windows each had setup only; C3 Windows preserved a partial failed resource report.",
+    "Recorded resident or working-set lifetime highwater is not private heap, phase peak, enforced allocation or machine-wide memory. Partial low samples do not prove the 33-payment goal.",
+    "The C3 failure record does not establish a specific OS sharing-error cause. Its generic error code and limited partial execution state are preserved without filling gaps.",
+    "Design/code/document review, native CI and specialist external audit are separate. No candidate in this history is accepted and P2 remains in progress."
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "auditor": "/root/p2_resource_native_audit",
+  "observed_at": "2026-09-17T05:39:55.936601+00:00",
+  "designation": "C3_not_accepted_native_failure",
+  "source_head": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+  "source_tree": "072da4de0b426e619c80b504dedf019a0808201b",
+  "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+  "synthetic_checkout": "f38a9a1a1d40bf650a25eea6b689c618f10d9121",
+  "pull_request": 11,
+  "run_id": 35185652786,
+  "run_url": "https://github.com/youq616/Zevune/actions/runs/35185652786",
+  "source_acceptance": "not_accepted",
+  "windows": {
+    "job_id": 105087032307,
+    "url": "https://github.com/youq616/Zevune/actions/runs/35185652786/job/105087032307",
+    "conclusion": "failure",
+    "started_at": "2026-09-17T05:29:30Z",
+    "completed_at": "2026-09-17T05:35:45Z",
+    "failed_step": "Execute 32 real payments, full recovery and payment 33 with OS resource gates",
+    "python_tests": {
+      "run": 44,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 1
+    },
+    "platform_skip": "test_proc_pinned_identity_rechecks_both_sides_of_memory_read: Linux proc descriptor semantics",
+    "native_format_compile_vet_release_build": "all successful before the workload",
+    "diagnostic": "The public supervisor report records protocol_file_read_failed; the Go process subsequently reports real resource scenario exchange failed and nonzero scenario shutdown.",
+    "diagnostic_source": "scripts/check_payment_resources.py:read_public_json; internal/poolbridge/payment_resource_e2e_test.go:760 and :677",
+    "cause_limit": "C3 collapses all read/lstat/open OSError into one code; original report does not preserve errno, Windows error code, filename, or failed read stage. A concrete sharing violation or producer cause is not established by this record alone.",
+    "go_test_elapsed_seconds": 160.53,
+    "supervisor_elapsed_ms": 162188,
+    "go_exit_code": 1,
+    "events": 4,
+    "complete_memory_checkpoints": 4,
+    "samples": 8,
+    "progress_records": 283,
+    "completed_operations": 141,
+    "last_confirmed_committed_blocks": 27,
+    "unfinished_operation": {
+      "committed_blocks": 27,
+      "operation": "prepare",
+      "payment_index": 28,
+      "schema_version": 1,
+      "seq": 283,
+      "status": "started"
+    },
+    "commit_outcome_uncertain": false,
+    "result": null,
+    "failures": [
+      {
+        "error_code": "protocol_file_read_failed"
+      }
+    ],
+    "cleanup": {
+      "initial_roles_registered": true,
+      "precheckpoint_child_tree_cleanup_confirmed": false,
+      "registered_children_exit_confirmed": true,
+      "registered_processes": 2,
+      "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+    },
+    "retained_memory_samples": [
+      {
+        "role": "worker",
+        "generation": 1,
+        "sample_count": 4,
+        "max_observed_os_lifetime_peak_bytes": 13090816
+      },
+      {
+        "role": "scenario",
+        "generation": 1,
+        "sample_count": 4,
+        "max_observed_os_lifetime_peak_bytes": 118448128
+      }
+    ],
+    "memory_scope": "All eight retained checkpoint samples are within the fixed 1GiB gate. No full 33-payment or second-worker lifetime budget result exists. This is not a completed resource acceptance.",
+    "completed_operation_timing_ms": {
+      "scenario_start": {
+        "count": 1,
+        "sum": 9632,
+        "min": 9632,
+        "max": 9632
+      },
+      "worker_create": {
+        "count": 1,
+        "sum": 2735,
+        "min": 2735,
+        "max": 2735
+      },
+      "wallet_sync": {
+        "count": 28,
+        "sum": 13411,
+        "min": 70,
+        "max": 893
+      },
+      "prepare": {
+        "count": 27,
+        "sum": 119727,
+        "min": 3838,
+        "max": 6048
+      },
+      "candidate": {
+        "count": 27,
+        "sum": 8722,
+        "min": 137,
+        "max": 534
+      },
+      "worker_commit": {
+        "count": 27,
+        "sum": 961,
+        "min": 20,
+        "max": 386
+      },
+      "scenario_apply": {
+        "count": 27,
+        "sum": 1484,
+        "min": 50,
+        "max": 69
+      },
+      "duplicate_rejection": {
+        "count": 3,
+        "sum": 924,
+        "min": 190,
+        "max": 426
+      }
+    },
+    "artifact_id": 10482372364,
+    "artifact_entries": [
+      "payment-resource-setup.json",
+      "payment-resources.json"
+    ],
+    "artifact_result": "public partial failure report retained; no fabricated final result",
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "conclusion": "success"
+      },
+      {
+        "name": "Preserve initial identity even if setup or compilation fails",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "conclusion": "success"
+      },
+      {
+        "name": "Install fixed Rust formatter and compiler",
+        "conclusion": "success"
+      },
+      {
+        "name": "Test resource evidence validation and process measurement",
+        "conclusion": "success"
+      },
+      {
+        "name": "Check source formatting without rewriting the candidate",
+        "conclusion": "success"
+      },
+      {
+        "name": "Compile and vet the explicit resource test tag",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build the actual fixed-profile worker and wallet scenario",
+        "conclusion": "success"
+      },
+      {
+        "name": "Execute 32 real payments, full recovery and payment 33 with OS resource gates",
+        "conclusion": "failure"
+      },
+      {
+        "name": "Assert exact source and dependency locks",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Preserve only public setup and resource evidence, including failures",
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "ubuntu_snapshot": {
+    "job_id": 105087032109,
+    "status": "queued",
+    "conclusion": null,
+    "scope": "No accepted current-source full cross-platform result."
+  },
+  "files": [
+    {
+      "filename": "9e46e03-job-105087032307.log",
+      "bytes": 53753,
+      "sha256": "e3dc48e824ad3bff108a9427821e8be0ccf745d8b41d548b61545f5c15a4bbd5"
+    },
+    {
+      "filename": "9e46e03-job-105087032307-log-evidence.json",
+      "bytes": 1110,
+      "sha256": "a381ebbf5fc62e0893eccac2f65969e684e69df05971ab9cf966d0cb806db669"
+    },
+    {
+      "filename": "9e46e03-resource-windows-10482372364.zip",
+      "bytes": 5638,
+      "sha256": "9e0387b95c29d535ea3d6066825234af0f6fac89788b7269d3dfd9d2dc92bb98"
+    },
+    {
+      "filename": "9e46e03-windows-payment-resource-setup.json",
+      "bytes": 466,
+      "sha256": "167ef25a68bdf6b27937f3eb26410b2ccaa24a15cd63dd25ad67d04a865554a4"
+    },
+    {
+      "filename": "9e46e03-windows-payment-resources.json",
+      "bytes": 63255,
+      "sha256": "551c5eca212825f30b9fcfd04e9011a1ef9e237cc3a8789af468db3152d75a3b"
+    },
+    {
+      "filename": "9e46e03-windows-artifact-meta.json",
+      "bytes": 779,
+      "sha256": "e26acd5c3d8ab6166054404105d8fd71b71897b28cc393adc750b0dc84a44615"
+    },
+    {
+      "filename": "9e46e03-synthetic-merge-meta.json",
+      "bytes": 2772,
+      "sha256": "bea6081d3ff334f17b0a478398fb58a62b530d838e04cba502b057b9f54c19ff"
+    },
+    {
+      "filename": "9e46e03-resource-failure-job-status.json",
+      "bytes": 6578,
+      "sha256": "03a688c291bd9807695f7ef9762b6cb9a0ce5090f0de02c95445a253c4e0bc46"
+    }
+  ]
+}
