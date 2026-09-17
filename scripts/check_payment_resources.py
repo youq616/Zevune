@@ -95,6 +95,45 @@ CHECKS = {
 class MeasurementError(RuntimeError):
     """A fixed public failure code; never embeds untrusted input or secrets."""
 
+    def public(self) -> dict:
+        return {"error_code": str(self)}
+
+
+class ProtocolReadError(MeasurementError):
+    """Keep only bounded OS codes and a recognized public protocol position."""
+
+    STAGES = frozenset({"lstat_before", "open", "fstat", "read", "close", "lstat_after"})
+
+    def __init__(self, path: Path, stage: str, error: OSError):
+        super().__init__("protocol_file_read_failed")
+        self._stage = stage
+        self._kind, self._seq = "unknown", None
+        name = path.name
+        for kind, digits, limit in (("event", 2, len(PHASES)),
+                                    ("progress", 4, MAX_PROGRESS_RECORDS)):
+            match = re.fullmatch(kind + r"-([0-9]{" + str(digits) + r"})\.json", name)
+            if match is not None and 1 <= int(match[1]) <= limit:
+                self._kind, self._seq = kind, int(match[1])
+                break
+        if name == "result.json":
+            self._kind = "result"
+        self._errno = getattr(error, "errno", None)
+        self._winerror = getattr(error, "winerror", None)
+
+    def public(self) -> dict:
+        def os_code(value):
+            return value if type(value) is int and 0 <= value <= MAX_PID else None
+
+        kind = self._kind if self._kind in {"event", "progress", "result"} else "unknown"
+        limit = len(PHASES) if kind == "event" else MAX_PROGRESS_RECORDS
+        seq = self._seq if (kind in {"event", "progress"} and type(self._seq) is int
+                            and 1 <= self._seq <= limit) else None
+        stage = self._stage if isinstance(self._stage, str) and self._stage in self.STAGES else "unknown"
+        return {"error_code": "protocol_file_read_failed", "io_diagnostic": {
+            "stage": stage, "errno": os_code(self._errno), "winerror": os_code(self._winerror),
+            "protocol_kind": kind, "seq": seq,
+        }}
+
 
 def checked_uint(value: object, maximum: int = MAX_UINT64,
                  minimum: int = 0) -> int:
@@ -573,21 +612,85 @@ def open_process(pid: int, parent_pid: int):
     raise MeasurementError("unsupported_memory_platform")
 
 
+def windows_public_binary(path: Path, *, api=None, crt=None):
+    """Read a published file while a Windows rename still holds DELETE access.
+
+    The name can be visible before MoveFileEx closes its DELETE handle. The
+    CRT's ordinary open lacks FILE_SHARE_DELETE and can reject that reader.
+    This changes sharing only; the caller still checks identity and contents.
+    https://devblogs.microsoft.com/oldnewthing/20211022-00/?p=105822
+    """
+    from ctypes import wintypes
+
+    if api is None:
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+    if crt is None:
+        import msvcrt as crt
+
+    api.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                               wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    api.CreateFileW.restype = wintypes.HANDLE
+    api.CloseHandle.argtypes = [wintypes.HANDLE]
+    api.CloseHandle.restype = wintypes.BOOL
+    # GENERIC_READ; FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+    # OPEN_EXISTING; ordinary attributes. The handle is not inheritable.
+    handle = api.CreateFileW(str(path), 0x80000000, 0x7, None, 3, 0x80, None)
+    if handle is None or handle == ctypes.c_void_p(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        fd = crt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
+    except BaseException:
+        # Ownership has not transferred. Release exactly this raw handle,
+        # preserving the original conversion failure if release also fails.
+        api.CloseHandle(handle)
+        raise
+    try:
+        os.set_inheritable(fd, False)
+        return os.fdopen(fd, "rb")
+    except BaseException:
+        # The CRT owns the handle after conversion; never CloseHandle it too.
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+
+
+def open_public_binary(path: Path):
+    if sys.platform == "win32":
+        return windows_public_binary(path)
+    return path.open("rb")
+
+
 def read_public_json(path: Path, maximum: int) -> tuple[dict, str]:
+    stage = "lstat_before"
     try:
         before = path.lstat()
         if not stat.S_ISREG(before.st_mode) or before.st_size > maximum:
             raise MeasurementError("invalid_protocol_file")
-        with path.open("rb") as stream:
+        stage = "open"
+        stream = open_public_binary(path)
+        try:
+            stage = "fstat"
             actual = os.fstat(stream.fileno())
-            if not os.path.samestat(before, actual):
+            if not os.path.samestat(before, actual) or actual.st_size != before.st_size:
                 raise MeasurementError("protocol_file_changed")
+            stage = "read"
             raw = stream.read(maximum + 1)
+        except BaseException:
+            try:
+                stream.close()
+            except OSError:
+                pass
+            raise
+        stage = "close"
+        stream.close()
+        stage = "lstat_after"
         after = path.lstat()
         if not os.path.samestat(before, after) or after.st_size != before.st_size:
             raise MeasurementError("protocol_file_changed")
     except OSError as exc:
-        raise MeasurementError("protocol_file_read_failed") from exc
+        raise ProtocolReadError(path, stage, exc) from exc
     return decode_json(raw, maximum), hashlib.sha256(raw).hexdigest()
 
 
@@ -1027,7 +1130,8 @@ def run(test_executable: Path, worker: Path, scenario: Path, output: Path) -> in
         code = str(exc) if isinstance(exc, MeasurementError) else (
             "supervisor_interrupted" if isinstance(exc, KeyboardInterrupt) else "supervisor_operation_failed")
         evidence["status"] = "failed"
-        evidence["failures"].append({"error_code": code})
+        evidence["failures"].append(exc.public() if isinstance(exc, MeasurementError)
+                                    else {"error_code": code})
     finally:
         if process is not None and process.poll() is None:
             try:
