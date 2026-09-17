@@ -2,6 +2,7 @@
 //! No height edits, accepting verifier, synthetic record execution or reduced
 //! segment capacity stands in for the 10000-record and 1 MiB growth checks.
 use super::*;
+use crate::pool::recovery::active::{ActiveArchive, ActiveRecoveryCheckpoint};
 use crate::pool::root_cache_tests::assert_state;
 use crate::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use crate::wallet::{Wallet, WalletError, WalletProver};
@@ -88,6 +89,62 @@ fn write_directory(path: &Path, entries: &DirectoryBytes) {
     }
 }
 
+// Both public CLI modes use this same exact create-only archive API. The test
+// restores through a distinct archive source, then ordinary PoolStore open
+// replays the final directory before any onward payment is prepared.
+fn archive_and_restore(
+    dir: &Dir,
+    source: &Path,
+    pin: ActiveRecoveryCheckpoint,
+    label: &str,
+) -> PathBuf {
+    let original = directory_bytes(source);
+    let archive_path = dir.path(&format!("{label}-archive"));
+    let restored_path = dir.path(&format!("{label}-restored"));
+    let mut source_archive = ActiveArchive::open(source, pin).unwrap();
+    assert_eq!(source_archive.checkpoint(), pin);
+    assert_eq!(source_archive.copy_new(&archive_path).unwrap(), pin);
+    drop(source_archive);
+    assert_eq!(directory_bytes(source), original);
+    assert_eq!(directory_bytes(&archive_path), original);
+    let mut archive = ActiveArchive::open(&archive_path, pin).unwrap();
+    assert_eq!(archive.copy_new(&restored_path).unwrap(), pin);
+    drop(archive);
+    assert_eq!(directory_bytes(&archive_path), original);
+    assert_eq!(directory_bytes(&restored_path), original);
+    restored_path
+}
+
+// Test-only recomputation of EVERY ordinary archive checksum. This deliberately
+// models an attacker supplying both changed bytes and an untrusted matching pin;
+// only genuine authorization may reject a rehashed invalid binding signature.
+fn repin_layout(
+    original: ActiveRecoveryCheckpoint,
+    entries: &DirectoryBytes,
+) -> ActiveRecoveryCheckpoint {
+    let header = &entries["genesis"];
+    let mut raw = original.to_bytes();
+    raw[8..40].copy_from_slice(&Sha256::digest(header));
+    let length = entries.values().map(|bytes| bytes.len() as u64).sum::<u64>();
+    raw[80..88].copy_from_slice(&length.to_be_bytes());
+    raw[88..92].copy_from_slice(&(header.len() as u32).to_be_bytes());
+    let segments = entries.len() - 1;
+    raw[92..96].copy_from_slice(&(segments as u32).to_be_bytes());
+    let mut hash = Sha256::new();
+    hash.update(b"ZVARLY01");
+    hash.update((header.len() as u32).to_be_bytes());
+    hash.update(header);
+    hash.update((segments as u32).to_be_bytes());
+    for index in 0..segments {
+        let bytes = &entries[&format!("{index:08}.journal")];
+        hash.update((index as u32).to_be_bytes());
+        hash.update((bytes.len() as u32).to_be_bytes());
+        hash.update(bytes);
+    }
+    raw[96..128].copy_from_slice(&hash.finalize());
+    ActiveRecoveryCheckpoint::from_bytes(&raw).unwrap()
+}
+
 fn assert_noncanonical_layouts_reject(
     dir: &Dir,
     genesis: &TestGenesis,
@@ -100,6 +157,13 @@ fn assert_noncanonical_layouts_reject(
     let first_frame = first_body + 36;
     assert_eq!(records.len(), first_frame + EMPTY_FRAME_BYTES);
     assert!(records.len() < SEGMENT_LIMIT);
+
+    let archive_control = dir.path("original-archive-control");
+    write_directory(&archive_control, original);
+    let mut control = genesis.open_pool(&archive_control).unwrap();
+    let original_pin = control.active_recovery_checkpoint().unwrap();
+    drop(control);
+    ActiveArchive::open(&archive_control, original_pin).unwrap();
 
     // These are the complete bytes of two actually committed blocks. Changing
     // only their physical split cannot be accepted as a different segment use.
@@ -143,7 +207,14 @@ fn assert_noncanonical_layouts_reject(
         genesis.open_pool(&path),
         Err(PoolError::Authorization)
     ));
+    let forged_pin = repin_layout(original_pin, &forged);
+    assert_ne!(forged_pin, original_pin);
+    assert!(matches!(
+        ActiveArchive::open(&path, forged_pin),
+        Err(PoolError::Authorization)
+    ));
     assert_eq!(directory_bytes(&path), forged);
+    assert_eq!(directory_bytes(&archive_control), *original);
 
     // Control: the identical unmodified bytes fully replay and authenticate the
     // wallet history, so preceding failures cannot be attributed to bad input
@@ -420,7 +491,11 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(after_payment.2, 2);
     assert_eq!(after_payment.3 as usize, first_frame_bytes);
     assert!(matches!(
-        pool.prepare(first_height + 1, block_id(first_height + 1), &[first]),
+        pool.prepare(
+            first_height + 1,
+            block_id(first_height + 1),
+            std::slice::from_ref(&first)
+        ),
         Err(PoolError::DoubleSpend)
     ));
     assert_eq!(pool.active_capacity().unwrap(), after_payment);
@@ -431,6 +506,34 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(bob.balance().unwrap(), 60_000);
     assert!(alice.pending_id().is_none());
     drop(paid_history);
+
+    // The first genuine payment caused a real 1 MiB rotation. Preserve those
+    // exact two segments through backup AND restore before preparing the later
+    // second-hop spend; neither a synthetic layout nor an in-place reopen is
+    // credited as active archive recovery.
+    let rotated_pin = pool.active_recovery_checkpoint().unwrap();
+    assert_eq!(rotated_pin.height(), first_height);
+    assert_eq!(rotated_pin.segment_count(), 2);
+    assert_eq!(rotated_pin.length(), after_payment.1);
+    drop(pool);
+    let path = archive_and_restore(&dir, &path, rotated_pin, "rotated-payment");
+    let mut pool = genesis.open_pool(&path).unwrap();
+    assert_eq!(pool.active_capacity().unwrap(), after_payment);
+    assert_eq!(assert_state(&pool.state), paid);
+    assert!(matches!(
+        pool.prepare(
+            first_height + 1,
+            block_id(first_height + 1),
+            std::slice::from_ref(&first)
+        ),
+        Err(PoolError::DoubleSpend)
+    ));
+    let recovered_history = genesis.wallet_history(&mut pool).unwrap();
+    alice.sync(&recovered_history).unwrap();
+    bob.sync(&recovered_history).unwrap();
+    assert_eq!(alice.balance().unwrap(), 39_000);
+    assert_eq!(bob.balance().unwrap(), 60_000);
+    drop(recovered_history);
 
     for height in first_height + 1..=9998 {
         commit(&mut pool, height, &[]);
@@ -462,6 +565,10 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(at_10001.fees, 2_000);
     let before_reopen = pool.active_capacity().unwrap();
     assert_eq!(before_reopen.2, 2);
+    let above_legacy_pin = pool.active_recovery_checkpoint().unwrap();
+    assert_eq!(above_legacy_pin.height(), 10001);
+    assert_eq!(above_legacy_pin.segment_count(), 2);
+    assert_eq!(above_legacy_pin.length(), before_reopen.1);
     drop(pool);
     let persisted = directory_bytes(&path);
     assert_eq!(persisted.len(), 3);
@@ -483,6 +590,7 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert!(persisted["00000000.journal"].len() + first_frame_bytes > SEGMENT_LIMIT);
     assert!(persisted["00000001.journal"].len() <= SEGMENT_LIMIT);
 
+    let path = archive_and_restore(&dir, &path, above_legacy_pin, "above-legacy-limit");
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.summary().unwrap(), at_10001);
     assert_eq!(assert_state(&pool.state), at_10001);
@@ -531,10 +639,11 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(final_capacity.2, 2);
     assert_eq!(final_capacity.3, before_reopen.3 + EMPTY_FRAME_BYTES as u32);
     println!(
-        "active Rust growth: height={} logical_bytes={} segments={} elapsed_ms={}",
+        "active Rust growth: height={} logical_bytes={} segments={} archive_restore_heights={},10001 elapsed_ms={}",
         final_summary.height,
         final_capacity.1,
         final_capacity.2,
+        first_height,
         start.elapsed().as_millis()
     );
 }

@@ -1,9 +1,14 @@
 //! Local NO-FUNDS recovery utility. No networking, signer reset or file deletion.
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::Path;
+use zevune_orchard_lab::pool::recovery::active::{
+    ActiveArchive, ActiveRecoveryCheckpoint, ACTIVE_CHECKPOINT_BYTES,
+};
 use zevune_orchard_lab::pool::recovery::segments::SegmentedArchive;
 use zevune_orchard_lab::pool::recovery::{RecoveryArchive, RecoveryCheckpoint, CHECKPOINT_BYTES};
 use zevune_orchard_lab::pool::testnet::TestGenesis;
+use zevune_orchard_lab::pool::StorageProfile;
 
 #[path = "../recovery_index_output.rs"]
 mod index_output;
@@ -17,6 +22,9 @@ verify-segments --no-real-funds --source <absolute archive directory> --checkpoi
 restore-segments --no-real-funds --source <absolute archive directory> --output <NEW absolute journal> --checkpoint <240 hex pin>\n\
 index --no-real-funds --source <absolute archive directory> --checkpoint <240 hex pin> (JSON to stdout)\n\
 locate-height --no-real-funds --source <absolute archive directory> --checkpoint <240 hex pin> --height <1..tip>\n\
+checkpoint-active --no-real-funds --source <absolute active directory> --genesis <absolute ZVTGEN03 manifest> --genesis-sha256 <64 hex> --height <trusted height> --app-hash <trusted hash>\n\
+backup-active|restore-active --no-real-funds --source <absolute active/archive directory> --output <NEW absolute directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
+verify-active --no-real-funds --source <absolute active/archive directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
 Stop the owning writer before use. No consensus database or signer state is copied.\n\
 A failed copy may leave a partial or complete target. No automatic retry or repair.\n";
 
@@ -40,6 +48,51 @@ fn unhex<const N: usize>(text: &str) -> Result<[u8; N], ()> {
 fn hex(raw: &[u8]) -> String {
     raw.iter().map(|b| format!("{b:02x}")).collect()
 }
+
+fn run_active(mode: &str, source: &Path, options: &BTreeMap<&str, &str>) -> Result<(), ()> {
+    let pin = if mode == "checkpoint-active" {
+        let height: u64 = options["--height"].parse().map_err(|_| ())?;
+        if height.to_string() != options["--height"] {
+            return Err(());
+        }
+        let app_hash = unhex::<32>(options["--app-hash"])?;
+        let genesis = TestGenesis::read_pinned(
+            Path::new(options["--genesis"]),
+            unhex::<32>(options["--genesis-sha256"])?,
+        )
+        .map_err(|_| ())?;
+        // Only an independently pinned 03 manifest selects this profile. The
+        // candidate directory and new pin cannot upgrade a legacy deployment.
+        if genesis.storage_profile() != StorageProfile::ActiveSegmentsV1 {
+            return Err(());
+        }
+        let mut pool = genesis.open_pool(source).map_err(|_| ())?;
+        pool.check_checkpoint(height, app_hash).map_err(|_| ())?;
+        pool.active_recovery_checkpoint().map_err(|_| ())?
+    } else {
+        let pin = ActiveRecoveryCheckpoint::from_bytes(&unhex::<ACTIVE_CHECKPOINT_BYTES>(
+            options["--checkpoint"],
+        )?)
+        .map_err(|_| ())?;
+        let mut archive = ActiveArchive::open(source, pin).map_err(|_| ())?;
+        match mode {
+            // open already performs a new complete replay and final byte/name
+            // checks. Do not replay the entire history twice for one CLI call.
+            "verify-active" => archive.checkpoint(),
+            "backup-active" | "restore-active" => archive
+                .copy_new(Path::new(options["--output"]))
+                .map_err(|_| ())?,
+            _ => return Err(()),
+        }
+    };
+    let report = format!("{{\"operation\":\"{mode}\",\"checkpoint\":\"{}\",\"height\":{},\"bytes\":{},\"checkpoint_format\":\"ZVARCP01\",\"storage_profile\":\"ActiveSegmentsV1\",\"app_hash\":\"{}\",\"segment_count\":{},\"replay_verified\":true,\"finality_verified\":false,\"validator_ready\":false,\"real_funds_allowed\":false}}\n", hex(&pin.to_bytes()), pin.height(), pin.length(), hex(&pin.app_hash()), pin.segment_count());
+    // A complete copy can already exist when writing its receipt fails. Keep
+    // that failure nonzero; never delete the new target or retry the operation.
+    let mut output = std::io::stdout().lock();
+    output.write_all(report.as_bytes()).map_err(|_| ())?;
+    output.flush().map_err(|_| ())
+}
+
 fn run(args: &[String]) -> Result<(), ()> {
     if args == ["--help"] || args == ["help"] {
         print!("{HELP}");
@@ -56,6 +109,10 @@ fn run(args: &[String]) -> Result<(), ()> {
         "restore-segments",
         "index",
         "locate-height",
+        "checkpoint-active",
+        "backup-active",
+        "verify-active",
+        "restore-active",
     ]
     .contains(&mode.as_str())
         || rest.len() > 13
@@ -83,7 +140,7 @@ fn run(args: &[String]) -> Result<(), ()> {
         return Err(());
     }
     let expected: &[&str] = match mode.as_str() {
-        "checkpoint" => &[
+        "checkpoint" | "checkpoint-active" => &[
             "--source",
             "--genesis",
             "--genesis-sha256",
@@ -91,7 +148,9 @@ fn run(args: &[String]) -> Result<(), ()> {
             "--app-hash",
         ],
         "locate-height" => &["--source", "--checkpoint", "--height"],
-        "verify" | "verify-segments" | "index" => &["--source", "--checkpoint"],
+        "verify" | "verify-segments" | "index" | "verify-active" => {
+            &["--source", "--checkpoint"]
+        }
         _ => &["--source", "--output", "--checkpoint"],
     };
     if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {
@@ -105,6 +164,12 @@ fn run(args: &[String]) -> Result<(), ()> {
         }
     }
     let source = Path::new(options["--source"]);
+    if matches!(
+        mode.as_str(),
+        "checkpoint-active" | "backup-active" | "verify-active" | "restore-active"
+    ) {
+        return run_active(mode, source, &options);
+    }
     let pin = if mode == "checkpoint" {
         let height: u64 = options["--height"].parse().map_err(|_| ())?;
         if height.to_string() != options["--height"] {

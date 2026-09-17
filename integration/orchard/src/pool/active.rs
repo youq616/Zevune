@@ -3,7 +3,8 @@
 //! A caller must replay every record and validate every returned physical frame
 //! before publishing any state. Trusted parents, OS and filesystem are required.
 use super::recovery::segments::namespace;
-use super::{PoolError, MAX_COMMITMENTS, MAX_RECORD_BYTES};
+use super::{replay, Hash, PoolError, StorageProfile, MAX_COMMITMENTS, MAX_RECORD_BYTES};
+use sha2::{Digest, Sha256};
 use std::fs::{self, File, Metadata, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -15,14 +16,16 @@ const GENESIS: &str = "genesis";
 const MIN_FRAME_BYTES: u64 = 4 + 114 + 32;
 const MAX_FRAME_BYTES: u64 = 4 + MAX_RECORD_BYTES as u64 + 32;
 const MAX_HEADER_BYTES: u64 = 76 + 32 * MAX_COMMITMENTS as u64;
+const COPY_CHUNK: usize = 64 * 1024;
 
 struct Segment {
     file: File,
     length: u64,
 }
 
-/// Owns retained segment/directory handles. The separate returned `genesis`
-/// handle owns the exclusive lock and must remain owned by the enclosing store.
+/// Owns retained segment/directory handles. The caller must retain the separate
+/// `genesis` handle: its exclusive writer lock or shared archive lock protects
+/// this ownership for the entire lifetime, including cloned readers.
 /// Keeping at most MAX_SEGMENTS handles can exceed a host's descriptor limit;
 /// that is a fail-closed storage error, never permission to omit a segment.
 pub(super) struct ActiveJournal {
@@ -31,8 +34,10 @@ pub(super) struct ActiveJournal {
     header_length: u64,
     segments: Vec<Segment>,
     length: u64,
-    /// Test-only interruption points: 1=new empty segment; 2=partial write;
-    /// 3=full write before sync; 4=durable write with lost acknowledgement.
+    /// Test-only interruptions. Append: 1=new empty segment, 2=partial frame,
+    /// 3=full frame before sync, 4=durable frame with lost acknowledgement.
+    /// Archive copy: 1=partial genesis, 2=partial first segment, 3=last file
+    /// before sync, 4=all files/directories synced with lost acknowledgement.
     #[cfg(test)]
     pub(super) fault: u8,
 }
@@ -73,6 +78,14 @@ fn check_file(path: &Path, file: &File, length: u64) -> Result<(), PoolError> {
 }
 
 fn open_file(path: &Path, expected: Option<u64>) -> Result<Segment, PoolError> {
+    open_file_access(path, expected, true)
+}
+
+fn open_file_access(
+    path: &Path,
+    expected: Option<u64>,
+    writable: bool,
+) -> Result<Segment, PoolError> {
     let before = fs::symlink_metadata(path).map_err(|_| PoolError::Storage)?;
     let length = before.len();
     if !regular(&before)
@@ -84,7 +97,7 @@ fn open_file(path: &Path, expected: Option<u64>) -> Result<Segment, PoolError> {
         return Err(PoolError::Corrupt);
     }
     let mut options = OpenOptions::new();
-    options.read(true).write(true);
+    options.read(true).write(writable);
     namespace::retain_name(&mut options);
     let file = options.open(path).map_err(|_| PoolError::Storage)?;
     #[cfg(unix)]
@@ -260,6 +273,44 @@ fn verify_header(file: &File, expected: &[u8]) -> Result<(), PoolError> {
     }
 }
 
+// Explicit offsets also make hashing/copy independent of a cloned Windows
+// handle's shared cursor. Retained names are checked by the enclosing operation.
+// Every physical file must reach its captured length and actual EOF.
+fn visit_file(
+    file: &File,
+    length: u64,
+    mut consume: impl FnMut(&[u8]) -> Result<(), PoolError>,
+) -> Result<(), PoolError> {
+    let mut offset = 0;
+    let mut buffer = [0; COPY_CHUNK];
+    while offset < length {
+        let take = (length - offset).min(buffer.len() as u64) as usize;
+        match read_at(file, &mut buffer[..take], offset) {
+            Ok(0) => return Err(PoolError::Corrupt),
+            Ok(n) => {
+                consume(&buffer[..n])?;
+                offset += n as u64;
+            }
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => return Err(PoolError::Storage),
+        }
+    }
+    let mut extra = [0];
+    loop {
+        match read_at(file, &mut extra, length) {
+            Ok(0) => break,
+            Ok(_) => return Err(PoolError::Corrupt),
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => return Err(PoolError::Storage),
+        }
+    }
+    let meta = file.metadata().map_err(|_| PoolError::Storage)?;
+    if !regular(&meta) || meta.len() != length {
+        return Err(PoolError::Corrupt);
+    }
+    Ok(())
+}
+
 impl ActiveJournal {
     pub(super) fn create(path: &Path, header: &[u8]) -> Result<(File, Self), PoolError> {
         if !path.is_absolute() {
@@ -303,6 +354,38 @@ impl ActiveJournal {
         let genesis = open_file(&path.join(GENESIS), Some(header_length))?.file;
         genesis.try_lock().map_err(|_| PoolError::Locked)?;
         verify_header(&genesis, expected_header)?;
+        Self::finish_open(path, location, genesis, header_length, true)
+    }
+
+    /// Read-only ownership of an inactive source. The shared root lock excludes
+    /// cooperating writers without requiring writable access to archive files.
+    pub(super) fn open_readonly(
+        path: &Path,
+        expected_header_length: u32,
+    ) -> Result<(File, Self), PoolError> {
+        let header_length = u64::from(expected_header_length);
+        if !(76..=MAX_HEADER_BYTES).contains(&header_length)
+            || (header_length - 76) % 32 != 0
+        {
+            return Err(PoolError::Bounds);
+        }
+        let location = namespace::Directory::open(path)?;
+        let genesis =
+            open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
+        genesis.try_lock_shared().map_err(|_| PoolError::Locked)?;
+        let (genesis, journal) =
+            Self::finish_open(path, location, genesis, header_length, false)?;
+        journal.read_header(&genesis)?;
+        Ok((genesis, journal))
+    }
+
+    fn finish_open(
+        path: &Path,
+        location: namespace::Directory,
+        genesis: File,
+        header_length: u64,
+        writable: bool,
+    ) -> Result<(File, Self), PoolError> {
         let count = inventory(path)?;
         let mut segments = Vec::new();
         segments
@@ -310,7 +393,7 @@ impl ActiveJournal {
             .map_err(|_| PoolError::Storage)?;
         let mut length = header_length;
         for index in 0..count {
-            let segment = open_file(&path.join(name(index)), None)?;
+            let segment = open_file_access(&path.join(name(index)), None, writable)?;
             length = length
                 .checked_add(segment.length)
                 .ok_or(PoolError::Bounds)?;
@@ -330,6 +413,146 @@ impl ActiveJournal {
         };
         journal.check(&genesis)?;
         Ok((genesis, journal))
+    }
+
+    pub(super) fn header_length(&self) -> u64 {
+        self.header_length
+    }
+
+    pub(super) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub(super) fn read_header(&self, genesis: &File) -> Result<replay::Header, PoolError> {
+        self.check(genesis)?;
+        let mut reader = genesis.try_clone().map_err(|_| PoolError::Storage)?;
+        reader.rewind().map_err(|_| PoolError::Storage)?;
+        let header = replay::read_header_profile(
+            &mut reader,
+            self.header_length,
+            StorageProfile::ActiveSegmentsV1,
+        )?;
+        if header.length != self.header_length {
+            return Err(PoolError::Corrupt);
+        }
+        replay::require_eof(&mut reader)?;
+        self.check(genesis)?;
+        Ok(header)
+    }
+
+    /// ZVARCP01 binds the exact physical layout, not only concatenated frames.
+    /// This damage fingerprint never substitutes for genuine authorization.
+    pub(super) fn layout_hash(&self, genesis: &File) -> Result<Hash, PoolError> {
+        self.check(genesis)?;
+        let mut hash = Sha256::new();
+        hash.update(b"ZVARLY01");
+        hash.update(
+            u32::try_from(self.header_length)
+                .map_err(|_| PoolError::Bounds)?
+                .to_be_bytes(),
+        );
+        visit_file(genesis, self.header_length, |bytes| {
+            hash.update(bytes);
+            Ok(())
+        })?;
+        hash.update(
+            u32::try_from(self.segments.len())
+                .map_err(|_| PoolError::Bounds)?
+                .to_be_bytes(),
+        );
+        for (index, segment) in self.segments.iter().enumerate() {
+            hash.update((index as u32).to_be_bytes());
+            hash.update((segment.length as u32).to_be_bytes());
+            visit_file(&segment.file, segment.length, |bytes| {
+                hash.update(bytes);
+                Ok(())
+            })?;
+        }
+        self.check(genesis)?;
+        Ok(hash.finalize().into())
+    }
+
+    fn copy_file(
+        &self,
+        source: &File,
+        length: u64,
+        target: &mut File,
+        index: usize,
+    ) -> Result<(), PoolError> {
+        #[cfg(not(test))]
+        let _ = index;
+        visit_file(source, length, |bytes| {
+            #[cfg(test)]
+            if (self.fault == 1 && index == 0) || (self.fault == 2 && index == 1) {
+                target
+                    .write_all(&bytes[..bytes.len() / 2])
+                    .map_err(|_| PoolError::Storage)?;
+                return Err(PoolError::Storage);
+            }
+            target.write_all(bytes).map_err(|_| PoolError::Storage)
+        })?;
+        #[cfg(test)]
+        if self.fault == 3 && index == self.segments.len() {
+            return Err(PoolError::Storage);
+        }
+        target.sync_all().map_err(|_| PoolError::Storage)
+    }
+
+    /// Copies original files through retained handles. The caller authenticates
+    /// source and target with full replay; no writable state is published here.
+    /// An error leaves the newly created directory exactly as the writes left it.
+    pub(super) fn copy_new(
+        &self,
+        genesis: &File,
+        target: &Path,
+    ) -> Result<(File, Self), PoolError> {
+        if !target.is_absolute() {
+            return Err(PoolError::Bounds);
+        }
+        self.check(genesis)?;
+        let mut builder = fs::DirBuilder::new();
+        builder.recursive(false);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        builder.create(target).map_err(|_| PoolError::Storage)?;
+        let location = namespace::Directory::open(target)?;
+        let mut output = create_file(&target.join(GENESIS))?;
+        output.try_lock().map_err(|_| PoolError::Locked)?;
+        self.copy_file(genesis, self.header_length, &mut output, 0)?;
+        let mut segments = Vec::new();
+        segments
+            .try_reserve_exact(self.segments.len())
+            .map_err(|_| PoolError::Storage)?;
+        for (index, source) in self.segments.iter().enumerate() {
+            let mut file = create_file(&target.join(name(index)))?;
+            self.copy_file(&source.file, source.length, &mut file, index + 1)?;
+            segments.push(Segment {
+                file,
+                length: source.length,
+            });
+        }
+        location.sync()?;
+        #[cfg(unix)]
+        namespace::Directory::open(target.parent().ok_or(PoolError::Bounds)?)?.sync()?;
+        #[cfg(test)]
+        if self.fault == 4 {
+            return Err(PoolError::Storage);
+        }
+        let journal = Self {
+            path: target.to_path_buf(),
+            location,
+            header_length: self.header_length,
+            segments,
+            length: self.length,
+            #[cfg(test)]
+            fault: 0,
+        };
+        journal.check(&output)?;
+        self.check(genesis)?;
+        Ok((output, journal))
     }
 
     pub(super) fn length(&self) -> u64 {
@@ -518,7 +741,7 @@ impl ActiveJournal {
     }
 }
 
-/// Owned, bounded logical stream. Cloned handles retain the genesis lock and
+/// Owned, bounded logical stream. Cloned handles retain the caller's genesis lock and
 /// pathname protections even if the original store is dropped. Each individual
 /// file must reach its captured length AND actual EOF; joining streams cannot
 /// conceal extra bytes. validate_frame additionally enforces record boundaries.
