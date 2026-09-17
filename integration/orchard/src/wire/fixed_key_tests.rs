@@ -32,7 +32,10 @@ fn concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_col
     let digest = payload_digest(&raw);
     let first = AuthorizationVerifier::new();
     let existing = AuthorizationVerifier::new();
-    assert_eq!(first.key.circuit_version(), OrchardCircuitVersion::FixedPostNu6_2);
+    assert_eq!(
+        first.key.circuit_version(),
+        OrchardCircuitVersion::FixedPostNu6_2
+    );
     assert!(std::ptr::eq(first.key, existing.key));
     assert!(!first.verified.contains(&raw, digest).unwrap());
     assert!(!existing.verified.contains(&raw, digest).unwrap());
