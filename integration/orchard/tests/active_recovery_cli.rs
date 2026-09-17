@@ -5,6 +5,7 @@ use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::{self, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use zevune_orchard_lab::pool::recovery::active::ActiveRecoveryCheckpoint;
@@ -695,31 +696,68 @@ fn active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation() 
 fn active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable() {
     let f = fixture(1);
     let target = f.dir.path("complete-without-receipt");
+    let restored = f.dir.path("restored-without-receipt");
     let sink = f.dir.path("read-only-stdout");
     fs::write(&sink, b"keep stdout sink").unwrap();
     let encoded = hex(&f.pin.to_bytes());
-    // An actual read-only OS handle, not a mocked output writer, makes writes
-    // fail on both supported platforms. Process creation still gets a valid
-    // inherited handle; this tests publication followed by a failed receipt.
-    let output = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
-        .args(archive_args(
-            "backup-active",
-            &f.source,
-            &encoded,
-            Some(&target),
-        ))
-        .stdout(Stdio::from(File::open(&sink).unwrap()))
+    // Positive file-redirection control complements the other tests' captured
+    // pipes. The exact success JSON must actually reach the writable OS file.
+    let receipt = f.dir.path("writable-stdout.json");
+    let mut positive = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
+        .args(archive_args("verify-active", &f.source, &encoded, None))
+        .stdout(Stdio::from(File::create_new(&receipt).unwrap()))
         .output()
         .unwrap();
-    failure(&output, &f.dir);
-    assert_eq!(fs::read(&sink).unwrap(), b"keep stdout sink");
-    unchanged(&f.source, &f.original);
+    assert!(positive.stdout.is_empty());
+    positive.stdout = fs::read(&receipt).unwrap();
+    success(&positive, "verify-active", f.pin);
+
+    let commands = [
+        checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state),
+        archive_args("verify-active", &f.source, &encoded, None),
+        archive_args("backup-active", &f.source, &encoded, Some(&target)),
+        archive_args("restore-active", &target, &encoded, Some(&restored)),
+    ];
+    for args in commands {
+        let mode = &args[0];
+        let mut read_only = File::open(&sink).unwrap();
+        // First prove the actual OS handle rejects writes. Rust's buffered
+        // stdout adapter can swallow Unix EBADF, so a File probe is essential.
+        assert!(
+            read_only.write_all(b"must not be written").is_err(),
+            "{mode}: stdout fixture unexpectedly permits writing"
+        );
+        let output = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
+            .args(&args)
+            .stdout(Stdio::from(read_only))
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{mode}: rejected stdout did not produce the CLI failure exit"
+        );
+        failure(&output, &f.dir);
+        assert_eq!(fs::read(&sink).unwrap(), b"keep stdout sink");
+        unchanged(&f.source, &f.original);
+        let copied = match mode.as_str() {
+            "backup-active" => Some(&target),
+            "restore-active" => Some(&restored),
+            _ => None,
+        };
+        if let Some(copied) = copied {
+            // The copy really completed before its receipt failed. It remains
+            // byte-exact and passes a later explicit command with good stdout.
+            unchanged(copied, &f.original);
+            success(
+                &call(&archive_args("verify-active", copied, &encoded, None)),
+                "verify-active",
+                f.pin,
+            );
+        }
+    }
     unchanged(&target, &f.original);
-    success(
-        &call(&archive_args("verify-active", &target, &encoded, None)),
-        "verify-active",
-        f.pin,
-    );
+    unchanged(&restored, &f.original);
     // A later explicit command cannot replace the already complete target.
     failure(
         &call(&archive_args(

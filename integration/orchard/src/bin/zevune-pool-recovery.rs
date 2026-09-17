@@ -49,6 +49,38 @@ fn hex(raw: &[u8]) -> String {
     raw.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+#[cfg(any(unix, windows))]
+fn write_active_receipt(report: &[u8]) -> Result<(), ()> {
+    // Stdout's buffered adapter intentionally turns EBADF into success. Keep
+    // its lock, but write this ASCII receipt through an owned duplicate so OS
+    // errors propagate and dropping the File never closes the original stdout.
+    let output_guard = std::io::stdout().lock();
+    #[cfg(unix)]
+    let handle = {
+        use std::os::fd::AsFd;
+        output_guard.as_fd().try_clone_to_owned().map_err(|_| ())?
+    };
+    #[cfg(windows)]
+    let handle = {
+        use std::os::windows::io::{AsHandle, AsRawHandle};
+        let borrowed = output_guard.as_handle();
+        // Windows permits a null borrowed stdout and even duplicates it as a
+        // null OwnedHandle. An absent receipt destination cannot mean success.
+        if borrowed.as_raw_handle().is_null() {
+            return Err(());
+        }
+        borrowed.try_clone_to_owned().map_err(|_| ())?
+    };
+    let mut output = std::fs::File::from(handle);
+    output.write_all(report).map_err(|_| ())?;
+    output.flush().map_err(|_| ())
+}
+
+#[cfg(not(any(unix, windows)))]
+fn write_active_receipt(_report: &[u8]) -> Result<(), ()> {
+    Err(())
+}
+
 fn run_active(mode: &str, source: &Path, options: &BTreeMap<&str, &str>) -> Result<(), ()> {
     let pin = if mode == "checkpoint-active" {
         let height: u64 = options["--height"].parse().map_err(|_| ())?;
@@ -88,9 +120,7 @@ fn run_active(mode: &str, source: &Path, options: &BTreeMap<&str, &str>) -> Resu
     let report = format!("{{\"operation\":\"{mode}\",\"checkpoint\":\"{}\",\"height\":{},\"bytes\":{},\"checkpoint_format\":\"ZVARCP01\",\"storage_profile\":\"ActiveSegmentsV1\",\"app_hash\":\"{}\",\"segment_count\":{},\"replay_verified\":true,\"finality_verified\":false,\"validator_ready\":false,\"real_funds_allowed\":false}}\n", hex(&pin.to_bytes()), pin.height(), pin.length(), hex(&pin.app_hash()), pin.segment_count());
     // A complete copy can already exist when writing its receipt fails. Keep
     // that failure nonzero; never delete the new target or retry the operation.
-    let mut output = std::io::stdout().lock();
-    output.write_all(report.as_bytes()).map_err(|_| ())?;
-    output.flush().map_err(|_| ())
+    write_active_receipt(report.as_bytes())
 }
 
 fn run(args: &[String]) -> Result<(), ()> {
