@@ -1,0 +1,971 @@
+﻿2026-09-17T09:42:59.0216944Z Current runner version: '2.337.0'
+2026-09-17T09:42:59.0243381Z ##[group]Runner Image Provisioner
+2026-09-17T09:42:59.0244547Z Hosted Compute Agent
+2026-09-17T09:42:59.0245601Z Version: 20260828.587
+2026-09-17T09:42:59.0246755Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-17T09:42:59.0248145Z Build Date: 2026-08-28T16:44:25Z
+2026-09-17T09:42:59.0249186Z Worker ID: {470ca9dc-0d9a-4459-91e4-227ec61e06c5}
+2026-09-17T09:42:59.0249925Z Azure Region: eastus2
+2026-09-17T09:42:59.0250542Z ##[endgroup]
+2026-09-17T09:42:59.0252397Z ##[group]Operating System
+2026-09-17T09:42:59.0253056Z Ubuntu
+2026-09-17T09:42:59.0253681Z 24.04.5
+2026-09-17T09:42:59.0254194Z LTS
+2026-09-17T09:42:59.0254723Z ##[endgroup]
+2026-09-17T09:42:59.0255333Z ##[group]Runner Image
+2026-09-17T09:42:59.0255934Z Image: ubuntu-24.04
+2026-09-17T09:42:59.0256531Z Version: 20260907.300.1
+2026-09-17T09:42:59.0258204Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-17T09:42:59.0259915Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-17T09:42:59.0260902Z ##[endgroup]
+2026-09-17T09:42:59.0262088Z ##[group]GITHUB_TOKEN Permissions
+2026-09-17T09:42:59.0264257Z Contents: read
+2026-09-17T09:42:59.0264949Z Metadata: read
+2026-09-17T09:42:59.0265523Z ##[endgroup]
+2026-09-17T09:42:59.0268626Z Secret source: Actions
+2026-09-17T09:42:59.0269847Z Cache mode: write
+2026-09-17T09:42:59.0270811Z Prepare workflow directory
+2026-09-17T09:42:59.0693683Z Prepare all required actions
+2026-09-17T09:42:59.0743480Z Getting action download info
+2026-09-17T09:42:59.3038799Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-17T09:42:59.4464443Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-17T09:42:59.7640573Z Complete job name: integrated (ubuntu-latest)
+2026-09-17T09:42:59.8541778Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-17T09:42:59.8542882Z with:
+2026-09-17T09:42:59.8543324Z   persist-credentials: false
+2026-09-17T09:42:59.8543857Z   repository: youq616/Zevune
+2026-09-17T09:42:59.8547758Z   token: ***
+2026-09-17T09:42:59.8548206Z   ssh-strict: true
+2026-09-17T09:42:59.8548646Z   ssh-user: git
+2026-09-17T09:42:59.8549075Z   clean: true
+2026-09-17T09:42:59.8549531Z   sparse-checkout-cone-mode: true
+2026-09-17T09:42:59.8550062Z   fetch-depth: 1
+2026-09-17T09:42:59.8550494Z   fetch-tags: false
+2026-09-17T09:42:59.8550943Z   show-progress: true
+2026-09-17T09:42:59.8551383Z   lfs: false
+2026-09-17T09:42:59.8551794Z   submodules: false
+2026-09-17T09:42:59.8552246Z   set-safe-directory: true
+2026-09-17T09:42:59.8552972Z env:
+2026-09-17T09:42:59.8553386Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:42:59.8553853Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:42:59.8554293Z ##[endgroup]
+2026-09-17T09:42:59.9606534Z Syncing repository: youq616/Zevune
+2026-09-17T09:42:59.9609957Z ##[group]Getting Git version info
+2026-09-17T09:42:59.9611192Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-17T09:42:59.9612483Z [command]/usr/bin/git version
+2026-09-17T09:42:59.9709889Z git version 2.55.0
+2026-09-17T09:42:59.9735285Z ##[endgroup]
+2026-09-17T09:42:59.9751422Z Temporarily overriding HOME='/home/runner/work/_temp/f29406cc-f271-483a-bbc2-df8758ffabdd' before making global git config changes
+2026-09-17T09:42:59.9752875Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T09:42:59.9753975Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T09:42:59.9815763Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-17T09:42:59.9820377Z ##[group]Initializing the repository
+2026-09-17T09:42:59.9825373Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-17T09:42:59.9958062Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-17T09:42:59.9960043Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-17T09:42:59.9966445Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-17T09:42:59.9970913Z hint: call:
+2026-09-17T09:42:59.9971946Z hint:
+2026-09-17T09:42:59.9973150Z hint: 	git config --global init.defaultBranch <name>
+2026-09-17T09:42:59.9974453Z hint:
+2026-09-17T09:42:59.9975756Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-17T09:42:59.9977810Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-17T09:42:59.9979464Z hint:
+2026-09-17T09:42:59.9980380Z hint: 	git branch -m <name>
+2026-09-17T09:42:59.9981127Z hint:
+2026-09-17T09:42:59.9981925Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-17T09:42:59.9983184Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-17T09:42:59.9985359Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-17T09:43:00.0071139Z ##[endgroup]
+2026-09-17T09:43:00.0072486Z ##[group]Disabling automatic garbage collection
+2026-09-17T09:43:00.0078533Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-17T09:43:00.0112624Z ##[endgroup]
+2026-09-17T09:43:00.0114105Z ##[group]Setting up auth
+2026-09-17T09:43:00.0120724Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T09:43:00.0159666Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T09:43:00.0646508Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T09:43:00.0697307Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T09:43:00.0964961Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-17T09:43:00.1012817Z ##[endgroup]
+2026-09-17T09:43:00.1014096Z ##[group]Fetching the repository
+2026-09-17T09:43:00.1029811Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +fb5ec39a59cb87aec0662c7706dce1f9e85e1962:refs/remotes/pull/13/merge
+2026-09-17T09:43:00.5606292Z From https://github.com/youq616/Zevune
+2026-09-17T09:43:00.5608617Z  * [new ref]         fb5ec39a59cb87aec0662c7706dce1f9e85e1962 -> pull/13/merge
+2026-09-17T09:43:00.5614675Z ##[endgroup]
+2026-09-17T09:43:00.5616066Z ##[group]Determining the checkout info
+2026-09-17T09:43:00.5617212Z ##[endgroup]
+2026-09-17T09:43:00.5622316Z [command]/usr/bin/git sparse-checkout disable
+2026-09-17T09:43:00.5686121Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-17T09:43:00.5723328Z ##[group]Checking out the ref
+2026-09-17T09:43:00.5728619Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/13/merge
+2026-09-17T09:43:00.6250279Z Note: switching to 'refs/remotes/pull/13/merge'.
+2026-09-17T09:43:00.6251264Z 
+2026-09-17T09:43:00.6251895Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-17T09:43:00.6253276Z changes and commit them, and you can discard any commits you make in this
+2026-09-17T09:43:00.6254660Z state without impacting any branches by switching back to a branch.
+2026-09-17T09:43:00.6255465Z 
+2026-09-17T09:43:00.6256084Z If you want to create a new branch to retain commits you create, you may
+2026-09-17T09:43:00.6257662Z do so (now or later) by using -c with the switch command. Example:
+2026-09-17T09:43:00.6258535Z 
+2026-09-17T09:43:00.6258959Z   git switch -c <new-branch-name>
+2026-09-17T09:43:00.6259569Z 
+2026-09-17T09:43:00.6259957Z Or undo this operation with:
+2026-09-17T09:43:00.6260536Z 
+2026-09-17T09:43:00.6260900Z   git switch -
+2026-09-17T09:43:00.6262079Z 
+2026-09-17T09:43:00.6262919Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-17T09:43:00.6264003Z 
+2026-09-17T09:43:00.6265247Z HEAD is now at fb5ec39 Merge 50ef0d9a5f7c7fdcf64118bd1e0f307457d37736 into 6913d4ab2fda6956db37e0ceb49790a4518c2762
+2026-09-17T09:43:00.6270300Z ##[endgroup]
+2026-09-17T09:43:00.6318337Z [command]/usr/bin/git log -1 --format=%H
+2026-09-17T09:43:00.6350173Z fb5ec39a59cb87aec0662c7706dce1f9e85e1962
+2026-09-17T09:43:00.6362411Z ##[group]Removing auth
+2026-09-17T09:43:00.6366355Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T09:43:00.6403653Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T09:43:00.6634990Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T09:43:00.6668573Z http.https://github.com/.extraheader
+2026-09-17T09:43:00.6679338Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-17T09:43:00.6719241Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T09:43:00.6948009Z ##[endgroup]
+2026-09-17T09:43:00.7370592Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T09:43:00.7375779Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-17T09:43:00.7377641Z with:
+2026-09-17T09:43:00.7378528Z   go-version: 1.27.1
+2026-09-17T09:43:00.7379703Z   cache-dependency-path: integration/cometbft/go.sum
+2026-09-17T09:43:00.7381054Z   check-latest: false
+2026-09-17T09:43:00.7389426Z   token: ***
+2026-09-17T09:43:00.7390349Z   cache: true
+2026-09-17T09:43:00.7391439Z env:
+2026-09-17T09:43:00.7392277Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:43:00.7393244Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:43:00.7394179Z ##[endgroup]
+2026-09-17T09:43:00.8763025Z Setup go version spec 1.27.1
+2026-09-17T09:43:00.8774262Z Attempting to download 1.27.1...
+2026-09-17T09:43:00.8887293Z (node:2246) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T09:43:00.8891434Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T09:43:01.2819667Z matching 1.27.1...
+2026-09-17T09:43:01.2844933Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-linux-x64.tar.gz
+2026-09-17T09:43:01.8418454Z Extracting Go...
+2026-09-17T09:43:01.8562287Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/ea44b430-ccd8-45f0-a712-27214c580526 -f /home/runner/work/_temp/5f8079dd-eb2b-4332-8805-3348f99be8e8
+2026-09-17T09:43:03.5598045Z Successfully extracted go to /home/runner/work/_temp/ea44b430-ccd8-45f0-a712-27214c580526
+2026-09-17T09:43:03.5598810Z Adding to the cache ...
+2026-09-17T09:43:09.1817484Z Successfully cached go to /opt/hostedtoolcache/go/1.27.1/x64
+2026-09-17T09:43:09.1820486Z Added go to the path
+2026-09-17T09:43:09.1823183Z Successfully set up Go version 1.27.1
+2026-09-17T09:43:09.2080719Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-17T09:43:09.2124761Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-17T09:43:09.2170740Z /home/runner/go/pkg/mod
+2026-09-17T09:43:09.2188210Z /home/runner/.cache/go-build
+2026-09-17T09:43:09.3170242Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-17T09:43:09.3288444Z (node:2246) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-17T09:43:10.3710967Z Received 234881024 of 484452015 (48.5%), 224.0 MBs/sec
+2026-09-17T09:43:11.3714927Z Received 480257711 of 484452015 (99.1%), 228.9 MBs/sec
+2026-09-17T09:43:11.4229176Z Received 484452015 of 484452015 (100.0%), 225.2 MBs/sec
+2026-09-17T09:43:11.4230543Z Cache Size: ~462 MB (484452015 B)
+2026-09-17T09:43:11.4269993Z [command]/usr/bin/tar -xf /home/runner/work/_temp/1be8df1f-c99d-40c9-8829-6c26c9a71d36/cache.tzst -P -C /home/runner/work/Zevune/Zevune --use-compress-program unzstd
+2026-09-17T09:43:14.0082748Z Cache restored successfully
+2026-09-17T09:43:14.0349568Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-17T09:43:14.0374819Z go version go1.27.1 linux/amd64
+2026-09-17T09:43:14.0375175Z 
+2026-09-17T09:43:14.0375617Z ##[group]go env
+2026-09-17T09:43:14.0918904Z AR='ar'
+2026-09-17T09:43:14.0919369Z CC='gcc'
+2026-09-17T09:43:14.0919810Z CGO_CFLAGS='-O2 -g'
+2026-09-17T09:43:14.0920535Z CGO_CPPFLAGS=''
+2026-09-17T09:43:14.0920922Z CGO_CXXFLAGS='-O2 -g'
+2026-09-17T09:43:14.0921184Z CGO_ENABLED='1'
+2026-09-17T09:43:14.0921402Z CGO_FFLAGS='-O2 -g'
+2026-09-17T09:43:14.0921652Z CGO_LDFLAGS='-O2 -g'
+2026-09-17T09:43:14.0922228Z CXX='g++'
+2026-09-17T09:43:14.0922458Z GCCGO='gccgo'
+2026-09-17T09:43:14.0922666Z GO111MODULE=''
+2026-09-17T09:43:14.0922872Z GOAMD64='v1'
+2026-09-17T09:43:14.0923070Z GOARCH='amd64'
+2026-09-17T09:43:14.0923265Z GOAUTH='netrc'
+2026-09-17T09:43:14.0923482Z GOBIN='/home/runner/go/bin'
+2026-09-17T09:43:14.0923755Z GOCACHE='/home/runner/.cache/go-build'
+2026-09-17T09:43:14.0924037Z GOCACHEPROG=''
+2026-09-17T09:43:14.0924238Z GODEBUG=''
+2026-09-17T09:43:14.0924453Z GOENV='/home/runner/.config/go/env'
+2026-09-17T09:43:14.0924713Z GOEXE=''
+2026-09-17T09:43:14.0924913Z GOEXPERIMENT=''
+2026-09-17T09:43:14.0925137Z GOFIPS140='off'
+2026-09-17T09:43:14.0925335Z GOFLAGS=''
+2026-09-17T09:43:14.0925997Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build613529697=/tmp/go-build -gno-record-gcc-switches'
+2026-09-17T09:43:14.0926686Z GOHOSTARCH='amd64'
+2026-09-17T09:43:14.0926903Z GOHOSTOS='linux'
+2026-09-17T09:43:14.0927109Z GOINSECURE=''
+2026-09-17T09:43:14.0927659Z GOMOD='/home/runner/work/Zevune/Zevune/go.mod'
+2026-09-17T09:43:14.0928043Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-09-17T09:43:14.0928499Z GONOPROXY=''
+2026-09-17T09:43:14.0928820Z GONOSUMDB=''
+2026-09-17T09:43:14.0929111Z GOOS='linux'
+2026-09-17T09:43:14.0929316Z GOPACKAGESDRIVER=''
+2026-09-17T09:43:14.0929596Z GOPATH='/home/runner/go'
+2026-09-17T09:43:14.0930011Z GOPRIVATE=''
+2026-09-17T09:43:14.0930508Z GOPROXY='https://proxy.golang.org,direct'
+2026-09-17T09:43:14.0931081Z GOROOT='/opt/hostedtoolcache/go/1.27.1/x64'
+2026-09-17T09:43:14.0931605Z GOSUMDB='sum.golang.org'
+2026-09-17T09:43:14.0931948Z GOTELEMETRY='local'
+2026-09-17T09:43:14.0932219Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-09-17T09:43:14.0932534Z GOTMPDIR=''
+2026-09-17T09:43:14.0932731Z GOTOOLCHAIN='local'
+2026-09-17T09:43:14.0933075Z GOTOOLDIR='/opt/hostedtoolcache/go/1.27.1/x64/pkg/tool/linux_amd64'
+2026-09-17T09:43:14.0933432Z GOVCS=''
+2026-09-17T09:43:14.0933628Z GOVERSION='go1.27.1'
+2026-09-17T09:43:14.0933846Z GOWORK=''
+2026-09-17T09:43:14.0934058Z PKG_CONFIG='pkg-config'
+2026-09-17T09:43:14.0934205Z 
+2026-09-17T09:43:14.0934539Z ##[endgroup]
+2026-09-17T09:43:14.1172982Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+2026-09-17T09:43:14.1173801Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy[0m
+2026-09-17T09:43:14.1217862Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:43:14.1218248Z env:
+2026-09-17T09:43:14.1218454Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:43:14.1218926Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:43:14.1219146Z   GOTOOLCHAIN: local
+2026-09-17T09:43:14.1219365Z ##[endgroup]
+2026-09-17T09:43:14.3196421Z info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+2026-09-17T09:43:14.7970840Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T09:43:14.7971615Z info: downloading 5 components
+2026-09-17T09:43:22.9658905Z 
+2026-09-17T09:43:22.9731706Z   1.98.1-x86_64-unknown-linux-gnu installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T09:43:22.9732244Z 
+2026-09-17T09:43:22.9813536Z ##[group]Run test -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"
+2026-09-17T09:43:22.9814200Z [36;1mtest -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"[0m
+2026-09-17T09:43:22.9814743Z [36;1mcargo fmt --manifest-path integration/orchard/Cargo.toml --all -- --check[0m
+2026-09-17T09:43:22.9815408Z [36;1mcargo metadata --manifest-path integration/orchard/Cargo.toml --locked --format-version=1 > /dev/null[0m
+2026-09-17T09:43:22.9815962Z [36;1mgit diff --exit-code[0m
+2026-09-17T09:43:22.9854133Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:43:22.9854488Z env:
+2026-09-17T09:43:22.9854682Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:43:22.9854899Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:43:22.9855113Z   GOTOOLCHAIN: local
+2026-09-17T09:43:22.9855325Z ##[endgroup]
+2026-09-17T09:43:23.6571937Z     Updating crates.io index
+2026-09-17T09:43:24.7674127Z  Downloading crates ...
+2026-09-17T09:43:24.8470181Z   Downloaded base16ct v0.2.0
+2026-09-17T09:43:24.8554901Z   Downloaded block-buffer v0.10.4
+2026-09-17T09:43:24.8567378Z   Downloaded aead v0.5.2
+2026-09-17T09:43:24.8582314Z   Downloaded atomic-polyfill v1.0.3
+2026-09-17T09:43:24.8615278Z   Downloaded version_check v0.9.5
+2026-09-17T09:43:24.8654960Z   Downloaded embedded-io v0.6.1
+2026-09-17T09:43:24.8673170Z   Downloaded embedded-io v0.4.0
+2026-09-17T09:43:24.8697073Z   Downloaded uint v0.9.5
+2026-09-17T09:43:24.8722750Z   Downloaded derive-getters v0.5.0
+2026-09-17T09:43:24.8764222Z   Downloaded crunchy v0.2.4
+2026-09-17T09:43:24.8775036Z   Downloaded autocfg v1.5.1
+2026-09-17T09:43:24.8802905Z   Downloaded base64ct v1.8.3
+2026-09-17T09:43:24.8833508Z   Downloaded tracing-core v0.1.36
+2026-09-17T09:43:24.8870503Z   Downloaded argon2 v0.5.3
+2026-09-17T09:43:24.8889834Z   Downloaded digest v0.10.7
+2026-09-17T09:43:24.8914914Z   Downloaded arrayvec v0.7.8
+2026-09-17T09:43:24.8942280Z   Downloaded crypto-common v0.1.7
+2026-09-17T09:43:24.8956584Z   Downloaded document-features v0.2.12
+2026-09-17T09:43:24.8978087Z   Downloaded blake2b_simd v1.0.5
+2026-09-17T09:43:24.9009736Z   Downloaded pin-project-lite v0.2.17
+2026-09-17T09:43:24.9129244Z   Downloaded subtle v2.6.1
+2026-09-17T09:43:24.9150757Z   Downloaded corez v0.1.1
+2026-09-17T09:43:24.9171779Z   Downloaded either v1.18.0
+2026-09-17T09:43:24.9189194Z   Downloaded funty v2.0.0
+2026-09-17T09:43:24.9196546Z   Downloaded universal-hash v0.5.1
+2026-09-17T09:43:24.9207541Z   Downloaded cfg-if v1.0.4
+2026-09-17T09:43:24.9222997Z   Downloaded generic-array v0.14.7
+2026-09-17T09:43:24.9239455Z   Downloaded ff v0.13.1
+2026-09-17T09:43:24.9254005Z   Downloaded fpe v0.6.1
+2026-09-17T09:43:24.9274225Z   Downloaded tracing-attributes v0.1.31
+2026-09-17T09:43:24.9301264Z   Downloaded visibility v0.1.1
+2026-09-17T09:43:24.9314862Z   Downloaded scopeguard v1.2.0
+2026-09-17T09:43:24.9327087Z   Downloaded blake2 v0.10.6
+2026-09-17T09:43:24.9353359Z   Downloaded cbc v0.1.2
+2026-09-17T09:43:24.9368979Z   Downloaded getset v0.1.7
+2026-09-17T09:43:24.9385555Z   Downloaded jubjub v0.10.0
+2026-09-17T09:43:24.9420293Z   Downloaded memuse v0.2.2
+2026-09-17T09:43:24.9434551Z   Downloaded maybe-rayon v0.1.1
+2026-09-17T09:43:24.9443010Z   Downloaded lazy_static v1.5.0
+2026-09-17T09:43:24.9461039Z   Downloaded static_assertions v1.1.0
+2026-09-17T09:43:24.9475378Z   Downloaded hex v0.4.3
+2026-09-17T09:43:24.9491753Z   Downloaded tap v1.0.1
+2026-09-17T09:43:24.9501570Z   Downloaded zeroize_derive v1.5.0
+2026-09-17T09:43:24.9511787Z   Downloaded const-crc32-nostd v1.3.1
+2026-09-17T09:43:24.9519525Z   Downloaded nonempty v0.11.0
+2026-09-17T09:43:24.9533052Z   Downloaded opaque-debug v0.3.1
+2026-09-17T09:43:24.9542650Z   Downloaded sha2 v0.10.9
+2026-09-17T09:43:24.9568510Z   Downloaded cpufeatures v0.2.17
+2026-09-17T09:43:24.9582462Z   Downloaded cobs v0.3.0
+2026-09-17T09:43:24.9596677Z   Downloaded hash32 v0.2.1
+2026-09-17T09:43:24.9611705Z   Downloaded radium v0.7.0
+2026-09-17T09:43:24.9621916Z   Downloaded inout v0.1.4
+2026-09-17T09:43:24.9633417Z   Downloaded rand_chacha v0.3.1
+2026-09-17T09:43:24.9644593Z   Downloaded stable_deref_trait v1.2.1
+2026-09-17T09:43:24.9653486Z   Downloaded rustc_version v0.4.1
+2026-09-17T09:43:24.9666415Z   Downloaded thiserror-impl v2.0.20
+2026-09-17T09:43:24.9681321Z   Downloaded zcash_spec v0.2.1
+2026-09-17T09:43:24.9694140Z   Downloaded frost-rerandomized v3.0.0
+2026-09-17T09:43:24.9704143Z   Downloaded password-hash v0.5.0
+2026-09-17T09:43:24.9722302Z   Downloaded poly1305 v0.8.0
+2026-09-17T09:43:24.9747123Z   Downloaded bech32 v0.11.1
+2026-09-17T09:43:24.9778471Z   Downloaded litrs v1.0.0
+2026-09-17T09:43:24.9808519Z   Downloaded halo2_legacy_pdqsort v0.1.0
+2026-09-17T09:43:24.9819544Z   Downloaded incrementalmerkletree v0.8.1
+2026-09-17T09:43:24.9832044Z   Downloaded quote v1.0.47
+2026-09-17T09:43:24.9860021Z   Downloaded serdect v0.2.0
+2026-09-17T09:43:24.9873865Z   Downloaded byteorder v1.5.0
+2026-09-17T09:43:24.9890131Z   Downloaded num-integer v0.1.47
+2026-09-17T09:43:24.9907453Z   Downloaded once_cell v1.21.4
+2026-09-17T09:43:24.9933080Z   Downloaded rand_core v0.6.4
+2026-09-17T09:43:24.9946897Z   Downloaded cipher v0.4.4
+2026-09-17T09:43:24.9962539Z   Downloaded critical-section v1.2.0
+2026-09-17T09:43:24.9980229Z   Downloaded crossbeam-deque v0.8.8
+2026-09-17T09:43:24.9995570Z   Downloaded group v0.13.0
+2026-09-17T09:43:25.0011468Z   Downloaded lock_api v0.4.14
+2026-09-17T09:43:25.0024181Z   Downloaded ppv-lite86 v0.2.21
+2026-09-17T09:43:25.0037369Z   Downloaded frost-core v3.0.0
+2026-09-17T09:43:25.0070344Z   Downloaded semver v1.0.28
+2026-09-17T09:43:25.0094371Z   Downloaded chacha20 v0.9.1
+2026-09-17T09:43:25.0113853Z   Downloaded constant_time_eq v0.4.2
+2026-09-17T09:43:25.0135154Z   Downloaded crossbeam-epoch v0.9.21
+2026-09-17T09:43:25.0160110Z   Downloaded halo2_poseidon v0.1.0
+2026-09-17T09:43:25.0174957Z   Downloaded postcard v1.1.3
+2026-09-17T09:43:25.0198691Z   Downloaded serde_core v1.0.229
+2026-09-17T09:43:25.0226415Z   Downloaded spin v0.9.9
+2026-09-17T09:43:25.0250512Z   Downloaded thiserror v2.0.20
+2026-09-17T09:43:25.0318787Z   Downloaded wasi v0.11.1+wasi-snapshot-preview1
+2026-09-17T09:43:25.0335199Z   Downloaded wyz v0.5.1
+2026-09-17T09:43:25.0347680Z   Downloaded zcash_note_encryption v0.4.2
+2026-09-17T09:43:25.0361431Z   Downloaded zeroize v1.9.0
+2026-09-17T09:43:25.0376942Z   Downloaded zip32 v0.2.1
+2026-09-17T09:43:25.0394469Z   Downloaded aes v0.8.4
+2026-09-17T09:43:25.0430136Z   Downloaded crossbeam-utils v0.8.23
+2026-09-17T09:43:25.0458587Z   Downloaded getrandom v0.2.17
+2026-09-17T09:43:25.0488868Z   Downloaded indexmap v1.9.3
+2026-09-17T09:43:25.0521886Z   Downloaded num-traits v0.2.19
+2026-09-17T09:43:25.0549032Z   Downloaded rayon-core v1.13.0
+2026-09-17T09:43:25.0587444Z   Downloaded serde_derive v1.0.229
+2026-09-17T09:43:25.0619145Z   Downloaded proc-macro2 v1.0.107
+2026-09-17T09:43:25.0649606Z   Downloaded serde v1.0.229
+2026-09-17T09:43:25.0684860Z   Downloaded chacha20poly1305 v0.10.1
+2026-09-17T09:43:25.0701619Z   Downloaded heapless v0.7.17
+2026-09-17T09:43:25.0740233Z   Downloaded unicode-ident v1.0.24
+2026-09-17T09:43:25.0768666Z   Downloaded rand v0.8.5
+2026-09-17T09:43:25.0803389Z   Downloaded hashbrown v0.12.3
+2026-09-17T09:43:25.0841506Z   Downloaded num-bigint v0.4.8
+2026-09-17T09:43:25.0890524Z   Downloaded sinsemilla v0.1.0
+2026-09-17T09:43:25.0913988Z   Downloaded reddsa v0.5.2
+2026-09-17T09:43:25.0967638Z   Downloaded bitvec v1.1.1
+2026-09-17T09:43:25.1142631Z   Downloaded halo2_proofs v0.3.5
+2026-09-17T09:43:25.1222712Z   Downloaded itertools v0.14.0
+2026-09-17T09:43:25.1294055Z   Downloaded libm v0.2.16
+2026-09-17T09:43:25.1408246Z   Downloaded rayon v1.12.0
+2026-09-17T09:43:25.1507321Z   Downloaded typenum v1.20.1
+2026-09-17T09:43:25.1543703Z   Downloaded halo2_gadgets v0.5.0
+2026-09-17T09:43:25.1661782Z   Downloaded syn v2.0.119
+2026-09-17T09:43:25.1771687Z   Downloaded pasta_curves v0.5.2
+2026-09-17T09:43:25.1845486Z   Downloaded zerocopy-derive v0.8.57
+2026-09-17T09:43:25.1944381Z   Downloaded bls12_381 v0.8.0
+2026-09-17T09:43:25.1998107Z   Downloaded orchard v0.15.5
+2026-09-17T09:43:25.2171064Z   Downloaded libc v0.2.189
+2026-09-17T09:43:25.2620057Z   Downloaded zerocopy v0.8.57
+2026-09-17T09:43:25.2844806Z   Downloaded syn v3.0.5
+2026-09-17T09:43:25.2953742Z   Downloaded tracing v0.1.44
+2026-09-17T09:43:25.3893147Z ##[group]Run python - <<'PY'
+2026-09-17T09:43:25.3893545Z [36;1mpython - <<'PY'[0m
+2026-09-17T09:43:25.3893789Z [36;1mimport os, tempfile[0m
+2026-09-17T09:43:25.3894189Z [36;1md = tempfile.mkdtemp(prefix='zevune-m7-', dir=os.environ['RUNNER_TEMP'])[0m
+2026-09-17T09:43:25.3894922Z [36;1mworker = os.path.abspath('integration/orchard/target/release/zevune-pool-worker' + ('.exe' if os.name == 'nt' else ''))[0m
+2026-09-17T09:43:25.3895612Z [36;1mwith open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:[0m
+2026-09-17T09:43:25.3896124Z [36;1m    f.write('ZEVUNE_POOL_FIXTURE=' + os.path.join(d, 'zero-value.bin') + '\n')[0m
+2026-09-17T09:43:25.3896580Z [36;1m    f.write('ZEVUNE_POOL_WORKER=' + worker + '\n')[0m
+2026-09-17T09:43:25.3896890Z [36;1mPY[0m
+2026-09-17T09:43:25.3933280Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:43:25.3933632Z env:
+2026-09-17T09:43:25.3933832Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:43:25.3934106Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:43:25.3934327Z   GOTOOLCHAIN: local
+2026-09-17T09:43:25.3934554Z ##[endgroup]
+2026-09-17T09:43:25.4307203Z ##[group]Run cargo test --locked --release -- --test-threads=1
+2026-09-17T09:43:25.4307987Z [36;1mcargo test --locked --release -- --test-threads=1[0m
+2026-09-17T09:43:25.4308446Z [36;1mcargo clippy --locked --release --all-targets -- -D warnings[0m
+2026-09-17T09:43:25.4308910Z [36;1mcargo build --locked --release --bin zevune-pool-worker[0m
+2026-09-17T09:43:25.4345554Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:43:25.4345904Z env:
+2026-09-17T09:43:25.4346100Z   RAYON_NUM_THREADS: 2
+2026-09-17T09:43:25.4346325Z   CARGO_BUILD_JOBS: 2
+2026-09-17T09:43:25.4346536Z   GOTOOLCHAIN: local
+2026-09-17T09:43:25.4346883Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T09:43:25.4347767Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T09:43:25.4348315Z ##[endgroup]
+2026-09-17T09:43:25.5708330Z    Compiling libc v0.2.189
+2026-09-17T09:43:25.5709089Z    Compiling cfg-if v1.0.4
+2026-09-17T09:43:25.5925805Z    Compiling proc-macro2 v1.0.107
+2026-09-17T09:43:25.8058838Z    Compiling quote v1.0.47
+2026-09-17T09:43:25.8883113Z    Compiling unicode-ident v1.0.24
+2026-09-17T09:43:26.4278904Z    Compiling getrandom v0.2.17
+2026-09-17T09:43:26.4413375Z    Compiling subtle v2.6.1
+2026-09-17T09:43:26.5104778Z    Compiling rand_core v0.6.4
+2026-09-17T09:43:26.5555047Z    Compiling version_check v0.9.5
+2026-09-17T09:43:26.6394143Z    Compiling typenum v1.20.1
+2026-09-17T09:43:26.6962364Z    Compiling generic-array v0.14.7
+2026-09-17T09:43:26.7532844Z    Compiling syn v2.0.119
+2026-09-17T09:43:27.5133060Z    Compiling crypto-common v0.1.7
+2026-09-17T09:43:27.5632529Z    Compiling radium v0.7.0
+2026-09-17T09:43:27.6389793Z    Compiling tap v1.0.1
+2026-09-17T09:43:27.6746922Z    Compiling wyz v0.5.1
+2026-09-17T09:43:27.8902586Z    Compiling funty v2.0.0
+2026-09-17T09:43:28.6503041Z    Compiling zerocopy v0.8.57
+2026-09-17T09:43:28.7871108Z    Compiling autocfg v1.5.1
+2026-09-17T09:43:28.9917771Z    Compiling bitvec v1.1.1
+2026-09-17T09:43:29.9305439Z    Compiling zeroize_derive v1.5.0
+2026-09-17T09:43:30.1818381Z    Compiling zeroize v1.9.0
+2026-09-17T09:43:30.8420880Z    Compiling ff v0.13.1
+2026-09-17T09:43:30.9019579Z    Compiling memuse v0.2.2
+2026-09-17T09:43:30.9845340Z    Compiling crossbeam-utils v0.8.23
+2026-09-17T09:43:31.0723204Z    Compiling arrayvec v0.7.8
+2026-09-17T09:43:31.1976535Z    Compiling constant_time_eq v0.4.2
+2026-09-17T09:43:31.2815985Z    Compiling blake2b_simd v1.0.5
+2026-09-17T09:43:32.9828640Z    Compiling ppv-lite86 v0.2.21
+2026-09-17T09:43:33.1023435Z    Compiling crossbeam-epoch v0.9.21
+2026-09-17T09:43:33.2044589Z    Compiling rand_chacha v0.3.1
+2026-09-17T09:43:33.5728712Z    Compiling group v0.13.0
+2026-09-17T09:43:33.6174078Z    Compiling inout v0.1.4
+2026-09-17T09:43:33.6681230Z    Compiling static_assertions v1.1.0
+2026-09-17T09:43:33.6689381Z    Compiling cpufeatures v0.2.17
+2026-09-17T09:43:33.6869985Z    Compiling spin v0.9.9
+2026-09-17T09:43:33.6870623Z    Compiling crossbeam-deque v0.8.8
+2026-09-17T09:43:33.7340855Z    Compiling lazy_static v1.5.0
+2026-09-17T09:43:33.7557751Z    Compiling cipher v0.4.4
+2026-09-17T09:43:33.8856528Z    Compiling rand v0.8.5
+2026-09-17T09:43:34.0170999Z    Compiling rayon-core v1.13.0
+2026-09-17T09:43:34.1739701Z    Compiling num-traits v0.2.19
+2026-09-17T09:43:34.2230406Z    Compiling syn v3.0.5
+2026-09-17T09:43:34.4188815Z    Compiling pasta_curves v0.5.2
+2026-09-17T09:43:35.7915512Z    Compiling either v1.18.0
+2026-09-17T09:43:37.0884016Z    Compiling indexmap v1.9.3
+2026-09-17T09:43:37.1375126Z    Compiling crunchy v0.2.4
+2026-09-17T09:43:37.2084307Z    Compiling once_cell v1.21.4
+2026-09-17T09:43:37.3244132Z    Compiling serde_core v1.0.229
+2026-09-17T09:43:37.4278756Z    Compiling tracing-core v0.1.36
+2026-09-17T09:43:38.1366305Z    Compiling rayon v1.12.0
+2026-09-17T09:43:40.4679090Z    Compiling tracing-attributes v0.1.31
+2026-09-17T09:43:41.1316349Z    Compiling universal-hash v0.5.1
+2026-09-17T09:43:41.1759323Z    Compiling block-buffer v0.10.4
+2026-09-17T09:43:41.2288222Z    Compiling libm v0.2.16
+2026-09-17T09:43:41.3255356Z    Compiling opaque-debug v0.3.1
+2026-09-17T09:43:41.3428325Z    Compiling byteorder v1.5.0
+2026-09-17T09:43:41.4790842Z    Compiling hashbrown v0.12.3
+2026-09-17T09:43:41.8605567Z    Compiling hex v0.4.3
+2026-09-17T09:43:42.0227843Z    Compiling thiserror v2.0.20
+2026-09-17T09:43:42.1334189Z    Compiling pin-project-lite v0.2.17
+2026-09-17T09:43:42.1589426Z    Compiling serde v1.0.229
+2026-09-17T09:43:42.2583781Z    Compiling tracing v0.1.44
+2026-09-17T09:43:42.7891184Z    Compiling poly1305 v0.8.0
+2026-09-17T09:43:43.2199150Z    Compiling digest v0.10.7
+2026-09-17T09:43:43.3408074Z    Compiling num-integer v0.1.47
+2026-09-17T09:43:43.6756889Z    Compiling maybe-rayon v0.1.1
+2026-09-17T09:43:45.4269596Z    Compiling serde_derive v1.0.229
+2026-09-17T09:43:47.2890777Z    Compiling thiserror-impl v2.0.20
+2026-09-17T09:43:47.9950537Z    Compiling chacha20 v0.9.1
+2026-09-17T09:43:48.1143414Z    Compiling bls12_381 v0.8.0
+2026-09-17T09:43:48.4054250Z    Compiling aead v0.5.2
+2026-09-17T09:43:48.4768586Z    Compiling halo2_legacy_pdqsort v0.1.0
+2026-09-17T09:43:48.5412784Z    Compiling halo2_proofs v0.3.5
+2026-09-17T09:43:48.9646850Z    Compiling chacha20poly1305 v0.10.1
+2026-09-17T09:43:49.0167027Z    Compiling jubjub v0.10.0
+2026-09-17T09:43:51.4836433Z    Compiling uint v0.9.5
+2026-09-17T09:43:51.5403384Z    Compiling num-bigint v0.4.8
+2026-09-17T09:43:54.2128706Z    Compiling halo2_poseidon v0.1.0
+2026-09-17T09:43:54.7151046Z    Compiling sinsemilla v0.1.0
+2026-09-17T09:43:54.9791502Z    Compiling cbc v0.1.2
+2026-09-17T09:43:55.0342287Z    Compiling zcash_spec v0.2.1
+2026-09-17T09:43:55.0763885Z    Compiling base64ct v1.8.3
+2026-09-17T09:43:55.2522671Z    Compiling bech32 v0.11.1
+2026-09-17T09:43:55.5667946Z    Compiling zip32 v0.2.1
+2026-09-17T09:43:55.8510954Z    Compiling password-hash v0.5.0
+2026-09-17T09:43:55.9156058Z    Compiling halo2_gadgets v0.5.0
+2026-09-17T09:43:56.5435353Z    Compiling fpe v0.6.1
+2026-09-17T09:43:57.1520130Z    Compiling reddsa v0.5.2
+2026-09-17T09:43:57.4120016Z    Compiling zcash_note_encryption v0.4.2
+2026-09-17T09:43:57.5591370Z    Compiling blake2 v0.10.6
+2026-09-17T09:43:57.9176126Z    Compiling incrementalmerkletree v0.8.1
+2026-09-17T09:43:58.0372104Z    Compiling aes v0.8.4
+2026-09-17T09:43:58.7640647Z    Compiling getset v0.1.7
+2026-09-17T09:43:59.0573238Z    Compiling visibility v0.1.1
+2026-09-17T09:43:59.1505585Z    Compiling nonempty v0.11.0
+2026-09-17T09:43:59.2282612Z    Compiling corez v0.1.1
+2026-09-17T09:43:59.2470516Z    Compiling argon2 v0.5.3
+2026-09-17T09:43:59.9958765Z    Compiling orchard v0.15.5
+2026-09-17T09:44:01.2032236Z    Compiling sha2 v0.10.9
+2026-09-17T09:44:02.7210412Z    Compiling zevune-orchard-lab v0.1.0 (/home/runner/work/Zevune/Zevune/integration/orchard)
+2026-09-17T09:45:24.1957657Z     Finished `release` profile [optimized] target(s) in 1m 58s
+2026-09-17T09:45:24.2030764Z      Running unittests src/lib.rs (target/release/deps/zevune_orchard_lab-5ea7533f368c424e)
+2026-09-17T09:45:24.2045056Z 
+2026-09-17T09:45:24.2045318Z running 139 tests
+2026-09-17T09:45:24.2065432Z test pool::active::tests::adding_a_hard_link_after_open_poison_checks_without_modifying_ledger_bytes ... ok
+2026-09-17T09:45:24.2107279Z test pool::active::tests::another_process_cannot_open_held_genesis_lock ... ok
+2026-09-17T09:45:24.2108650Z test pool::active::tests::budgets_include_framing_total_tail_and_the_independent_segment_cap ... ok
+2026-09-17T09:45:24.2135755Z test pool::active::tests::captured_reader_requires_each_real_eof_and_poisoned_readers_cannot_resume ... ok
+2026-09-17T09:45:24.2145414Z test pool::active::tests::create_is_exclusive_bounded_and_preserves_existing_bytes ... ok
+2026-09-17T09:45:24.2165166Z test pool::active::tests::early_rotation_and_split_frames_are_rejected_even_with_valid_checksums ... ok
+2026-09-17T09:45:24.2397915Z test pool::active::tests::failed_next_segment_publication_keeps_all_sealed_prefix_bytes_and_no_repair ... ok
+2026-09-17T09:45:24.2495901Z test pool::active::tests::full_segment_and_next_frame_rotate_canonically_without_crossing ... ok
+2026-09-17T09:45:24.2581725Z test pool::active::tests::interruption_leaves_metadata_unchanged_and_preserves_the_recoverable_prefix ... ok
+2026-09-17T09:45:24.2591067Z test pool::active::tests::malformed_frame_and_capacity_rejection_create_no_files_or_bytes ... ok
+2026-09-17T09:45:24.2608228Z test pool::active::tests::readers_retain_the_exclusive_root_lock_and_have_independent_positions ... ok
+2026-09-17T09:45:24.2646699Z test pool::active::tests::symlinks_hard_links_and_replaced_names_are_rejected ... ok
+2026-09-17T09:45:24.2656026Z test pool::active::tests::unknown_entry_after_open_is_not_ignored_or_removed ... ok
+2026-09-17T09:45:24.2726323Z test pool::active::tests::unknown_missing_empty_and_truncated_segments_fail_closed_without_repair ... ok
+2026-09-17T09:45:24.2735627Z test pool::capacity_tests::capacity_accounting_matches_the_actual_record_encoder ... ok
+2026-09-17T09:45:26.3392944Z test pool::capacity_tests::capacity_commit_rechecks_the_budget_and_preserves_the_source ... ok
+2026-09-17T09:45:30.4750791Z test pool::capacity_tests::capacity_exact_empty_frame_commits_reopens_and_stops_cleanly ... ok
+2026-09-17T09:45:32.5529719Z test pool::capacity_tests::capacity_invalid_instance_still_fails_closed ... ok
+2026-09-17T09:45:32.5530890Z test pool::capacity_tests::capacity_invalid_lengths_counts_and_overflow_are_rejected ... ok
+2026-09-17T09:45:34.6105562Z test pool::capacity_tests::capacity_prepare_rejects_before_unpersistable_empty_block ... ok
+2026-09-17T09:45:36.6660014Z test pool::capacity_tests::capacity_rejects_before_attempting_any_candidate_authorization ... ok
+2026-09-17T09:45:38.7265785Z test pool::capacity_tests::capacity_selection_requires_space_for_even_an_empty_record ... ok
+2026-09-17T09:45:38.7266650Z test pool::recovery::active::tests::checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic ... ok
+2026-09-17T09:45:51.0753085Z test pool::recovery::active::tests::checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes ... ok
+2026-09-17T09:46:03.4373127Z test pool::recovery::active::tests::checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state ... ok
+2026-09-17T09:46:09.6219420Z test pool::recovery::active::tests::creating_a_target_is_exclusive_and_source_validation_precedes_creation ... ok
+2026-09-17T09:46:13.7390554Z test pool::recovery::active::tests::exported_genesis_checkpoint_matches_independent_fixed_layout_vector ... ok
+2026-09-17T09:46:42.6063679Z test pool::recovery::active::tests::final_source_and_target_namespace_changes_cannot_return_success ... ok
+2026-09-17T09:47:48.6345030Z test pool::recovery::active::tests::genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally ... ok
+2026-09-17T09:47:54.8829332Z test pool::recovery::active::tests::incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores ... ok
+2026-09-17T09:48:30.0235466Z test pool::recovery::active::tests::namespace_tests::active_archive_locks_coordinate_real_processes ... ok
+2026-09-17T09:48:34.1463959Z test pool::recovery::active::tests::namespace_tests::failed_open_releases_all_acquired_file_and_directory_handles ... ok
+2026-09-17T09:48:50.6785205Z test pool::recovery::active::tests::namespace_tests::parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive ... ok
+2026-09-17T09:49:36.0118152Z test pool::recovery::active::tests::namespace_tests::persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified ... ok
+2026-09-17T09:49:54.5775845Z test pool::recovery::active::tests::namespace_tests::readonly_source_files_copy_into_a_normally_writable_active_directory ... ok
+2026-09-17T09:50:00.7672860Z test pool::recovery::active::tests::namespace_tests::unknown_entry_after_open_prevents_verification_and_creates_no_target ... ok
+2026-09-17T09:50:33.7263234Z test pool::recovery::active::tests::partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair ... ok
+2026-09-17T09:50:39.9366627Z test pool::recovery::active::tests::repinned_headers_are_bounded_inside_the_physical_genesis_file ... ok
+2026-09-17T09:50:58.4755415Z test pool::recovery::active::tests::repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state ... ok
+2026-09-17T09:51:00.5384104Z test pool::recovery::active::tests::retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change ... ok
+2026-09-17T09:51:10.9500301Z test pool::recovery::segments::index::tests::all_records_locate_correctly_across_real_production_segment_boundaries ... ok
+2026-09-17T09:51:43.9442447Z test pool::recovery::segments::index::tests::both_profiles_have_exact_height_locations_and_unchanged_source ... ok
+2026-09-17T09:52:00.4384973Z test pool::recovery::segments::index::tests::changed_captured_length_and_wrong_pinned_tip_are_rejected ... ok
+2026-09-17T09:52:00.4387248Z test pool::recovery::segments::index::tests::exact_segment_end_is_not_attributed_to_a_nonexistent_next_segment ... ok
+2026-09-17T09:52:10.7422085Z test pool::recovery::segments::index::tests::genesis_only_has_no_phantom_record ... ok
+2026-09-17T09:52:14.8828961Z test pool::recovery::segments::index::tests::index_builder_rejects_gaps_overlaps_wrong_heights_hashes_and_bombs ... ok
+2026-09-17T09:52:31.3443632Z test pool::recovery::segments::index::tests::metadata_or_late_replay_failure_never_yields_a_prefix_index ... ok
+2026-09-17T09:52:41.6337938Z test pool::recovery::segments::index::tests::moved_named_archive_cannot_reuse_its_old_index_verdict ... ok
+2026-09-17T09:52:41.6339696Z test pool::recovery::segments::reader_tests::exact_payload_requires_last_segment_eof_check_before_success ... ok
+2026-09-17T09:52:41.6341576Z test pool::recovery::segments::reader_tests::hard_io_failure_at_each_boundary_permanently_invalidates_reader ... ok
+2026-09-17T09:52:41.6342713Z test pool::recovery::segments::reader_tests::inconsistent_private_reader_metadata_returns_error_instead_of_panicking ... ok
+2026-09-17T09:52:41.6344047Z test pool::recovery::segments::reader_tests::interrupted_short_reads_and_segment_end_checks_do_not_poison_reader ... ok
+2026-09-17T09:52:41.6345466Z test pool::recovery::segments::reader_tests::truncated_or_extended_segment_cannot_be_skipped_by_retry ... ok
+2026-09-17T09:53:00.4117547Z test pool::recovery::segments::tests::actual_multisegment_replay_crosses_record_boundary_and_restores_exact_bytes ... ok
+2026-09-17T09:53:00.4129436Z test pool::recovery::segments::tests::empty_read_does_not_advance_and_segment_eof_is_not_journal_eof ... ok
+2026-09-17T09:53:08.6482528Z test pool::recovery::segments::tests::every_publication_failure_preserves_source_and_cannot_be_retried_in_place ... ok
+2026-09-17T09:53:20.9990121Z test pool::recovery::segments::tests::links_and_nonregular_inputs_are_refused_and_late_corruption_precedes_output_creation ... ok
+2026-09-17T09:53:20.9992582Z test pool::recovery::segments::tests::manifest_is_exact_bounded_and_contains_no_supplied_paths ... ok
+2026-09-17T09:53:33.3435610Z test pool::recovery::segments::tests::missing_extra_swapped_truncated_or_changed_segments_are_rejected ... ok
+2026-09-17T09:53:43.6712740Z test pool::recovery::segments::tests::namespace_tests::extra_file_after_open_is_rejected_without_removal_or_output ... ok
+2026-09-17T09:53:51.9047181Z test pool::recovery::segments::tests::namespace_tests::failed_open_releases_directory_guard_and_all_acquired_file_locks ... ok
+2026-09-17T09:54:06.3123406Z test pool::recovery::segments::tests::namespace_tests::renamed_and_replaced_directory_cannot_be_verified_or_receive_restore_output ... ok
+2026-09-17T09:54:18.6747222Z test pool::recovery::segments::tests::namespace_tests::replaced_manifest_with_identical_bytes_is_not_the_retained_object ... ok
+2026-09-17T09:54:28.9605542Z test pool::recovery::segments::tests::namespace_tests::replaced_segment_symlink_is_rejected_even_when_it_targets_original_bytes ... ok
+2026-09-17T09:55:01.9125740Z test pool::recovery::segments::tests::namespace_tests::unchanged_archives_retain_multiple_readers_and_release_handles_on_drop ... ok
+2026-09-17T09:55:20.4245226Z test pool::recovery::segments::tests::pack_and_restore_are_create_only_and_archive_readers_keep_real_locks ... ok
+2026-09-17T09:55:45.1758473Z test pool::recovery::segments::tests::partial_restore_and_lost_ack_leave_explicitly_verifiable_targets ... ok
+2026-09-17T09:55:55.4830224Z test pool::recovery::segments::tests::persistent_segment_path_replacement_is_rejected_before_restore ... ok
+2026-09-17T09:55:57.5378244Z test pool::recovery::tests::recovery_checkpoint_codec_bounds_and_every_truncation ... ok
+2026-09-17T09:56:05.7677902Z test pool::recovery::tests::recovery_full_copy_matches_and_original_keeps_prepared_block ... ok
+2026-09-17T09:56:09.8840716Z test pool::recovery::tests::recovery_invalid_store_does_not_export_a_checkpoint ... ok
+2026-09-17T09:56:18.1141534Z test pool::recovery::tests::recovery_partial_write_and_lost_ack_never_replace_or_repair_source ... ok
+2026-09-17T09:56:24.2875306Z test pool::recovery::tests::recovery_readonly_archive_and_changed_source_are_checked_before_target_creation ... ok
+2026-09-17T09:56:28.4081860Z test pool::recovery::tests::recovery_refuses_overwrite_live_writers_links_and_unknown_paths ... ok
+2026-09-17T09:56:30.4686372Z test pool::recovery::tests::recovery_untrusted_header_sizes_are_bounded_even_with_a_matching_file_hash ... ok
+2026-09-17T09:56:38.7531228Z test pool::recovery::tests::recovery_wrong_state_domain_length_or_bytes_pin_rejected ... ok
+2026-09-17T09:56:42.9005341Z test pool::recovery::tests::replay_integration_tests::a_shorter_valid_archive_needs_its_own_pin_not_the_later_checkpoint ... ok
+2026-09-17T09:56:53.2208851Z test pool::recovery::tests::replay_integration_tests::checkpoint_export_and_archive_copy_discard_history_but_keep_the_exact_tip ... ok
+2026-09-17T09:56:59.3968785Z test pool::recovery::tests::replay_integration_tests::checkpoint_export_rejects_a_valid_same_length_alternate_history ... ok
+2026-09-17T09:57:15.8655889Z test pool::recovery::tests::replay_integration_tests::every_recovery_entry_uses_isolated_replay_without_per_block_state_copies ... ok
+2026-09-17T09:57:22.0363921Z test pool::recovery::tests::replay_integration_tests::injected_replay_failure_keeps_lock_and_blocks_prepared_commit_without_repair ... ok
+2026-09-17T09:57:30.2699152Z test pool::recovery::tests::replay_integration_tests::normal_append_handles_preserve_history_even_after_read_cursor_rewinds ... ok
+2026-09-17T09:57:34.3986833Z test pool::recovery::tests::replay_integration_tests::wrong_final_result_with_new_checksums_never_returns_a_verified_archive ... ok
+2026-09-17T09:57:38.5295649Z test pool::replay::tests::a_complete_shorter_prefix_still_requires_an_independent_checkpoint ... ok
+2026-09-17T09:57:42.6564008Z test pool::replay::tests::checksum_mutations_and_structural_corruption_do_not_replay ... ok
+2026-09-17T09:57:42.6566242Z test pool::replay::tests::declared_size_and_record_count_are_bounded_before_body_allocation ... ok
+2026-09-17T09:57:46.7763155Z test pool::replay::tests::every_truncated_frame_and_appended_byte_is_rejected ... ok
+2026-09-17T09:57:50.8876852Z test pool::replay::tests::finish_requires_verified_eof_and_errors_permanently_poison_replay ... ok
+2026-09-17T09:57:55.0008831Z test pool::replay::tests::fragmented_reads_and_interrupted_eof_are_retried_without_skipping ... ok
+2026-09-17T09:57:59.1214683Z test pool::replay::tests::input_failure_is_never_converted_to_a_successful_empty_history ... ok
+2026-09-17T09:58:03.2411137Z test pool::replay::tests::io_fault_at_every_record_byte_including_final_eof_drops_the_reconstruction ... ok
+2026-09-17T09:58:07.3804045Z test pool::replay::tests::maximum_record_window_is_replayed_without_copying_the_full_state_per_block ... ok
+2026-09-17T09:58:07.3814369Z test pool::replay::tests::reusable_buffer_does_not_decode_stale_tail_bytes_after_a_shorter_record ... ok
+2026-09-17T09:58:07.3815573Z test pool::replay::tests::shared_eof_does_not_swallow_read_errors_or_trailing_data ... ok
+2026-09-17T09:58:07.3816962Z test pool::replay::tests::shared_header_and_eof_retry_interrupted_and_short_reads ... ok
+2026-09-17T09:58:07.3818310Z test pool::replay::tests::shared_header_preserves_both_profiles_and_leaves_records_unread ... ok
+2026-09-17T09:58:07.3819196Z test pool::replay::tests::shared_header_rejects_bounds_before_reading_commitment_payload ... ok
+2026-09-17T09:58:07.3820336Z test pool::replay::tests::shared_header_rejects_unknown_network_domain_and_truncation ... ok
+2026-09-17T09:58:11.4918288Z test pool::replay::tests::startup_and_wallet_history_share_replay_and_preserve_journal_bytes ... ok
+2026-09-17T09:58:37.1245913Z test pool::tests::actual_two_hop_pool_commit_replay_and_corruption ... ok
+2026-09-17T09:58:41.2537251Z test pool::tests::empty_pool_lock_restart_and_no_overwrite ... ok
+2026-09-17T09:58:45.3669411Z test pool::tests::lost_sync_acknowledgement_remains_uncertain_until_replay ... ok
+2026-09-17T09:58:49.4812713Z test pool::tests::partial_write_poison_does_not_advance_memory_or_repair_disk ... ok
+2026-09-17T09:58:49.4881291Z test pool::tests::record_decoder_rejects_truncation_trailing_and_length_bombs ... ok
+2026-09-17T09:58:51.5431593Z test pool::tests::tampered_prepared_result_and_resource_limits ... ok
+2026-09-17T09:59:15.6581600Z test pool::wallet_flow_tests::durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement ... ok
+2026-09-17T09:59:17.7153312Z test pool::wallet_flow_tests::wallet_history_replay_keeps_append_cursor_and_rejects_disk_drift ... ok
+2026-09-17T09:59:44.4072312Z test pool::wallet_flow_tests::wallet_nonzero_multinote_payment_change_expiry_backup_and_rescan ... ok
+2026-09-17T09:59:48.7302231Z test pool::wallet_flow_tests::wallet_rejects_changed_checkpoint_ancestry_without_mutation ... ok
+2026-09-17T09:59:48.7304496Z test signing_domain_vectors::every_context_component_changes_the_bound_signature_message ... ok
+2026-09-17T09:59:48.7305587Z test signing_domain_vectors::legacy_and_bound_transcripts_match_independent_sha256_vectors ... ok
+2026-09-17T09:59:49.0953301Z test wallet::tests::shared_witnesses_match_upstream_frontier_for_odd_and_even_trees ... ok
+2026-09-17T09:59:49.1845663Z test wallet::vault::independent_kdf_vector::argon2id_matches_independent_argon2_cffi_reference ... ok
+2026-09-17T09:59:51.9645020Z test wallet::vault::store::compact_tests::compacted_checkpoint_is_authenticated_but_requires_rescan_and_new_receipt ... ok
+2026-09-17T09:59:54.6133759Z test wallet::vault::store::compact_tests::compaction_requires_exact_current_pin_and_never_overwrites_targets ... ok
+2026-09-17T09:59:54.7118911Z test wallet::vault::store::compact_tests::corrupt_or_poisoned_source_cannot_be_compacted_into_a_fresh_looking_copy ... ok
+2026-09-17T09:59:55.3677197Z test wallet::vault::store::compact_tests::partial_and_lost_ack_compaction_preserve_source_and_do_not_repair_targets ... ok
+2026-09-17T09:59:57.9140782Z test wallet::vault::store::tests::authenticated_predecessor_rejects_rewritten_hash_chain_and_other_journal ... ok
+2026-09-17T10:00:00.0903523Z test wallet::vault::store::tests::bounds_padding_and_live_disk_drift_fail_closed ... ok
+2026-09-17T10:00:00.1888359Z test wallet::vault::store::tests::capacity_inspection_is_read_only_and_does_not_claim_synced_balance ... ok
+2026-09-17T10:00:02.7862806Z test wallet::vault::store::tests::create_sync_backup_reopen_and_exact_source_protection ... ok
+2026-09-17T10:00:05.3546418Z test wallet::vault::store::tests::legacy_snapshot_import_preserves_missing_outbox_reservation ... ok
+2026-09-17T10:00:05.3547649Z test wallet::vault::store::tests::lock_child ... ok
+2026-09-17T10:00:05.4552121Z test wallet::vault::store::tests::lock_is_enforced_across_processes ... ok
+2026-09-17T10:00:07.8111182Z test wallet::vault::store::tests::lost_acknowledgement_is_uncertain_and_reopen_reconciles_complete_record ... ok
+2026-09-17T10:00:07.9080651Z test wallet::vault::store::tests::missing_and_nonregular_files_are_not_created_or_repaired ... ok
+2026-09-17T10:00:10.1725830Z test wallet::vault::store::tests::partial_write_poison_preserves_failure_and_never_truncates_on_reopen ... ok
+2026-09-17T10:00:10.2715313Z test wallet::vault::store::tests::truncated_and_oversized_files_never_invoke_unbounded_reads ... ok
+2026-09-17T10:00:12.7288991Z test wallet::vault::store::tests::valid_prefix_needs_independent_receipt_for_rollback_detection ... ok
+2026-09-17T10:00:13.4808231Z test wallet::vault::tests::encrypted_roundtrip_randomization_and_wrong_password ... ok
+2026-09-17T10:00:13.4874791Z test wallet::vault::tests::rejects_lengths_versions_and_kdf_bombs_before_derivation ... ok
+2026-09-17T10:00:13.4951828Z test wallet::vault::tests::snapshot_rejects_noncanonical_flags_padding_and_duplicate_reservations ... ok
+2026-09-17T10:00:13.4959532Z test wire::cache::tests::concurrent_success_memoization_preserves_exact_entries_and_bounds ... ok
+2026-09-17T10:00:13.4960702Z test wire::cache::tests::exact_bytes_required_even_for_a_forced_digest_collision ... ok
+2026-09-17T10:00:13.4961758Z test wire::cache::tests::fifo_capacity_and_duplicate_insert_are_bounded ... ok
+2026-09-17T10:00:13.4962664Z test wire::cache::tests::invalid_sizes_cannot_fill_the_cache ... ok
+2026-09-17T10:00:13.4963406Z test worker::tests::bounded_frame_rejections ... ok
+2026-09-17T10:00:13.4964095Z test worker::tests::fingerprint_matches_go_vector ... ok
+2026-09-17T10:00:13.4964734Z test worker::tests::frame_roundtrip ... ok
+2026-09-17T10:00:13.4964961Z 
+2026-09-17T10:00:13.4965304Z test result: ok. 139 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 889.29s
+2026-09-17T10:00:13.4965728Z 
+2026-09-17T10:00:13.4974888Z      Running unittests src/bin/zevune-orchard-worker.rs (target/release/deps/zevune_orchard_worker-cd84f4d9aac9e10a)
+2026-09-17T10:00:13.4984842Z 
+2026-09-17T10:00:13.4985128Z running 0 tests
+2026-09-17T10:00:13.4985349Z 
+2026-09-17T10:00:13.4985928Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:13.4986374Z 
+2026-09-17T10:00:13.4987085Z      Running unittests src/bin/zevune-pool-worker.rs (target/release/deps/zevune_pool_worker-c8c07100e193c907)
+2026-09-17T10:00:13.4995675Z 
+2026-09-17T10:00:13.4995857Z running 3 tests
+2026-09-17T10:00:13.4997935Z test tests::block_decoder_bounds ... ok
+2026-09-17T10:00:13.4998799Z test tests::frame_truncation_and_bombs ... ok
+2026-09-17T10:00:13.5001369Z test tests::selection_frame_is_bounded_canonical_and_separate_from_blocks ... ok
+2026-09-17T10:00:13.5001945Z 
+2026-09-17T10:00:13.5002245Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:13.5002874Z 
+2026-09-17T10:00:13.5003492Z      Running tests/active_recovery_cli.rs (target/release/deps/active_recovery_cli-1f50c05fa40f1b0c)
+2026-09-17T10:00:13.5010176Z 
+2026-09-17T10:00:13.5010386Z running 0 tests
+2026-09-17T10:00:13.5010615Z 
+2026-09-17T10:00:13.5010904Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:13.5011247Z 
+2026-09-17T10:00:13.5013088Z      Running tests/authorization_cache.rs (target/release/deps/authorization_cache-d80d49074bec5de6)
+2026-09-17T10:00:13.5023563Z 
+2026-09-17T10:00:13.5023792Z running 1 test
+2026-09-17T10:00:23.5342843Z test real_authorization_reuse_rejects_changed_bytes_and_restarts_cold ... ok
+2026-09-17T10:00:23.5343227Z 
+2026-09-17T10:00:23.5343541Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.03s
+2026-09-17T10:00:23.5343908Z 
+2026-09-17T10:00:23.5355124Z      Running tests/bridge.rs (target/release/deps/bridge-cda5b5ed74dd728b)
+2026-09-17T10:00:23.5366978Z 
+2026-09-17T10:00:23.5367284Z running 1 test
+2026-09-17T10:00:35.7346421Z test real_wire_roundtrip_individual_authorization_and_rejections ... ok
+2026-09-17T10:00:35.7346778Z 
+2026-09-17T10:00:35.7347070Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.20s
+2026-09-17T10:00:35.7347848Z 
+2026-09-17T10:00:35.7359725Z      Running tests/cache_state_guards.rs (target/release/deps/cache_state_guards-5ead73e6d643655e)
+2026-09-17T10:00:35.7369468Z 
+2026-09-17T10:00:35.7369648Z running 0 tests
+2026-09-17T10:00:35.7369857Z 
+2026-09-17T10:00:35.7370524Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7371141Z 
+2026-09-17T10:00:35.7371688Z      Running tests/default_worker_policy.rs (target/release/deps/default_worker_policy-479792fe47624099)
+2026-09-17T10:00:35.7381002Z 
+2026-09-17T10:00:35.7381262Z running 1 test
+2026-09-17T10:00:35.7395108Z test default_worker_refuses_explicit_funding_arguments ... ok
+2026-09-17T10:00:35.7395480Z 
+2026-09-17T10:00:35.7395813Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7396263Z 
+2026-09-17T10:00:35.7397800Z      Running tests/genesis_domain.rs (target/release/deps/genesis_domain-f530e40902e25b8e)
+2026-09-17T10:00:35.7405456Z 
+2026-09-17T10:00:35.7405640Z running 0 tests
+2026-09-17T10:00:35.7405863Z 
+2026-09-17T10:00:35.7406223Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7406580Z 
+2026-09-17T10:00:35.7408379Z      Running tests/genesis_manifest_bounds.rs (target/release/deps/genesis_manifest_bounds-b5536276992f4a6e)
+2026-09-17T10:00:35.7415720Z 
+2026-09-17T10:00:35.7415899Z running 0 tests
+2026-09-17T10:00:35.7416135Z 
+2026-09-17T10:00:35.7416494Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7416846Z 
+2026-09-17T10:00:35.7418433Z      Running tests/operator_cli.rs (target/release/deps/operator_cli-287e6082c7030018)
+2026-09-17T10:00:35.7425926Z 
+2026-09-17T10:00:35.7426102Z running 0 tests
+2026-09-17T10:00:35.7426326Z 
+2026-09-17T10:00:35.7426688Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7427035Z 
+2026-09-17T10:00:35.7428735Z      Running tests/payment_preflight.rs (target/release/deps/payment_preflight-d68a7de54a8fe8d9)
+2026-09-17T10:00:35.7436120Z 
+2026-09-17T10:00:35.7436286Z running 0 tests
+2026-09-17T10:00:35.7436508Z 
+2026-09-17T10:00:35.7436970Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:00:35.7437868Z 
+2026-09-17T10:00:35.7438761Z      Running tests/pool_network.rs (target/release/deps/pool_network-c8f8ae5b9cd9a26d)
+2026-09-17T10:00:35.7447840Z 
+2026-09-17T10:00:35.7448002Z running 1 test
+2026-09-17T10:00:43.7680875Z test zero_value_real_proof_for_consensus ... ok
+2026-09-17T10:00:43.7683186Z 
+2026-09-17T10:00:43.7683682Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.02s
+2026-09-17T10:00:43.7684303Z 
+2026-09-17T10:00:43.7690822Z      Running tests/real_bundle.rs (target/release/deps/real_bundle-20f99c112b3d5369)
+2026-09-17T10:00:43.7702625Z 
+2026-09-17T10:00:43.7702773Z running 4 tests
+2026-09-17T10:00:43.7897765Z test builder_rejects_wrong_owner_and_nonmember_path ... ok
+2026-09-17T10:00:43.7933535Z test raw_key_reconstruction_preserves_local_receiver ... ok
+2026-09-17T10:01:02.0026132Z test real_proofs_two_hops_and_adversarial_cases ... ok
+2026-09-17T10:01:02.0026954Z test upstream_public_empty_root_vectors ... ok
+2026-09-17T10:01:02.0027611Z 
+2026-09-17T10:01:02.0028052Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.23s
+2026-09-17T10:01:02.0028449Z 
+2026-09-17T10:01:02.0038060Z      Running tests/recipient_domain.rs (target/release/deps/recipient_domain-bf48c57b14c78bc5)
+2026-09-17T10:01:02.0048007Z 
+2026-09-17T10:01:02.0048188Z running 3 tests
+2026-09-17T10:01:02.0211123Z test canonical_receiver_formats_preserve_legacy_without_domain_fallback ... ok
+2026-09-17T10:01:02.0419008Z test network_recipient_requires_a_verified_history_not_only_keys ... ok
+2026-09-17T10:01:02.0646663Z test recipient_parser_rejects_truncation_mutation_and_noncanonical_input ... ok
+2026-09-17T10:01:02.0647504Z 
+2026-09-17T10:01:02.0647977Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+2026-09-17T10:01:02.0648444Z 
+2026-09-17T10:01:02.0650003Z      Running tests/recovery_cli.rs (target/release/deps/recovery_cli-db19acbe6913f296)
+2026-09-17T10:01:02.0661461Z 
+2026-09-17T10:01:02.0661645Z running 0 tests
+2026-09-17T10:01:02.0661858Z 
+2026-09-17T10:01:02.0662328Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:01:02.0662750Z 
+2026-09-17T10:01:02.0663334Z      Running tests/test_genesis.rs (target/release/deps/test_genesis-c254433454550e36)
+2026-09-17T10:01:02.0671943Z 
+2026-09-17T10:01:02.0672165Z running 0 tests
+2026-09-17T10:01:02.0672393Z 
+2026-09-17T10:01:02.0672883Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:01:02.0673466Z 
+2026-09-17T10:01:02.0673691Z    Doc-tests zevune_orchard_lab
+2026-09-17T10:01:02.1290018Z 
+2026-09-17T10:01:02.1290549Z running 0 tests
+2026-09-17T10:01:02.1290863Z 
+2026-09-17T10:01:02.1291462Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-09-17T10:01:02.1292188Z 
+2026-09-17T10:01:02.2764897Z     Checking cfg-if v1.0.4
+2026-09-17T10:01:02.2765710Z     Checking libc v0.2.189
+2026-09-17T10:01:02.2924747Z     Checking subtle v2.6.1
+2026-09-17T10:01:02.3483145Z     Checking typenum v1.20.1
+2026-09-17T10:01:02.7392845Z     Checking generic-array v0.14.7
+2026-09-17T10:01:02.8076783Z     Checking getrandom v0.2.17
+2026-09-17T10:01:02.8705549Z     Checking rand_core v0.6.4
+2026-09-17T10:01:02.9396483Z     Checking tap v1.0.1
+2026-09-17T10:01:02.9682752Z     Checking wyz v0.5.1
+2026-09-17T10:01:03.0442948Z     Checking radium v0.7.0
+2026-09-17T10:01:03.0471668Z     Checking crypto-common v0.1.7
+2026-09-17T10:01:03.0817065Z     Checking funty v2.0.0
+2026-09-17T10:01:03.1238050Z     Checking zeroize v1.9.0
+2026-09-17T10:01:03.1801992Z     Checking zerocopy v0.8.57
+2026-09-17T10:01:03.3268773Z     Checking bitvec v1.1.1
+2026-09-17T10:01:04.5216934Z     Checking ff v0.13.1
+2026-09-17T10:01:04.5642277Z     Checking arrayvec v0.7.8
+2026-09-17T10:01:04.6510352Z     Checking constant_time_eq v0.4.2
+2026-09-17T10:01:04.6925919Z     Checking memuse v0.2.2
+2026-09-17T10:01:04.7522546Z     Checking blake2b_simd v1.0.5
+2026-09-17T10:01:04.9821659Z     Checking crossbeam-utils v0.8.23
+2026-09-17T10:01:05.1878959Z     Checking group v0.13.0
+2026-09-17T10:01:05.2483741Z     Checking inout v0.1.4
+2026-09-17T10:01:05.2852791Z     Checking cpufeatures v0.2.17
+2026-09-17T10:01:05.2928085Z     Checking ppv-lite86 v0.2.21
+2026-09-17T10:01:05.3010701Z     Checking spin v0.9.9
+2026-09-17T10:01:05.3349378Z     Checking static_assertions v1.1.0
+2026-09-17T10:01:05.3498671Z     Checking lazy_static v1.5.0
+2026-09-17T10:01:05.3669073Z     Checking cipher v0.4.4
+2026-09-17T10:01:05.4588579Z     Checking crossbeam-epoch v0.9.21
+2026-09-17T10:01:05.4690235Z     Checking rand_chacha v0.3.1
+2026-09-17T10:01:05.5630432Z     Checking rand v0.8.5
+2026-09-17T10:01:05.5822874Z     Checking crossbeam-deque v0.8.8
+2026-09-17T10:01:05.6585569Z     Checking either v1.18.0
+2026-09-17T10:01:05.7369907Z     Checking rayon-core v1.13.0
+2026-09-17T10:01:05.8938368Z     Checking pasta_curves v0.5.2
+2026-09-17T10:01:05.9509444Z     Checking once_cell v1.21.4
+2026-09-17T10:01:06.0212361Z     Checking tracing-core v0.1.36
+2026-09-17T10:01:06.2150301Z     Checking rayon v1.12.0
+2026-09-17T10:01:06.3069814Z     Checking num-traits v0.2.19
+2026-09-17T10:01:06.6144366Z     Checking universal-hash v0.5.1
+2026-09-17T10:01:06.6491965Z     Checking block-buffer v0.10.4
+2026-09-17T10:01:06.6866267Z     Checking byteorder v1.5.0
+2026-09-17T10:01:06.8052740Z     Checking opaque-debug v0.3.1
+2026-09-17T10:01:06.8191695Z     Checking hashbrown v0.12.3
+2026-09-17T10:01:07.0666186Z     Checking hex v0.4.3
+2026-09-17T10:01:07.1721903Z     Checking pin-project-lite v0.2.17
+2026-09-17T10:01:07.1927500Z     Checking tracing v0.1.44
+2026-09-17T10:01:07.2706751Z     Checking indexmap v1.9.3
+2026-09-17T10:01:07.3539779Z     Checking maybe-rayon v0.1.1
+2026-09-17T10:01:07.3701788Z     Checking poly1305 v0.8.0
+2026-09-17T10:01:07.4535223Z     Checking digest v0.10.7
+2026-09-17T10:01:07.5056447Z     Checking num-integer v0.1.47
+2026-09-17T10:01:07.5406050Z     Checking serde_core v1.0.229
+2026-09-17T10:01:07.6226851Z     Checking crunchy v0.2.4
+2026-09-17T10:01:07.6398724Z     Checking chacha20 v0.9.1
+2026-09-17T10:01:07.7228086Z     Checking bls12_381 v0.8.0
+2026-09-17T10:01:07.7978434Z     Checking aead v0.5.2
+2026-09-17T10:01:07.8409479Z     Checking halo2_legacy_pdqsort v0.1.0
+2026-09-17T10:01:07.8854210Z     Checking halo2_proofs v0.3.5
+2026-09-17T10:01:08.6838394Z     Checking serde v1.0.229
+2026-09-17T10:01:08.9431421Z     Checking chacha20poly1305 v0.10.1
+2026-09-17T10:01:08.9765469Z     Checking jubjub v0.10.0
+2026-09-17T10:01:09.1182061Z     Checking thiserror v2.0.20
+2026-09-17T10:01:09.1399757Z     Checking uint v0.9.5
+2026-09-17T10:01:09.1773304Z     Checking num-bigint v0.4.8
+2026-09-17T10:01:09.5043087Z     Checking libm v0.2.16
+2026-09-17T10:01:09.8365330Z     Checking halo2_poseidon v0.1.0
+2026-09-17T10:01:10.0352411Z     Checking sinsemilla v0.1.0
+2026-09-17T10:01:10.0851169Z     Checking cbc v0.1.2
+2026-09-17T10:01:10.1268974Z     Checking zcash_spec v0.2.1
+2026-09-17T10:01:10.1534528Z     Checking base64ct v1.8.3
+2026-09-17T10:01:10.2630810Z     Checking bech32 v0.11.1
+2026-09-17T10:01:10.4397813Z     Checking zip32 v0.2.1
+2026-09-17T10:01:10.5185482Z     Checking password-hash v0.5.0
+2026-09-17T10:01:10.6396151Z     Checking fpe v0.6.1
+2026-09-17T10:01:10.6420119Z     Checking halo2_gadgets v0.5.0
+2026-09-17T10:01:10.7382543Z     Checking reddsa v0.5.2
+2026-09-17T10:01:10.8912686Z     Checking zcash_note_encryption v0.4.2
+2026-09-17T10:01:10.9675557Z     Checking blake2 v0.10.6
+2026-09-17T10:01:11.0854884Z     Checking incrementalmerkletree v0.8.1
+2026-09-17T10:01:11.1564794Z     Checking aes v0.8.4
+2026-09-17T10:01:11.3962393Z     Checking nonempty v0.11.0
+2026-09-17T10:01:11.4510874Z     Checking corez v0.1.1
+2026-09-17T10:01:11.4665639Z     Checking argon2 v0.5.3
+2026-09-17T10:01:11.4936099Z     Checking orchard v0.15.5
+2026-09-17T10:01:11.6536423Z     Checking sha2 v0.10.9
+2026-09-17T10:01:12.4576691Z     Checking zevune-orchard-lab v0.1.0 (/home/runner/work/Zevune/Zevune/integration/orchard)
+2026-09-17T10:01:13.6055418Z     Finished `release` profile [optimized] target(s) in 11.42s
+2026-09-17T10:01:13.7262920Z     Finished `release` profile [optimized] target(s) in 0.08s
+2026-09-17T10:01:13.7349197Z ##[group]Run go test ./... -count=1
+2026-09-17T10:01:13.7349538Z [36;1mgo test ./... -count=1[0m
+2026-09-17T10:01:13.7349788Z [36;1mgo vet ./...[0m
+2026-09-17T10:01:13.7385073Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T10:01:13.7385414Z env:
+2026-09-17T10:01:13.7385607Z   RAYON_NUM_THREADS: 2
+2026-09-17T10:01:13.7385820Z   CARGO_BUILD_JOBS: 2
+2026-09-17T10:01:13.7386035Z   GOTOOLCHAIN: local
+2026-09-17T10:01:13.7386383Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T10:01:13.7387027Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T10:01:13.7387789Z ##[endgroup]
+2026-09-17T10:01:14.0508939Z ?   	github.com/youq616/Zevune/cmd/latency-report	[no test files]
+2026-09-17T10:01:14.1648693Z ?   	github.com/youq616/Zevune/cmd/zevuned	[no test files]
+2026-09-17T10:01:14.8489377Z ok  	github.com/youq616/Zevune/internal/api	0.030s
+2026-09-17T10:01:14.8556295Z ok  	github.com/youq616/Zevune/internal/latency	0.008s
+2026-09-17T10:01:15.1140210Z ok  	github.com/youq616/Zevune/internal/ledger	0.269s
+2026-09-17T10:01:15.1184061Z ok  	github.com/youq616/Zevune/internal/merkle	0.008s
+2026-09-17T10:01:15.3755880Z ok  	github.com/youq616/Zevune/internal/orchardbridge	0.209s
+2026-09-17T10:01:15.7170828Z ok  	github.com/youq616/Zevune/internal/poolbridge	0.550s
+2026-09-17T10:01:15.7171444Z ok  	github.com/youq616/Zevune/internal/protocol	0.006s
+2026-09-17T10:01:18.3113442Z ##[group]Run go mod download
+2026-09-17T10:01:18.3113928Z [36;1mgo mod download[0m
+2026-09-17T10:01:18.3114357Z [36;1mgo mod verify[0m
+2026-09-17T10:01:18.3114850Z [36;1mgo mod tidy -diff[0m
+2026-09-17T10:01:18.3115524Z [36;1mgo test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v[0m
+2026-09-17T10:01:18.3116374Z [36;1mgo test -mod=readonly ./... -count=1 -timeout=8m[0m
+2026-09-17T10:01:18.3117062Z [36;1mgo vet -mod=readonly -tags=pool_e2e ./...[0m
+2026-09-17T10:01:18.3164124Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T10:01:18.3164516Z env:
+2026-09-17T10:01:18.3164719Z   RAYON_NUM_THREADS: 2
+2026-09-17T10:01:18.3165099Z   CARGO_BUILD_JOBS: 2
+2026-09-17T10:01:18.3165493Z   GOTOOLCHAIN: local
+2026-09-17T10:01:18.3166132Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T10:01:18.3167666Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T10:01:18.3168631Z ##[endgroup]
+2026-09-17T10:01:19.5739610Z all modules verified
+2026-09-17T10:01:40.6654394Z === RUN   TestRealFinalizationCommitAndRestart
+2026-09-17T10:01:47.0104087Z     e2e_test.go:179: real proof -> Finalize without persistence -> worker restart -> replay -> Commit -> durable restart -> duplicate rejected
+2026-09-17T10:01:47.0105056Z --- PASS: TestRealFinalizationCommitAndRestart (6.34s)
+2026-09-17T10:01:47.0105884Z === RUN   TestPoolNodeHelper
+2026-09-17T10:01:47.0106502Z --- PASS: TestPoolNodeHelper (0.00s)
+2026-09-17T10:01:47.0106976Z === RUN   TestRealPoolFourProcessConsensus
+2026-09-17T10:02:08.8591902Z     e2e_test.go:516: real zero-value proof included at height 4; 4 node commits/signatures/app hashes matched independent Orchard replay
+2026-09-17T10:02:26.0517037Z     e2e_test.go:554: full network restart exceeded every persisted height; spent nullifiers and 2 commitments retained; duplicate rejected
+2026-09-17T10:02:26.0681029Z --- PASS: TestRealPoolFourProcessConsensus (39.06s)
+2026-09-17T10:02:26.0681650Z === RUN   TestRealLegacyInitChainRejectsActiveApplicationVersion
+2026-09-17T10:02:28.1567560Z --- PASS: TestRealLegacyInitChainRejectsActiveApplicationVersion (2.09s)
+2026-09-17T10:02:28.1568327Z === RUN   TestGenesisBindingRejectsAmbiguityAndMismatch
+2026-09-17T10:02:28.1570775Z --- PASS: TestGenesisBindingRejectsAmbiguityAndMismatch (0.00s)
+2026-09-17T10:02:28.1571572Z === RUN   TestRealProposalSelectionAndAtomicRejection
+2026-09-17T10:02:30.4934151Z --- PASS: TestRealProposalSelectionAndAtomicRejection (2.34s)
+2026-09-17T10:02:30.4934693Z PASS
+2026-09-17T10:02:30.4936770Z ok  	github.com/youq616/Zevune/integration/cometbft/poolapp	49.839s
+2026-09-17T10:02:31.8047177Z ok  	github.com/youq616/Zevune/integration/cometbft/app	0.035s
+2026-09-17T10:02:31.8048522Z ?   	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet	[no test files]
+2026-09-17T10:02:32.8034451Z ok  	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-network	0.033s
+2026-09-17T10:03:12.1460343Z ok  	github.com/youq616/Zevune/integration/cometbft/devnet	39.177s
+2026-09-17T10:03:12.1461015Z ok  	github.com/youq616/Zevune/integration/cometbft/labnet	0.057s
+2026-09-17T10:03:12.1461502Z ok  	github.com/youq616/Zevune/integration/cometbft/poolapp	0.010s
+2026-09-17T10:03:18.0791316Z ##[group]Run go test -mod=readonly -race -tags=pool_e2e ./poolapp -run '^TestReal(FinalizationCommitAndRestart|ProposalSelectionAndAtomicRejection)$' -count=1 -timeout=3m
+2026-09-17T10:03:18.0792584Z [36;1mgo test -mod=readonly -race -tags=pool_e2e ./poolapp -run '^TestReal(FinalizationCommitAndRestart|ProposalSelectionAndAtomicRejection)$' -count=1 -timeout=3m[0m
+2026-09-17T10:03:18.0828662Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T10:03:18.0829015Z env:
+2026-09-17T10:03:18.0829213Z   RAYON_NUM_THREADS: 2
+2026-09-17T10:03:18.0829430Z   CARGO_BUILD_JOBS: 2
+2026-09-17T10:03:18.0829639Z   GOTOOLCHAIN: local
+2026-09-17T10:03:18.0829988Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T10:03:18.0830629Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T10:03:18.0831122Z ##[endgroup]
+2026-09-17T10:04:11.6433868Z ok  	github.com/youq616/Zevune/integration/cometbft/poolapp	9.827s
+2026-09-17T10:04:11.7918167Z ##[group]Run go test -race ./internal/poolbridge -count=1 -timeout=2m
+2026-09-17T10:04:11.7918726Z [36;1mgo test -race ./internal/poolbridge -count=1 -timeout=2m[0m
+2026-09-17T10:04:11.7919272Z [36;1mgo test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2[0m
+2026-09-17T10:04:11.7955567Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T10:04:11.7955901Z env:
+2026-09-17T10:04:11.7956104Z   RAYON_NUM_THREADS: 2
+2026-09-17T10:04:11.7956319Z   CARGO_BUILD_JOBS: 2
+2026-09-17T10:04:11.7956527Z   GOTOOLCHAIN: local
+2026-09-17T10:04:11.7956882Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T10:04:11.7957770Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T10:04:11.7958286Z ##[endgroup]
+2026-09-17T10:04:16.3599923Z ok  	github.com/youq616/Zevune/internal/poolbridge	3.989s
+2026-09-17T10:04:25.9071687Z fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+2026-09-17T10:04:25.9099256Z fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 2 workers
+2026-09-17T10:04:28.9082762Z fuzz: elapsed: 3s, execs: 119163 (39707/sec), new interesting: 4 (total: 5)
+2026-09-17T10:04:31.9078821Z fuzz: elapsed: 6s, execs: 241787 (40880/sec), new interesting: 4 (total: 5)
+2026-09-17T10:04:34.9079476Z fuzz: elapsed: 9s, execs: 369110 (42440/sec), new interesting: 4 (total: 5)
+2026-09-17T10:04:35.9745937Z fuzz: elapsed: 10s, execs: 411716 (39941/sec), new interesting: 4 (total: 5)
+2026-09-17T10:04:35.9746447Z PASS
+2026-09-17T10:04:35.9752124Z ok  	github.com/youq616/Zevune/internal/poolbridge	10.070s
+2026-09-17T10:04:36.0090384Z ##[group]Run git diff --exit-code
+2026-09-17T10:04:36.0090774Z [36;1mgit diff --exit-code[0m
+2026-09-17T10:04:36.0127098Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T10:04:36.0127663Z env:
+2026-09-17T10:04:36.0127863Z   RAYON_NUM_THREADS: 2
+2026-09-17T10:04:36.0128087Z   CARGO_BUILD_JOBS: 2
+2026-09-17T10:04:36.0128304Z   GOTOOLCHAIN: local
+2026-09-17T10:04:36.0128652Z   ZEVUNE_POOL_FIXTURE: /home/runner/work/_temp/zevune-m7-y8zjw3__/zero-value.bin
+2026-09-17T10:04:36.0129528Z   ZEVUNE_POOL_WORKER: /home/runner/work/Zevune/Zevune/integration/orchard/target/release/zevune-pool-worker
+2026-09-17T10:04:36.0130028Z ##[endgroup]
+2026-09-17T10:04:36.0681228Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T10:04:36.0682503Z Post job cleanup.
+2026-09-17T10:04:36.1908529Z (node:24533) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T10:04:36.1909534Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T10:04:36.1980817Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-17T10:04:36.2038606Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-17T10:04:36.2070110Z /home/runner/go/pkg/mod
+2026-09-17T10:04:36.2092663Z /home/runner/.cache/go-build
+2026-09-17T10:04:36.2099108Z Cache hit occurred on the primary key setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938, not saving cache.
+2026-09-17T10:04:36.2314360Z Post job cleanup.
+2026-09-17T10:04:36.3163988Z [command]/usr/bin/git version
+2026-09-17T10:04:36.3209920Z git version 2.55.0
+2026-09-17T10:04:36.3255444Z Temporarily overriding HOME='/home/runner/work/_temp/411ab118-fff2-464f-be81-6a8c9f18088a' before making global git config changes
+2026-09-17T10:04:36.3256987Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T10:04:36.3262276Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T10:04:36.3310000Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T10:04:36.3354621Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T10:04:36.3604618Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T10:04:36.3668601Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T10:04:36.4145173Z Cleaning up orphan processes
+2026-09-17T10:04:36.4623358Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

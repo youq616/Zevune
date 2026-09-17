@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "candidate": "C2",
+  "reviewer_task": "/root/p2_archive_native_audit",
+  "decision": "REJECTED_NATIVE_CLIPPY_GATE",
+  "recorded_at": "2026-09-17T08:28:04.930675+00:00",
+  "source_head": "7477d9e0656ed751f525a4b6fe9f6649b995ede6",
+  "source_tree": "8e6544a6de9a8337926f70f8a89aa36e59ab7e39",
+  "synthetic_checkout": "bc2e180ec53be25ee36b80931adbd5e8dbe1d9a3",
+  "pr": 13,
+  "run_id": 35199527967,
+  "job_id": 105130677319,
+  "job_name": "funded (ubuntu-latest)",
+  "step": "Verify exact source and unchanged locks",
+  "error": "clippy::manual_is_multiple_of denied by -D warnings",
+  "location": "src/pool/recovery/active.rs:88",
+  "expression": "(header - MIN_HEADER) % 32 != 0",
+  "native_suggestion": "!(header - MIN_HEADER).is_multiple_of(32)",
+  "exit_code": 101,
+  "command": "cargo clippy --locked --release --features local-funding-lab --all-targets -- -D warnings",
+  "original_log": {
+    "file": "job-105130677319.log",
+    "bytes": 63569,
+    "sha256": "67fa4d451492b8958ee1750e81c6a2fd261dea5cdf326048fc87de5ba916375c",
+    "checkout_commit_values": [
+      "bc2e180ec53be25ee36b80931adbd5e8dbe1d9a3"
+    ],
+    "CRLF_count": 0,
+    "has_BOM": true,
+    "terminal_cleanup_present": true
+  },
+  "observed_before_failure": {
+    "cargo_fmt_check_completed": true,
+    "python_lines": [
+      "Ran 135 tests in 3.633s",
+      "OK (skipped=3)"
+    ]
+  },
+  "scope": "C2 full matrix not accepted or fully archived. Other jobs retain their separately timestamped statuses. No push logs downloaded. Root plans C3 for independent-review missing swapped-segment regression plus this lint fix."
+}

@@ -1,0 +1,338 @@
+{
+  "schema": "zevune.independent-design-review.fixed-key.v1",
+  "reviewer_task": "/root/p2_archive_adversarial_review",
+  "completed_at_utc": "2026-09-17T10:22:25.379109+00:00",
+  "independent_non_author": true,
+  "reviewer_changed_design_or_runtime_or_tests": false,
+  "repository": "youq616/Zevune",
+  "pull_request": "https://github.com/youq616/Zevune/pull/13",
+  "stage_base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "existing_c4_source": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+  "existing_c4_tree": "3c44977028b58ddd387f52946632af594208edfb",
+  "new_c5_source": null,
+  "new_c5_tree": null,
+  "design": {
+    "path": "/workspace/scratch/1753b04c9dbb/Zevune/docs/FIXED_VERIFYING_KEY.zh-CN.md",
+    "bytes": 4682,
+    "sha256": "363e6a9576b12e5f2eb39487b00486cef92e9a49bc5728d47bf266b23a14f5a5",
+    "identity_verified": true,
+    "committed_at_review": false
+  },
+  "verdict": "DESIGN_PASS",
+  "open_blocking_design_findings": [],
+  "scope": "Fixed public verifying key lifetime reuse only; all authorization results, state checks, genuine replay and acceptance gates remain independent and unchanged.",
+  "existing_c4_tracked_files_unchanged": true,
+  "worktree_status_at_review": "?? docs/FIXED_VERIFYING_KEY.zh-CN.md\n",
+  "fixed_dependencies": {
+    "orchard": "0.15.5",
+    "orchard_registry_checksum": "a3cb2b35534bba3c63fbf640dc6cd9dfd1ece2fae886cdab4ab1f1e380dd6ca1",
+    "rust": "1.98.1",
+    "circuit": "OrchardCircuitVersion::FixedPostNu6_2",
+    "external_key_or_runtime_version_input": false
+  },
+  "checks": [
+    {
+      "id": "version_and_origin",
+      "result": "PASS_DESIGN",
+      "assessment": "Private OnceLock initializer uses only compile-time crate::CIRCUIT; no external key, input-selected version, fallback or changed dependency. Future version requires re-reviewed version/storage binding."
+    },
+    {
+      "id": "send_sync",
+      "result": "PASS_DESIGN",
+      "assessment": "Observed upstream API page identifies 0.15.5 and VerifyingKey Send+Sync; OnceLock Sync requires T Send+Sync. Locked native builds still required; no unsafe or custom trait implementations allowed."
+    },
+    {
+      "id": "lifetime",
+      "result": "PASS_DESIGN",
+      "assessment": "Only immutable public key retained for static process lifetime; verifier caches stay owned and individually dropped. Last verifier drop does not reclaim static key, and process exit does not invoke static Drop."
+    },
+    {
+      "id": "failure",
+      "result": "PASS_DESIGN",
+      "assessment": "Initializer panic propagates and cell remains uninitialized; later calls may retry same fixed build. No partially initialized key or accepting fallback. Not permanent poison or once-only counting failed attempts."
+    },
+    {
+      "id": "reentrancy",
+      "result": "PASS_DESIGN",
+      "assessment": "Initializer must not call same getter or AuthorizationVerifier::new; official contract makes reentrancy erroneous and current implementation may deadlock. Direct fixed upstream build has no project callback."
+    },
+    {
+      "id": "cache_isolation",
+      "result": "PASS_DESIGN",
+      "assessment": "Each new/default verifier obtains shared immutable key and its own VerifiedCache::default(). Exact bytes/digest, decode first, real signature/binding/proof validation, success-only insertion and per-instance poisoned-cache error unchanged."
+    },
+    {
+      "id": "callers_and_replay",
+      "result": "PASS_DESIGN",
+      "assessment": "PoolStore creation and replay, active export/verify/copy, worker sessions, WalletProver and vault outbox still receive independent new verifier/cache. Triple source/target/final-source genuine replay and all state checks unchanged."
+    },
+    {
+      "id": "meaningful_regression",
+      "result": "PASS_DESIGN",
+      "assessment": "One genuine payment fixture, real warm A and private contains true; concurrent new instances share exact fixed key/version but contain false, then each actually verifies and contains true. Canonically decoded signature/proof mutants require exact Authorization and remain uncached; no direct remember or fake verifier."
+    },
+    {
+      "id": "concurrency_claim",
+      "result": "PASS_DESIGN",
+      "assessment": "Proposed concurrent construction/use may run after warm initialization. Design explicitly declines cold-first-init contention claim without a fresh-process test; std synchronization guarantee is separate from measured test coverage."
+    },
+    {
+      "id": "unchanged_acceptance",
+      "result": "PASS_DESIGN",
+      "assessment": "No test/fixture/assertion/caller reduction, no workflow/concurrency/time-budget/dependency changes. New source/tree needs new independent code review and full Ubuntu/Windows native gates."
+    }
+  ],
+  "proposed_concrete_test_plan_from_parent": {
+    "implemented_or_executed": false,
+    "location": "Private wire cfg(test) child module",
+    "genuine_fixtures": 1,
+    "payment": "Genuine nonzero payment using existing tests/support/fixtures.rs",
+    "concurrent_new_verifiers": 4,
+    "key_checks": [
+      "std::ptr::eq shared fixed key",
+      "circuit_version exactly FixedPostNu6_2"
+    ],
+    "cache_checks": [
+      "A actual verify succeeds then contains true",
+      "Each concurrent new verifier contains false before first verify",
+      "After Barrier each performs actual verify then contains true"
+    ],
+    "mutants": [
+      "Proof first byte",
+      "Binding signature final byte"
+    ],
+    "mutant_checks": [
+      "decode succeeds",
+      "verify is exact WireError::Authorization",
+      "contains remains false"
+    ],
+    "direct_synthetic_success_insertion": false,
+    "cold_initialization_race_coverage_claimed": false,
+    "timing_threshold": false,
+    "old_authorization_test_assertions_removed": false
+  },
+  "nonblocking_implementation_guidance": [
+    "Keep observation helpers private cfg(test); no exported cache insertion or success marker API",
+    "Clarify old authorization-cache documentation/comment wording about independently constructed key versus shared fixed-origin material",
+    "Retain all existing cryptographic, ledger, archive, stdout, namespace and fault regression cases and original CI budgets",
+    "Do not infer throughput or end-to-end performance from removed repeated key construction"
+  ],
+  "source_documents": [
+    {
+      "url": "https://docs.rs/orchard/latest/orchard/circuit/struct.VerifyingKey.html",
+      "observed_version": "0.15.5",
+      "supports": [
+        "Explicit circuit version build",
+        "circuit_version getter",
+        "Send and Sync auto traits"
+      ],
+      "version_fixed_url_successfully_read": false
+    },
+    {
+      "url": "https://docs.rs/orchard/latest/src/orchard/circuit.rs.html",
+      "acquired_from": "API Source link",
+      "supports": [
+        "VerifyingKey build creates Params and Circuit::empty(version)",
+        "keygen_vk unwrap can panic",
+        "No project verifier callback"
+      ],
+      "vendored_crate_archive_authenticated_by_reviewer": false
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/sync/struct.OnceLock.html",
+      "observed_version": "1.98.1",
+      "supports": [
+        "Stable get_or_init",
+        "Single nonpanicking initialization under concurrency",
+        "Panic leaves uninitialized and propagates",
+        "Reentrancy invalid/current possible deadlock",
+        "OnceLock Sync requires T Send+Sync"
+      ]
+    },
+    {
+      "url": "https://doc.rust-lang.org/reference/items/static-items.html",
+      "supports": [
+        "Static lifetime",
+        "Static values do not run Drop at program end"
+      ]
+    }
+  ],
+  "diagnostic_scope": "Full overhead diagnostic read and hash verified; this reviewer did not independently re-audit C4 CI status for this design review and does not claim a profiler-confirmed cause or measured future benefit.",
+  "native_tests_executed": false,
+  "locked_build_performed": false,
+  "ci_results_certified": false,
+  "performance_gain_measured": false,
+  "c4_accepted": false,
+  "c5_implementation_accepted": false,
+  "stage_accepted": false,
+  "tools_present": {
+    "rustc": null,
+    "cargo": null,
+    "go": null
+  },
+  "missing_old_references": [
+    {
+      "path": "docs/PROOF_CONTRACT.md",
+      "exists": false,
+      "read_claimed": false
+    },
+    {
+      "path": "docs/ARCHITECTURE.zh-CN.md",
+      "exists": false,
+      "read_claimed": false
+    }
+  ],
+  "immutable_inputs": [
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c4-ci-overhead-diagnostic.md",
+      "bytes": 11451,
+      "sha256": "d85901f61ea58ff5e068ae666af9fa4f4bf371efdc34687a0b839f04623260d8",
+      "unchanged": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c4.md",
+      "bytes": 15431,
+      "sha256": "5d736cf901527a97cf27725212088432f6a1b943a9caccd02e1b94521e34b844",
+      "unchanged": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c4.json",
+      "bytes": 28068,
+      "sha256": "c39f3f128b121b6903fe9fd8603c699084f8361814fb3c49e5b528cb05fc584c",
+      "unchanged": true
+    }
+  ],
+  "source_input_inventory": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 3240,
+      "sha256": "bc5a7f3ba26bb99da6264427effd12b7df03a6f48c4c1a21281ade0b4c0b5f96",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "docs/STAGE_REVIEW.zh-CN.md",
+      "bytes": 2139,
+      "sha256": "738d92594cb0851975bd05b5746edba9cd10512ea049cbdb02e1be8e2020bb46",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "docs/FIXED_VERIFYING_KEY.zh-CN.md",
+      "bytes": 4682,
+      "sha256": "363e6a9576b12e5f2eb39487b00486cef92e9a49bc5728d47bf266b23a14f5a5",
+      "existing_source_commit": null,
+      "new_design_not_committed": true
+    },
+    {
+      "path": "docs/AUTHORIZATION_CACHE.zh-CN.md",
+      "bytes": 2753,
+      "sha256": "345b481c979cac0ed4b59602e4d20b1cabd4e993162c5efb74b8750b4b6da3bf",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/Cargo.toml",
+      "bytes": 841,
+      "sha256": "45d275f12a798c684bcf6b2e86034aff964414fbd32156b8601c4031d7487c7c",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/Cargo.lock",
+      "bytes": 29707,
+      "sha256": "34a1d8a6f67a3e85d8fee00682f6c8c5285f89a968b89ee66af861a237e74ff5",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/rust-toolchain.toml",
+      "bytes": 86,
+      "sha256": "887f9be066a15585a2c583578e84b0fcb541126d81546276bad3d2ff00d61167",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/lib.rs",
+      "bytes": 10427,
+      "sha256": "c24ab910b0676f9010e704becdf59575fc9077e8b5280c57d55d4c8e95078bf9",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "bytes": 10866,
+      "sha256": "8359d8611b346abb1e74d1fb947fcf7b3818c5e3f824f54eb3968cc7b62998f1",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/wire/cache.rs",
+      "bytes": 4110,
+      "sha256": "b78dd32ad8fd267ec9d23aac2d4d4eab9ddee294f194f7b2d8a00ceb7431a9fc",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/tests/authorization_cache.rs",
+      "bytes": 2932,
+      "sha256": "87eedb422d1149f8282a36032fb13e246452d2926a773dcc7e1d8c330cafa3ba",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "bytes": 29008,
+      "sha256": "62a5257f4e8f7cec291564341435a769c2dbdc463b642e0b21b513cde9d8e316",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/pool/replay.rs",
+      "bytes": 9818,
+      "sha256": "4c25dcd5d92cf5e0ab592b11ae790dba8f3ab7761d3d7cbf7f5e94b13b9b3d64",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "bytes": 10383,
+      "sha256": "77f47005568fad097edd6f563d3e1d0962957fe932dbd8565b0b4126ebe75137",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/worker.rs",
+      "bytes": 4694,
+      "sha256": "d02bec09c4ebb4269deec413d5b1895c34e81c82e1f3a3f6e82d5c5f9f65a51e",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/wallet.rs",
+      "bytes": 19392,
+      "sha256": "b4dbcbe3e6cd600c1c3327448ce78a452474ad10e4f9b06fa332072de2410ddf",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    },
+    {
+      "path": "integration/orchard/src/wallet/vault/store.rs",
+      "bytes": 19742,
+      "sha256": "8ea8237f1c451422068ecd64b6307f10a271e59d0c7466edaaff505a595339a2",
+      "existing_source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "new_design_not_committed": false
+    }
+  ],
+  "review_report": {
+    "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-design-review-c5.md",
+    "bytes": 10300,
+    "sha256": "bb6debd63f36ea94d646dca36946142f3a2f2eec4806423a862a85035a0644c7"
+  }
+}

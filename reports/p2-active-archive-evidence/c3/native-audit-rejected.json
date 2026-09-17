@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "candidate": "C3",
+  "reviewer_task": "/root/p2_archive_native_audit",
+  "decision": "REJECTED_NATIVE_CLI_REGRESSION",
+  "recorded_at": "2026-09-17T09:10:54.690169+00:00",
+  "source_head": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+  "source_tree": "4017bee976c18767ed568d7ec8a33f6d668b8c22",
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "synthetic_checkout": "11402e8d8db1e2ae9b6d8615ea9f6362e8676606",
+  "pr": 13,
+  "run_id": 35199878279,
+  "job_id": 105131817273,
+  "job_name": "funded (ubuntu-latest)",
+  "failure_step": "Complete binary, integration and documentation tests",
+  "driver": "python scripts/run_funded_rust.py interfaces",
+  "actual_cargo_commands": [
+    "RUN cargo test --locked --release --features local-funding-lab --bin zevune-funded-scenario --bin zevune-orchard-worker --bin zevune-pool-recovery --bin zevune-pool-worker --bin zevune-wallet-local --test active_recovery_cli --test authorization_cache --test bridge --test cache_state_guards --test default_worker_policy --test genesis_domain --test genesis_manifest_bounds --test operator_cli --test payment_preflight --test pool_network --test real_bundle --test recipient_domain --test recovery_cli --test test_genesis -- --test-threads=1"
+  ],
+  "funded_metadata_plan_lines": [
+    "{\"cohort\": \"interfaces\", \"commands\": [[\"cargo\", \"test\", \"--locked\", \"--release\", \"--features\", \"local-funding-lab\", \"--bin\", \"zevune-funded-scenario\", \"--bin\", \"zevune-orchard-worker\", \"--bin\", \"zevune-pool-recovery\", \"--bin\", \"zevune-pool-worker\", \"--bin\", \"zevune-wallet-local\", \"--test\", \"active_recovery_cli\", \"--test\", \"authorization_cache\", \"--test\", \"bridge\", \"--test\", \"cache_state_guards\", \"--test\", \"default_worker_policy\", \"--test\", \"genesis_domain\", \"--test\", \"genesis_manifest_bounds\", \"--test\", \"operator_cli\", \"--test\", \"payment_preflight\", \"--test\", \"pool_network\", \"--test\", \"real_bundle\", \"--test\", \"recipient_domain\", \"--test\", \"recovery_cli\", \"--test\", \"test_genesis\", \"--\", \"--test-threads=1\"], [\"cargo\", \"test\", \"--locked\", \"--release\", \"--features\", \"local-funding-lab\", \"--doc\", \"--\", \"--test-threads=1\"]], \"documentation_tests\": true, \"test_targets\": [[\"bin\", \"zevune-funded-scenario\"], [\"bin\", \"zevune-orchard-worker\"], [\"bin\", \"zevune-pool-recovery\"], [\"bin\", \"zevune-pool-worker\"], [\"bin\", \"zevune-wallet-local\"], [\"test\", \"active_recovery_cli\"], [\"test\", \"authorization_cache\"], [\"test\", \"bridge\"], [\"test\", \"cache_state_guards\"], [\"test\", \"default_worker_policy\"], [\"test\", \"genesis_domain\"], [\"test\", \"genesis_manifest_bounds\"], [\"test\", \"operator_cli\"], [\"test\", \"payment_preflight\"], [\"test\", \"pool_network\"], [\"test\", \"real_bundle\"], [\"test\", \"recipient_domain\"], [\"test\", \"recovery_cli\"], [\"test\", \"test_genesis\"]]}"
+  ],
+  "failed_target_result": {
+    "target": "Running tests/active_recovery_cli.rs (target/release/deps/active_recovery_cli-625280d4acb28a2c)",
+    "result": "FAILED",
+    "passed": 6,
+    "failed": 1,
+    "ignored": 0,
+    "measured": 0,
+    "filtered_out": 0,
+    "seconds": 137.53,
+    "original_line": "test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 137.53s"
+  },
+  "failed_test": "active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable",
+  "assertion": "assertion failed: !output.status.success()",
+  "panic_location": "tests/active_recovery_cli.rs:106:5",
+  "trace_lines": [
+    "---- active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable stdout ----",
+    "",
+    "thread 'active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable' (9964) panicked at tests/active_recovery_cli.rs:106:5:",
+    "assertion failed: !output.status.success()",
+    "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+    "",
+    "",
+    "failures:",
+    "    active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable",
+    "",
+    "test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 137.53s",
+    "",
+    "error: test failed, to rerun pass `--test active_recovery_cli`",
+    "FUNDED_COHORT_NOT_COMPLETED: CalledProcessError",
+    "##[error]Process completed with exit code 1.",
+    "Post job cleanup.",
+    "[command]/usr/bin/git version",
+    "git version 2.55.0",
+    "Temporarily overriding HOME='/home/runner/work/_temp/b6bcade2-615b-4920-972b-83bd0011e722' before making global git config changes"
+  ],
+  "fixture_source_excerpt": "695: fn active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable() {\n696:     let f = fixture(1);\n697:     let target = f.dir.path(\"complete-without-receipt\");\n698:     let sink = f.dir.path(\"read-only-stdout\");\n699:     fs::write(&sink, b\"keep stdout sink\").unwrap();\n700:     let encoded = hex(&f.pin.to_bytes());\n701:     // An actual read-only OS handle, not a mocked output writer, makes writes\n702:     // fail on both supported platforms. Process creation still gets a valid\n703:     // inherited handle; this tests publication followed by a failed receipt.\n704:     let output = Command::new(env!(\"CARGO_BIN_EXE_zevune-pool-recovery\"))\n705:         .args(archive_args(\n706:             \"backup-active\",\n707:             &f.source,\n708:             &encoded,\n709:             Some(&target),\n710:         ))\n711:         .stdout(Stdio::from(File::open(&sink).unwrap()))\n712:         .output()\n713:         .unwrap();\n714:     failure(&output, &f.dir);\n715:     assert_eq!(fs::read(&sink).unwrap(), b\"keep stdout sink\");\n716:     unchanged(&f.source, &f.original);\n717:     unchanged(&target, &f.original);\n718:     success(\n719:         &call(&archive_args(\"verify-active\", &target, &encoded, None)),\n720:         \"verify-active\",\n721:         f.pin,\n722:     );\n723:     // A later explicit command cannot replace the already complete target.\n724:     failure(\n725:         &call(&archive_args(\n726:             \"backup-active\",\n727:             &f.source,\n728:             &encoded,\n729:             Some(&target),\n730:         )),\n731:         &f.dir,\n732:     );\n733:     unchanged(&target, &f.original);\n734: }",
+  "scope": "The read-only stdout fixture invocation returned a successful process status where nonzero was required. This native log alone does not identify OS errno/stdout write behavior, production root cause, or later assertions reached. C3 is not accepted.",
+  "driver_completion": "FUNDED_COHORT_NOT_COMPLETED: CalledProcessError",
+  "workflow_step_exit_code": 1,
+  "original_log": {
+    "file": "job-105131817273.log",
+    "bytes": 76073,
+    "sha256": "64c3e286d1f0ba3ed339d3047793b2e6190ea056a0c2b1f9bc037b06d6ff53bb",
+    "has_utf8_bom": true,
+    "crlf_count": 0,
+    "checkout_commits": [
+      "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+    ],
+    "runner_cleanup_present": true
+  },
+  "actual_completed_result_harnesses": 6,
+  "actual_completed_results": [
+    {
+      "target": "Running unittests src/bin/zevune-funded-scenario.rs (target/release/deps/zevune_funded_scenario-f70f73ea82bffdb1)",
+      "result": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.0,
+      "original_line": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "target": "Running unittests src/bin/zevune-orchard-worker.rs (target/release/deps/zevune_orchard_worker-fc9899a21c7d3ca9)",
+      "result": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.0,
+      "original_line": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "target": "Running unittests src/bin/zevune-pool-recovery.rs (target/release/deps/zevune_pool_recovery-b632f684f6c9bf8e)",
+      "result": "ok",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.0,
+      "original_line": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "target": "Running unittests src/bin/zevune-pool-worker.rs (target/release/deps/zevune_pool_worker-5567cf45676a0b02)",
+      "result": "ok",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 0.0,
+      "original_line": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "target": "Running unittests src/bin/zevune-wallet-local.rs (target/release/deps/zevune_wallet_local-c9ee75283b8916a9)",
+      "result": "ok",
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 2.13,
+      "original_line": "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.13s"
+    },
+    {
+      "target": "Running tests/active_recovery_cli.rs (target/release/deps/active_recovery_cli-625280d4acb28a2c)",
+      "result": "FAILED",
+      "passed": 6,
+      "failed": 1,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 137.53,
+      "original_line": "test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 137.53s"
+    }
+  ],
+  "actual_test_ok_names": [
+    "tests::block_decoder_bounds",
+    "tests::frame_truncation_and_bombs",
+    "tests::selection_frame_is_bounded_canonical_and_separate_from_blocks",
+    "tests::compaction_frame_requires_explicit_pin_and_exact_two_paths",
+    "tests::experimental_address_and_numbers_require_canonical_encoding",
+    "tests::invalid_spend_does_not_construct_public_proving_parameters",
+    "tests::malformed_amounts_are_rejected_before_wallet_access",
+    "tests::network_address_operation_has_exact_bounded_fields",
+    "tests::parser_rejects_every_truncation_unknown_operation_and_trailing_byte",
+    "tests::storage_inspection_frame_has_exactly_one_path",
+    "tests::wrong_network_is_rejected_before_wallet_file_open",
+    "timing::tests::incomplete_or_extra_stages_do_not_make_a_success_measurement",
+    "timing::tests::reversed_clock_invalidates_all_durations_not_payment_state",
+    "timing::tests::stages_are_disjoint_and_total_includes_rounding_remainder",
+    "active_cli_bad_options_and_exact_tip_fail_without_changes",
+    "active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation",
+    "active_cli_genesis_without_segments_is_an_explicit_checkpoint",
+    "active_cli_keeps_legacy_profiles_pins_commands_and_json_separate",
+    "active_cli_locked_sources_and_existing_or_nested_targets_are_refused",
+    "active_cli_real_payment_backup_restore_and_receiver_spend"
+  ],
+  "funded_interfaces_completed": false,
+  "remaining_planned_tests_not_credited": true,
+  "no_claim_all_other_c3_jobs_failed": true,
+  "archived_log_count_at_failure": 7,
+  "archived_log_manifest": [
+    {
+      "file": "job-105131816289.log",
+      "bytes": 42353,
+      "sha256": "694f2305f6472c79221afd38eab4c86c86948236a0b09e2afa7b13b6824d0d97",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131816333.log",
+      "bytes": 75567,
+      "sha256": "0ec080116464eee89985b82231ebae02f8d421cbed8021ecd0fbdb33cd25f3a1",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131816441.log",
+      "bytes": 19227,
+      "sha256": "33298736c69bd55f89c8a0369374301f9cf09cdad4f8608be7bc1b47631a9cdc",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131816471.log",
+      "bytes": 43395,
+      "sha256": "6692296fc63a243be6e4dc388a952430f904130c7f73894a2627fd9e688d8422",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131816682.log",
+      "bytes": 95715,
+      "sha256": "5551ac6259d045f98fc9493ca7d2c6a3bc268998fa025c8e580081dd791e9c8f",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131816703.log",
+      "bytes": 59931,
+      "sha256": "cec1e6f132a4780722b0e2874e91a048e6a8a47c0847c16f75b0e8fb98eb14de",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": []
+    },
+    {
+      "file": "job-105131817273.log",
+      "bytes": 76073,
+      "sha256": "64c3e286d1f0ba3ed339d3047793b2e6190ea056a0c2b1f9bc037b06d6ff53bb",
+      "checkout_commits": [
+        "11402e8d8db1e2ae9b6d8615ea9f6362e8676606"
+      ],
+      "runner_cleanup_present": true,
+      "action_error_lines": [
+        "##[error]Process completed with exit code 1."
+      ]
+    }
+  ]
+}

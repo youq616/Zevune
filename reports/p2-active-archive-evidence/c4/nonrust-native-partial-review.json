@@ -1,0 +1,1016 @@
+{
+  "reviewer": "/root/p2_archive_native_audit/nonrust_log_review",
+  "reviewed_at": "2026-09-17T09:34:15.680204+00:00",
+  "verdict": "PASS_FOR_FOUR_JOBS_ONLY",
+  "candidate_overall": "PENDING",
+  "source_commit": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+  "source_tree": "3c44977028b58ddd387f52946632af594208edfb",
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "synthetic_checkout": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+  "method": "Read all four original logs in full; independently count actual raw outputs and cross-check original direct step metadata and exact-source workflow/scripts. Original logs unchanged. No GitHub polling, no test execution, no runtime edits.",
+  "jobs": [
+    {
+      "id": 105145581373,
+      "name": "integration (windows-latest)",
+      "url": "https://github.com/youq616/Zevune/actions/runs/35204106416/job/105145581373",
+      "metadata_observed_at": "2026-09-17T09:22:03.140Z",
+      "metadata_sha256": "6e1b7965f7d0a0252ee7bb37b6362ab5a0b737b14087ef2f27209239e9289205",
+      "actual_started_at": "2026-09-17T09:18:17Z",
+      "actual_completed_at": "2026-09-17T09:20:40Z",
+      "raw_log_file": "job-105145581373.log",
+      "raw_log_sha256": "88f846455557f2631f2c27ffaedbfc3475437ce789b5f90bff92b179e8d5444a",
+      "raw_log_bytes": 43146,
+      "raw_log_lines": 490,
+      "bom": true,
+      "crlf_count": 490,
+      "log_first_timestamp": "2026-09-17T09:18:18.5335681Z",
+      "log_last_timestamp": "2026-09-17T09:20:38.5763682Z",
+      "checkout": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+      "steps_success": 11,
+      "steps_skipped": [
+        {
+          "conclusion": "skipped",
+          "name": "Adapter race checks",
+          "number": 7,
+          "status": "completed"
+        }
+      ],
+      "cleanup_evidence": [
+        {
+          "line": 489,
+          "text": "2026-09-17T09:20:38.5262591Z Cleaning up orphan processes"
+        }
+      ],
+      "actual_go_test_top_level_pass_names": [
+        "TestGenesisValidation",
+        "TestFinalizeIsNotDurableAndCommitIs",
+        "TestProposalChecksNeverWrite",
+        "TestEveryTransactionEntryRemainsClosed",
+        "TestRepeatedFinalizeCopiesAndBindsHash",
+        "TestQueryOnlyCommittedStateAndNoProofClaims",
+        "TestSnapshotsAndExtensionsFailClosed",
+        "TestConcurrentInfoAndFinalize",
+        "TestClosedApplicationFails",
+        "TestMalformedCommandsNeverCreateOrOverwrite",
+        "TestBoundedPublicTransactionFiles",
+        "TestStorageCommandRejectsNetworkAndMutationFlags",
+        "TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput",
+        "TestStorageCheckpointFlagPair",
+        "TestCheckpointSyntaxDoesNotSelectAStorageProfile",
+        "TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands",
+        "TestExplicitEmptyStorageCheckpointDoesNotDisableCheck",
+        "TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths",
+        "TestNodeProcessHelper",
+        "TestFourProcessConsensusAndRecovery",
+        "TestInitAndManifestFailClosed",
+        "TestFullRestartAdvancesBeyondDurableHeight",
+        "TestMissingSigningStateIsNotRecreated",
+        "TestQuorumAndAllHeaderBindings",
+        "TestPinnedPublicConfigurationAndCompanionFiles",
+        "TestCanonicalDecodingAndFileBounds",
+        "TestLoopbackEndpointAndStreamingLimits",
+        "TestRPCRejectsRedirectCompressionAndOversize",
+        "TestMalformedGenesisInitDoesNotCreatePrivateDirectory",
+        "TestUnexpectedEngineExitIsNotSuccessfulShutdown",
+        "TestRequestedShutdownDoesNotNeedEngineExit",
+        "TestConcurrentCancellationAndEngineExitRemainRequested",
+        "TestEngineExitReleasesWaitingSupervisor",
+        "TestLifecycleRejectsMissingContext",
+        "TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion",
+        "TestSignedHeadersUseAuthenticatedProfileHeightAndVersion",
+        "TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds",
+        "TestActiveCapacityReportsLogicalBytesAndExactCheckpoint",
+        "TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath",
+        "TestReferenceCheckpointRequestBoundsBeforeAccess",
+        "TestReferenceCheckpointMissingContextAndNetwork",
+        "TestUnpinnedResultsNeverClaimRetainedCheckpoint",
+        "TestStorageCheckpointCanonicalInputs",
+        "TestStorageCheckpointExactTipNotMinimumHeightOrFinality",
+        "TestInvalidStorageCheckpointFailsBeforeFileAccess",
+        "TestBoundedCopyRejectsShortLongAndCancelledInput",
+        "TestCopyIOFailureAndMidstreamCancelNeverYieldDigest",
+        "TestCopyPathsAndPublicEntryRejectBeforeWorker",
+        "TestPublishCopyIsCreateOnlyAndDoesNotLinkSource",
+        "TestPublicationFailureAfterLinkIsExplicitlyUncertain",
+        "TestPublicationCancellationAndExistingSymlinkDoNotOverwrite",
+        "TestCopyReportDoesNotClaimConsensusOrFunds",
+        "TestJournalDigestDetectsChangedAndReplacedFile",
+        "TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult",
+        "TestStorageReportBoundariesAndNoFinalityClaims",
+        "TestStorageReportRejectsContradictoryCounts",
+        "TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges",
+        "TestStorageMissingInvalidPathsNeverCreateData",
+        "TestGenesisBindingRejectsAmbiguityAndMismatch"
+      ],
+      "actual_go_fuzz_seed_harness_pass_names": [
+        "FuzzCanonicalPublicConfiguration",
+        "FuzzNumericLoopbackEndpoint",
+        "FuzzStorageCheckpointInputs",
+        "FuzzStorageAccounting"
+      ],
+      "actual_go_subcase_pass_count": 43,
+      "actual_go_runtime_skip_lines": [],
+      "python_case_ok_count": 0,
+      "python_case_skip_lines": [],
+      "python_summary": [],
+      "package_results": [
+        {
+          "line": 240,
+          "text": "2026-09-17T09:19:31.0963378Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t3.302s"
+        },
+        {
+          "line": 241,
+          "text": "2026-09-17T09:19:31.0964915Z ?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]"
+        },
+        {
+          "line": 261,
+          "text": "2026-09-17T09:19:31.1540172Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.550s"
+        },
+        {
+          "line": 281,
+          "text": "2026-09-17T09:20:22.2524988Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t51.154s"
+        },
+        {
+          "line": 447,
+          "text": "2026-09-17T09:20:22.2710075Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t1.675s"
+        },
+        {
+          "line": 451,
+          "text": "2026-09-17T09:20:22.2712798Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.069s"
+        }
+      ],
+      "command_groups": [
+        {
+          "line": 33,
+          "text": "2026-09-17T09:18:19.4794461Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"
+        },
+        {
+          "line": 115,
+          "text": "2026-09-17T09:18:25.3392598Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00"
+        },
+        {
+          "line": 203,
+          "text": "2026-09-17T09:19:20.7689856Z ##[group]Run go version"
+        },
+        {
+          "line": 215,
+          "text": "2026-09-17T09:19:24.6521067Z ##[group]Run go test -mod=readonly ./... -count=1 -timeout=8m -v"
+        },
+        {
+          "line": 452,
+          "text": "2026-09-17T09:20:22.7702634Z ##[group]Run go vet -mod=readonly ./..."
+        },
+        {
+          "line": 458,
+          "text": "2026-09-17T09:20:33.8240051Z ##[group]Run go build -mod=readonly ./cmd/zevune-devnet"
+        },
+        {
+          "line": 464,
+          "text": "2026-09-17T09:20:36.5996648Z ##[group]Run git diff --exit-code"
+        }
+      ],
+      "fuzz_results": [
+        {
+          "line": 239,
+          "text": "2026-09-17T09:19:31.0962662Z PASS"
+        },
+        {
+          "line": 260,
+          "text": "2026-09-17T09:19:31.1539477Z PASS"
+        },
+        {
+          "line": 280,
+          "text": "2026-09-17T09:20:22.2524489Z PASS"
+        },
+        {
+          "line": 446,
+          "text": "2026-09-17T09:20:22.2709565Z PASS"
+        },
+        {
+          "line": 450,
+          "text": "2026-09-17T09:20:22.2712289Z PASS"
+        }
+      ],
+      "key_semantic_evidence": [
+        {
+          "line": 265,
+          "text": "2026-09-17T09:20:22.2509879Z     devnet_test.go:214: four processes verified common height=4; equal block/app hashes; >2/3 signatures verified"
+        },
+        {
+          "line": 269,
+          "text": "2026-09-17T09:20:22.2514972Z     devnet_test.go:239: restored quorum and lagging validator catch-up succeeded"
+        },
+        {
+          "line": 271,
+          "text": "2026-09-17T09:20:22.2517564Z     devnet_test.go:256: full four-process restart resumed from durable application/consensus state"
+        },
+        {
+          "line": 275,
+          "text": "2026-09-17T09:20:22.2520421Z === RUN   TestFullRestartAdvancesBeyondDurableHeight"
+        },
+        {
+          "line": 276,
+          "text": "2026-09-17T09:20:22.2521500Z     restart_test.go:53: restart advanced every node beyond highest recovered height 3 to at least 6"
+        },
+        {
+          "line": 277,
+          "text": "2026-09-17T09:20:22.2522504Z --- PASS: TestFullRestartAdvancesBeyondDurableHeight (7.87s)"
+        },
+        {
+          "line": 282,
+          "text": "2026-09-17T09:20:22.2525671Z === RUN   TestQuorumAndAllHeaderBindings"
+        },
+        {
+          "line": 283,
+          "text": "2026-09-17T09:20:22.2526627Z === RUN   TestQuorumAndAllHeaderBindings/version"
+        },
+        {
+          "line": 284,
+          "text": "2026-09-17T09:20:22.2527271Z === RUN   TestQuorumAndAllHeaderBindings/validators"
+        },
+        {
+          "line": 285,
+          "text": "2026-09-17T09:20:22.2527920Z === RUN   TestQuorumAndAllHeaderBindings/state-length"
+        },
+        {
+          "line": 286,
+          "text": "2026-09-17T09:20:22.2528550Z === RUN   TestQuorumAndAllHeaderBindings/future"
+        },
+        {
+          "line": 287,
+          "text": "2026-09-17T09:20:22.2529148Z === RUN   TestQuorumAndAllHeaderBindings/height"
+        },
+        {
+          "line": 288,
+          "text": "2026-09-17T09:20:22.2529727Z === RUN   TestQuorumAndAllHeaderBindings/chain"
+        },
+        {
+          "line": 289,
+          "text": "2026-09-17T09:20:22.2530367Z === RUN   TestQuorumAndAllHeaderBindings/next-validators"
+        },
+        {
+          "line": 290,
+          "text": "2026-09-17T09:20:22.2531036Z === RUN   TestQuorumAndAllHeaderBindings/parameters"
+        },
+        {
+          "line": 291,
+          "text": "2026-09-17T09:20:22.2531689Z === RUN   TestQuorumAndAllHeaderBindings/pre-genesis"
+        },
+        {
+          "line": 292,
+          "text": "2026-09-17T09:20:22.2532332Z --- PASS: TestQuorumAndAllHeaderBindings (0.00s)"
+        },
+        {
+          "line": 293,
+          "text": "2026-09-17T09:20:22.2533116Z     --- PASS: TestQuorumAndAllHeaderBindings/version (0.00s)"
+        },
+        {
+          "line": 294,
+          "text": "2026-09-17T09:20:22.2533977Z     --- PASS: TestQuorumAndAllHeaderBindings/validators (0.00s)"
+        },
+        {
+          "line": 295,
+          "text": "2026-09-17T09:20:22.2534865Z     --- PASS: TestQuorumAndAllHeaderBindings/state-length (0.00s)"
+        },
+        {
+          "line": 296,
+          "text": "2026-09-17T09:20:22.2535739Z     --- PASS: TestQuorumAndAllHeaderBindings/future (0.00s)"
+        },
+        {
+          "line": 297,
+          "text": "2026-09-17T09:20:22.2536537Z     --- PASS: TestQuorumAndAllHeaderBindings/height (0.00s)"
+        },
+        {
+          "line": 298,
+          "text": "2026-09-17T09:20:22.2537328Z     --- PASS: TestQuorumAndAllHeaderBindings/chain (0.00s)"
+        },
+        {
+          "line": 299,
+          "text": "2026-09-17T09:20:22.2538196Z     --- PASS: TestQuorumAndAllHeaderBindings/next-validators (0.00s)"
+        },
+        {
+          "line": 300,
+          "text": "2026-09-17T09:20:22.2538978Z     --- PASS: TestQuorumAndAllHeaderBindings/parameters (0.00s)"
+        },
+        {
+          "line": 301,
+          "text": "2026-09-17T09:20:22.2539812Z     --- PASS: TestQuorumAndAllHeaderBindings/pre-genesis (0.00s)"
+        }
+      ]
+    },
+    {
+      "id": 105145581297,
+      "name": "tests (windows-latest)",
+      "url": "https://github.com/youq616/Zevune/actions/runs/35204106310/job/105145581297",
+      "metadata_observed_at": "2026-09-17T09:29:38.343Z",
+      "metadata_sha256": "c89103cf63d4a62c4c890f3742df84a0efbadec6fde1b1b6825f7e521d0bde5c",
+      "actual_started_at": "2026-09-17T09:27:36Z",
+      "actual_completed_at": "2026-09-17T09:28:42Z",
+      "raw_log_file": "job-105145581297.log",
+      "raw_log_sha256": "9c88121f6864989b66ebb9821e61e5faebd2a6d4f1eb7f2d7ea3680407758cb6",
+      "raw_log_bytes": 19225,
+      "raw_log_lines": 232,
+      "bom": true,
+      "crlf_count": 232,
+      "log_first_timestamp": "2026-09-17T09:27:37.1760292Z",
+      "log_last_timestamp": "2026-09-17T09:28:40.1486841Z",
+      "checkout": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+      "steps_success": 9,
+      "steps_skipped": [
+        {
+          "conclusion": "skipped",
+          "name": "Race detector",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Bounded decoder fuzz smoke test",
+          "number": 8,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Bounded journal decoder fuzz smoke test",
+          "number": 9,
+          "status": "completed"
+        }
+      ],
+      "cleanup_evidence": [
+        {
+          "line": 231,
+          "text": "2026-09-17T09:28:40.0942811Z Cleaning up orphan processes"
+        }
+      ],
+      "actual_go_test_top_level_pass_names": [],
+      "actual_go_fuzz_seed_harness_pass_names": [],
+      "actual_go_subcase_pass_count": 0,
+      "actual_go_runtime_skip_lines": [],
+      "python_case_ok_count": 0,
+      "python_case_skip_lines": [],
+      "python_summary": [],
+      "package_results": [
+        {
+          "line": 202,
+          "text": "2026-09-17T09:28:19.2561863Z ?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]"
+        },
+        {
+          "line": 203,
+          "text": "2026-09-17T09:28:29.5256994Z ?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]"
+        },
+        {
+          "line": 204,
+          "text": "2026-09-17T09:28:31.3986523Z ok  \tgithub.com/youq616/Zevune/internal/api\t0.108s"
+        },
+        {
+          "line": 205,
+          "text": "2026-09-17T09:28:31.3987218Z ok  \tgithub.com/youq616/Zevune/internal/latency\t0.035s"
+        },
+        {
+          "line": 206,
+          "text": "2026-09-17T09:28:32.4376611Z ok  \tgithub.com/youq616/Zevune/internal/ledger\t1.099s"
+        },
+        {
+          "line": 207,
+          "text": "2026-09-17T09:28:32.4377447Z ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.062s"
+        },
+        {
+          "line": 208,
+          "text": "2026-09-17T09:28:32.4377984Z ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.526s"
+        },
+        {
+          "line": 209,
+          "text": "2026-09-17T09:28:32.8663781Z ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t1.082s"
+        },
+        {
+          "line": 210,
+          "text": "2026-09-17T09:28:32.8664418Z ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.021s"
+        }
+      ],
+      "command_groups": [
+        {
+          "line": 33,
+          "text": "2026-09-17T09:27:38.0319644Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"
+        },
+        {
+          "line": 115,
+          "text": "2026-09-17T09:27:44.1749543Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00"
+        },
+        {
+          "line": 190,
+          "text": "2026-09-17T09:28:08.0942295Z ##[group]Run test -z \"$(gofmt -l ./cmd ./internal)\""
+        },
+        {
+          "line": 196,
+          "text": "2026-09-17T09:28:08.3363364Z ##[group]Run go test ./... -count=1"
+        },
+        {
+          "line": 211,
+          "text": "2026-09-17T09:28:33.3334830Z ##[group]Run go vet ./..."
+        }
+      ],
+      "fuzz_results": [],
+      "key_semantic_evidence": []
+    },
+    {
+      "id": 105145580839,
+      "name": "tests (ubuntu-latest)",
+      "url": "https://github.com/youq616/Zevune/actions/runs/35204106310/job/105145580839",
+      "metadata_observed_at": "2026-09-17T09:29:39.327Z",
+      "metadata_sha256": "18c5a1a2031e7025d6dc02740e0336a5ee69e234e163acc4bd4a58ad3f24da6d",
+      "actual_started_at": "2026-09-17T09:27:21Z",
+      "actual_completed_at": "2026-09-17T09:28:40Z",
+      "raw_log_file": "job-105145580839.log",
+      "raw_log_sha256": "add91febdc052efd243983ab5c1aeff4b813db797d0a2c49877dce5e8b23931e",
+      "raw_log_bytes": 21312,
+      "raw_log_lines": 282,
+      "bom": true,
+      "crlf_count": 0,
+      "log_first_timestamp": "2026-09-17T09:27:22.4529503Z",
+      "log_last_timestamp": "2026-09-17T09:28:39.4333860Z",
+      "checkout": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+      "steps_success": 12,
+      "steps_skipped": [],
+      "cleanup_evidence": [
+        {
+          "line": 281,
+          "text": "2026-09-17T09:28:39.4050444Z Cleaning up orphan processes"
+        }
+      ],
+      "actual_go_test_top_level_pass_names": [],
+      "actual_go_fuzz_seed_harness_pass_names": [],
+      "actual_go_subcase_pass_count": 0,
+      "actual_go_runtime_skip_lines": [],
+      "python_case_ok_count": 0,
+      "python_case_skip_lines": [],
+      "python_summary": [],
+      "package_results": [
+        {
+          "line": 213,
+          "text": "2026-09-17T09:27:41.3204529Z ?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]"
+        },
+        {
+          "line": 214,
+          "text": "2026-09-17T09:27:49.3275942Z ?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]"
+        },
+        {
+          "line": 215,
+          "text": "2026-09-17T09:27:49.5316684Z ok  \tgithub.com/youq616/Zevune/internal/api\t0.026s"
+        },
+        {
+          "line": 216,
+          "text": "2026-09-17T09:27:49.5321061Z ok  \tgithub.com/youq616/Zevune/internal/latency\t0.005s"
+        },
+        {
+          "line": 217,
+          "text": "2026-09-17T09:27:49.6206192Z ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.115s"
+        },
+        {
+          "line": 218,
+          "text": "2026-09-17T09:27:49.6207318Z ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.004s"
+        },
+        {
+          "line": 219,
+          "text": "2026-09-17T09:27:49.7286848Z ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.218s"
+        },
+        {
+          "line": 220,
+          "text": "2026-09-17T09:27:50.0686878Z ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.558s"
+        },
+        {
+          "line": 221,
+          "text": "2026-09-17T09:27:50.0687769Z ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.005s"
+        },
+        {
+          "line": 234,
+          "text": "2026-09-17T09:28:03.7618814Z ?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]"
+        },
+        {
+          "line": 235,
+          "text": "2026-09-17T09:28:14.2296072Z ?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]"
+        },
+        {
+          "line": 236,
+          "text": "2026-09-17T09:28:15.6944530Z ok  \tgithub.com/youq616/Zevune/internal/api\t1.043s"
+        },
+        {
+          "line": 237,
+          "text": "2026-09-17T09:28:15.6953105Z ok  \tgithub.com/youq616/Zevune/internal/latency\t1.016s"
+        },
+        {
+          "line": 238,
+          "text": "2026-09-17T09:28:17.9413188Z ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.290s"
+        },
+        {
+          "line": 239,
+          "text": "2026-09-17T09:28:17.9413666Z ok  \tgithub.com/youq616/Zevune/internal/merkle\t1.014s"
+        },
+        {
+          "line": 240,
+          "text": "2026-09-17T09:28:17.9414106Z ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t1.361s"
+        },
+        {
+          "line": 241,
+          "text": "2026-09-17T09:28:19.6808614Z ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.013s"
+        },
+        {
+          "line": 242,
+          "text": "2026-09-17T09:28:19.6809349Z ok  \tgithub.com/youq616/Zevune/internal/protocol\t1.019s"
+        },
+        {
+          "line": 254,
+          "text": "2026-09-17T09:28:34.4456171Z ok  \tgithub.com/youq616/Zevune/internal/protocol\t4.005s"
+        },
+        {
+          "line": 266,
+          "text": "2026-09-17T09:28:39.0521888Z ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.060s"
+        }
+      ],
+      "command_groups": [
+        {
+          "line": 33,
+          "text": "2026-09-17T09:27:23.2462584Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"
+        },
+        {
+          "line": 128,
+          "text": "2026-09-17T09:27:24.3580664Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00"
+        },
+        {
+          "line": 201,
+          "text": "2026-09-17T09:27:33.2204728Z ##[group]Run test -z \"$(gofmt -l ./cmd ./internal)\""
+        },
+        {
+          "line": 207,
+          "text": "2026-09-17T09:27:33.2539743Z ##[group]Run go test ./... -count=1"
+        },
+        {
+          "line": 222,
+          "text": "2026-09-17T09:27:50.1369098Z ##[group]Run go vet ./..."
+        },
+        {
+          "line": 228,
+          "text": "2026-09-17T09:27:52.6245267Z ##[group]Run go test -race ./... -count=1"
+        },
+        {
+          "line": 243,
+          "text": "2026-09-17T09:28:19.7419945Z ##[group]Run go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2"
+        },
+        {
+          "line": 255,
+          "text": "2026-09-17T09:28:34.4842002Z ##[group]Run go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2"
+        }
+      ],
+      "fuzz_results": [
+        {
+          "line": 249,
+          "text": "2026-09-17T09:28:30.4433188Z fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed"
+        },
+        {
+          "line": 250,
+          "text": "2026-09-17T09:28:30.4513880Z fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers"
+        },
+        {
+          "line": 251,
+          "text": "2026-09-17T09:28:33.4434736Z fuzz: elapsed: 3s, execs: 675 (225/sec), new interesting: 1 (total: 4)"
+        },
+        {
+          "line": 252,
+          "text": "2026-09-17T09:28:34.4451595Z fuzz: elapsed: 4s, execs: 675 (0/sec), new interesting: 1 (total: 4)"
+        },
+        {
+          "line": 253,
+          "text": "2026-09-17T09:28:34.4454198Z PASS"
+        },
+        {
+          "line": 261,
+          "text": "2026-09-17T09:28:35.9943554Z fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed"
+        },
+        {
+          "line": 262,
+          "text": "2026-09-17T09:28:35.9981278Z fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers"
+        },
+        {
+          "line": 263,
+          "text": "2026-09-17T09:28:38.9947806Z fuzz: elapsed: 3s, execs: 97840 (32608/sec), new interesting: 8 (total: 11)"
+        },
+        {
+          "line": 264,
+          "text": "2026-09-17T09:28:39.0517349Z fuzz: elapsed: 3s, execs: 97840 (0/sec), new interesting: 8 (total: 11)"
+        },
+        {
+          "line": 265,
+          "text": "2026-09-17T09:28:39.0518084Z PASS"
+        }
+      ],
+      "key_semantic_evidence": []
+    },
+    {
+      "id": 105145580920,
+      "name": "operator (ubuntu-latest)",
+      "url": "https://github.com/youq616/Zevune/actions/runs/35204106289/job/105145580920",
+      "metadata_observed_at": "2026-09-17T09:30:55.851Z",
+      "metadata_sha256": "51f94fbcf4cf427797fd770197345e0512f02d2e42c7ed43d92867b21cc904a8",
+      "actual_started_at": "2026-09-17T09:17:06Z",
+      "actual_completed_at": "2026-09-17T09:29:29Z",
+      "raw_log_file": "job-105145580920.log",
+      "raw_log_sha256": "e911804ccd44737924def63aabcafe3298f94c02aec2fb84f61c7639d08fcb1f",
+      "raw_log_bytes": 97642,
+      "raw_log_lines": 1064,
+      "bom": true,
+      "crlf_count": 0,
+      "log_first_timestamp": "2026-09-17T09:17:07.7188326Z",
+      "log_last_timestamp": "2026-09-17T09:29:27.7768018Z",
+      "checkout": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+      "steps_success": 14,
+      "steps_skipped": [],
+      "cleanup_evidence": [
+        {
+          "line": 1063,
+          "text": "2026-09-17T09:29:27.7475727Z Cleaning up orphan processes"
+        }
+      ],
+      "actual_go_test_top_level_pass_names": [
+        "TestActiveFundedFourNodePaymentRestart",
+        "TestQuorumAndAllHeaderBindings",
+        "TestPinnedPublicConfigurationAndCompanionFiles",
+        "TestCanonicalDecodingAndFileBounds",
+        "TestLoopbackEndpointAndStreamingLimits",
+        "TestRPCRejectsRedirectCompressionAndOversize",
+        "TestMalformedGenesisInitDoesNotCreatePrivateDirectory",
+        "TestUnexpectedEngineExitIsNotSuccessfulShutdown",
+        "TestRequestedShutdownDoesNotNeedEngineExit",
+        "TestConcurrentCancellationAndEngineExitRemainRequested",
+        "TestEngineExitReleasesWaitingSupervisor",
+        "TestLifecycleRejectsMissingContext",
+        "TestRealOperatorNonzeroPaymentsAndRestart",
+        "TestQuorumSignedWrongPostStateNeverPersists",
+        "TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion",
+        "TestSignedHeadersUseAuthenticatedProfileHeightAndVersion",
+        "TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds",
+        "TestActiveCapacityReportsLogicalBytesAndExactCheckpoint",
+        "TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath",
+        "TestRealReferenceCheckpointBeforeRPC",
+        "TestRealPinnedReferencePayment",
+        "TestReferenceCheckpointRequestBoundsBeforeAccess",
+        "TestReferenceCheckpointMissingContextAndNetwork",
+        "TestUnpinnedResultsNeverClaimRetainedCheckpoint",
+        "TestStorageCheckpointCanonicalInputs",
+        "TestStorageCheckpointExactTipNotMinimumHeightOrFinality",
+        "TestInvalidStorageCheckpointFailsBeforeFileAccess",
+        "TestRealJournalCopyRestoreAndAdversarialReplay",
+        "TestBoundedCopyRejectsShortLongAndCancelledInput",
+        "TestCopyIOFailureAndMidstreamCancelNeverYieldDigest",
+        "TestCopyPathsAndPublicEntryRejectBeforeWorker",
+        "TestPublishCopyIsCreateOnlyAndDoesNotLinkSource",
+        "TestPublicationFailureAfterLinkIsExplicitlyUncertain",
+        "TestPublicationCancellationAndExistingSymlinkDoNotOverwrite",
+        "TestCopyReportDoesNotClaimConsensusOrFunds",
+        "TestJournalDigestDetectsChangedAndReplacedFile",
+        "TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult",
+        "TestRealOfflineStorageInspectionAndLock",
+        "TestStorageReportBoundariesAndNoFinalityClaims",
+        "TestStorageReportRejectsContradictoryCounts",
+        "TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges",
+        "TestStorageMissingInvalidPathsNeverCreateData",
+        "TestMalformedCommandsNeverCreateOrOverwrite",
+        "TestBoundedPublicTransactionFiles",
+        "TestStorageCommandRejectsNetworkAndMutationFlags",
+        "TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput",
+        "TestStorageCheckpointFlagPair",
+        "TestCheckpointSyntaxDoesNotSelectAStorageProfile",
+        "TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands",
+        "TestExplicitEmptyStorageCheckpointDoesNotDisableCheck",
+        "TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths"
+      ],
+      "actual_go_fuzz_seed_harness_pass_names": [
+        "FuzzCanonicalPublicConfiguration",
+        "FuzzNumericLoopbackEndpoint",
+        "FuzzStorageCheckpointInputs",
+        "FuzzStorageAccounting"
+      ],
+      "actual_go_subcase_pass_count": 47,
+      "actual_go_runtime_skip_lines": [],
+      "python_case_ok_count": 132,
+      "python_case_skip_lines": [
+        {
+          "line": 324,
+          "text": "2026-09-17T09:17:39.1145826Z test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'"
+        },
+        {
+          "line": 325,
+          "text": "2026-09-17T09:17:39.1149658Z test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'"
+        },
+        {
+          "line": 326,
+          "text": "2026-09-17T09:17:39.1153243Z test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+        }
+      ],
+      "python_summary": [
+        {
+          "line": 386,
+          "text": "2026-09-17T09:17:39.4689336Z Ran 135 tests in 2.798s"
+        },
+        {
+          "line": 388,
+          "text": "2026-09-17T09:17:39.4689572Z OK (skipped=3)"
+        }
+      ],
+      "package_results": [
+        {
+          "line": 941,
+          "text": "2026-09-17T09:27:21.8017277Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t391.514s"
+        },
+        {
+          "line": 961,
+          "text": "2026-09-17T09:27:21.8026700Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.014s"
+        },
+        {
+          "line": 978,
+          "text": "2026-09-17T09:28:13.5194635Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t1.188s"
+        },
+        {
+          "line": 979,
+          "text": "2026-09-17T09:28:13.5195598Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t1.073s"
+        },
+        {
+          "line": 980,
+          "text": "2026-09-17T09:28:20.8321564Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t5.251s"
+        },
+        {
+          "line": 986,
+          "text": "2026-09-17T09:29:14.3250160Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t3.029s"
+        },
+        {
+          "line": 992,
+          "text": "2026-09-17T09:29:18.3834867Z ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t3.067s"
+        },
+        {
+          "line": 998,
+          "text": "2026-09-17T09:29:24.6266418Z ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.006s"
+        }
+      ],
+      "command_groups": [
+        {
+          "line": 34,
+          "text": "2026-09-17T09:17:09.2269129Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"
+        },
+        {
+          "line": 132,
+          "text": "2026-09-17T09:17:10.7008293Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00"
+        },
+        {
+          "line": 222,
+          "text": "2026-09-17T09:17:27.9106662Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy"
+        },
+        {
+          "line": 236,
+          "text": "2026-09-17T09:17:36.4732499Z ##[group]Run test -z \"$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)\""
+        },
+        {
+          "line": 613,
+          "text": "2026-09-17T09:18:42.9962701Z ##[group]Run python scripts/build_local_lab.py --output \"$RUNNER_TEMP/zevune-local-bundle\""
+        },
+        {
+          "line": 724,
+          "text": "2026-09-17T09:20:14.9495406Z ##[group]Run python - <<'PY'"
+        },
+        {
+          "line": 740,
+          "text": "2026-09-17T09:20:14.9901459Z ##[group]Run go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v"
+        },
+        {
+          "line": 962,
+          "text": "2026-09-17T09:27:27.9362922Z ##[group]Run go test -mod=readonly -race ./labnet ./cmd/zevune-network -count=1"
+        },
+        {
+          "line": 999,
+          "text": "2026-09-17T09:29:24.6425133Z ##[group]Run git diff --exit-code"
+        },
+        {
+          "line": 1011,
+          "text": "2026-09-17T09:29:24.6651100Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        }
+      ],
+      "fuzz_results": [
+        {
+          "line": 940,
+          "text": "2026-09-17T09:27:21.8016970Z PASS"
+        },
+        {
+          "line": 960,
+          "text": "2026-09-17T09:27:21.8026370Z PASS"
+        },
+        {
+          "line": 981,
+          "text": "2026-09-17T09:29:11.3099297Z fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed"
+        },
+        {
+          "line": 982,
+          "text": "2026-09-17T09:29:11.3515801Z fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers"
+        },
+        {
+          "line": 983,
+          "text": "2026-09-17T09:29:14.3099279Z fuzz: elapsed: 3s, execs: 8217 (2739/sec), new interesting: 49 (total: 51)"
+        },
+        {
+          "line": 984,
+          "text": "2026-09-17T09:29:14.3231771Z fuzz: elapsed: 3s, execs: 8217 (0/sec), new interesting: 49 (total: 51)"
+        },
+        {
+          "line": 985,
+          "text": "2026-09-17T09:29:14.3232708Z PASS"
+        },
+        {
+          "line": 987,
+          "text": "2026-09-17T09:29:15.3313607Z fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed"
+        },
+        {
+          "line": 988,
+          "text": "2026-09-17T09:29:15.3790104Z fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers"
+        },
+        {
+          "line": 989,
+          "text": "2026-09-17T09:29:18.3320802Z fuzz: elapsed: 3s, execs: 8386 (2795/sec), new interesting: 32 (total: 34)"
+        },
+        {
+          "line": 990,
+          "text": "2026-09-17T09:29:18.3815926Z fuzz: elapsed: 3s, execs: 8386 (0/sec), new interesting: 32 (total: 34)"
+        },
+        {
+          "line": 991,
+          "text": "2026-09-17T09:29:18.3816822Z PASS"
+        },
+        {
+          "line": 993,
+          "text": "2026-09-17T09:29:20.6235019Z fuzz: elapsed: 0s, gathering baseline coverage: 0/4 completed"
+        },
+        {
+          "line": 994,
+          "text": "2026-09-17T09:29:20.6271711Z fuzz: elapsed: 0s, gathering baseline coverage: 4/4 completed, now fuzzing with 2 workers"
+        },
+        {
+          "line": 995,
+          "text": "2026-09-17T09:29:23.6235201Z fuzz: elapsed: 3s, execs: 99125 (33041/sec), new interesting: 4 (total: 8)"
+        },
+        {
+          "line": 996,
+          "text": "2026-09-17T09:29:24.6260208Z fuzz: elapsed: 4s, execs: 99125 (0/sec), new interesting: 4 (total: 8)"
+        },
+        {
+          "line": 997,
+          "text": "2026-09-17T09:29:24.6260898Z PASS"
+        }
+      ],
+      "key_semantic_evidence": [
+        {
+          "line": 299,
+          "text": "2026-09-17T09:17:37.7913447Z test_cleanup_does_not_restart_its_existing_deadline (test_payment_resources_evidence.EvidenceCollectorBoundaryTests.test_cleanup_does_not_restart_its_existing_deadline) ... ok"
+        },
+        {
+          "line": 723,
+          "text": "2026-09-17T09:20:14.9386176Z {\"built\": true, \"source_commit\": \"fb5ec39a59cb87aec0662c7706dce1f9e85e1962\", \"real_funds_allowed\": false, \"manifest_sha256\": \"6fcd1207cfd0b003bddd1c76e220e1533a4e12f4ad790b93d0d3f8d6a3dae42a\"}"
+        },
+        {
+          "line": 752,
+          "text": "2026-09-17T09:27:21.7906161Z === RUN   TestActiveFundedFourNodePaymentRestart"
+        },
+        {
+          "line": 753,
+          "text": "2026-09-17T09:27:21.7908167Z     active_funded_e2e_test.go:246: active profile: shipped init/run/sync/submit/storage, InitChain version rejection, genuine nonzero A->B, all-four-node restart, B->C spend, wallet history reopen, signed next-header verification and duplicate rejection passed; low-height NO-FUNDS scenario"
+        },
+        {
+          "line": 754,
+          "text": "2026-09-17T09:27:21.7909607Z --- PASS: TestActiveFundedFourNodePaymentRestart (79.59s)"
+        },
+        {
+          "line": 755,
+          "text": "2026-09-17T09:27:21.7910006Z === RUN   TestQuorumAndAllHeaderBindings"
+        },
+        {
+          "line": 756,
+          "text": "2026-09-17T09:27:21.7910362Z === RUN   TestQuorumAndAllHeaderBindings/state-length"
+        },
+        {
+          "line": 757,
+          "text": "2026-09-17T09:27:21.7910744Z === RUN   TestQuorumAndAllHeaderBindings/future"
+        },
+        {
+          "line": 758,
+          "text": "2026-09-17T09:27:21.7911110Z === RUN   TestQuorumAndAllHeaderBindings/pre-genesis"
+        },
+        {
+          "line": 759,
+          "text": "2026-09-17T09:27:21.7911478Z === RUN   TestQuorumAndAllHeaderBindings/height"
+        },
+        {
+          "line": 760,
+          "text": "2026-09-17T09:27:21.7912186Z === RUN   TestQuorumAndAllHeaderBindings/chain"
+        },
+        {
+          "line": 761,
+          "text": "2026-09-17T09:27:21.7912605Z === RUN   TestQuorumAndAllHeaderBindings/version"
+        },
+        {
+          "line": 762,
+          "text": "2026-09-17T09:27:21.7912967Z === RUN   TestQuorumAndAllHeaderBindings/validators"
+        },
+        {
+          "line": 763,
+          "text": "2026-09-17T09:27:21.7913351Z === RUN   TestQuorumAndAllHeaderBindings/next-validators"
+        },
+        {
+          "line": 764,
+          "text": "2026-09-17T09:27:21.7913730Z === RUN   TestQuorumAndAllHeaderBindings/parameters"
+        },
+        {
+          "line": 765,
+          "text": "2026-09-17T09:27:21.7914089Z --- PASS: TestQuorumAndAllHeaderBindings (0.00s)"
+        },
+        {
+          "line": 766,
+          "text": "2026-09-17T09:27:21.7914552Z     --- PASS: TestQuorumAndAllHeaderBindings/state-length (0.00s)"
+        },
+        {
+          "line": 767,
+          "text": "2026-09-17T09:27:21.7915034Z     --- PASS: TestQuorumAndAllHeaderBindings/future (0.00s)"
+        },
+        {
+          "line": 768,
+          "text": "2026-09-17T09:27:21.7915509Z     --- PASS: TestQuorumAndAllHeaderBindings/pre-genesis (0.00s)"
+        },
+        {
+          "line": 769,
+          "text": "2026-09-17T09:27:21.7915980Z     --- PASS: TestQuorumAndAllHeaderBindings/height (0.00s)"
+        },
+        {
+          "line": 770,
+          "text": "2026-09-17T09:27:21.7916829Z     --- PASS: TestQuorumAndAllHeaderBindings/chain (0.00s)"
+        },
+        {
+          "line": 771,
+          "text": "2026-09-17T09:27:21.7917586Z     --- PASS: TestQuorumAndAllHeaderBindings/version (0.00s)"
+        },
+        {
+          "line": 772,
+          "text": "2026-09-17T09:27:21.7918346Z     --- PASS: TestQuorumAndAllHeaderBindings/validators (0.00s)"
+        },
+        {
+          "line": 773,
+          "text": "2026-09-17T09:27:21.7919138Z     --- PASS: TestQuorumAndAllHeaderBindings/next-validators (0.00s)"
+        },
+        {
+          "line": 774,
+          "text": "2026-09-17T09:27:21.7919927Z     --- PASS: TestQuorumAndAllHeaderBindings/parameters (0.00s)"
+        },
+        {
+          "line": 803,
+          "text": "2026-09-17T09:27:21.7943093Z === RUN   TestRealOperatorNonzeroPaymentsAndRestart"
+        },
+        {
+          "line": 804,
+          "text": "2026-09-17T09:27:21.7944623Z     operator_e2e_test.go:451: shipped init/run/sync/submit commands: wrong-domain, downgrade and unknown-profile RPC rejection; real nonzero A->B->C, encrypted outbox backup, one-node outage, signed reference-state checks, full restart and duplicate rejection passed; local NO-FUNDS only"
+        },
+        {
+          "line": 805,
+          "text": "2026-09-17T09:27:21.7945828Z --- PASS: TestRealOperatorNonzeroPaymentsAndRestart (101.36s)"
+        },
+        {
+          "line": 806,
+          "text": "2026-09-17T09:27:21.7946252Z === RUN   TestQuorumSignedWrongPostStateNeverPersists"
+        },
+        {
+          "line": 807,
+          "text": "2026-09-17T09:27:21.7946671Z --- PASS: TestQuorumSignedWrongPostStateNeverPersists (4.15s)"
+        },
+        {
+          "line": 964,
+          "text": "2026-09-17T09:27:27.9364249Z \u001b[36;1mgo test -mod=readonly -race -tags=operator_e2e ./labnet -run '^TestQuorumSignedWrongPostStateNeverPersists$' -count=1\u001b[0m"
+        },
+        {
+          "line": 1041,
+          "text": "2026-09-17T09:29:27.3872071Z Artifact zevune-local-lab-Linux.zip successfully finalized. Artifact ID 10489996280"
+        },
+        {
+          "line": 1042,
+          "text": "2026-09-17T09:29:27.3873319Z Artifact zevune-local-lab-Linux has been successfully uploaded! Final size is 22853524 bytes. Artifact ID is 10489996280"
+        }
+      ]
+    }
+  ],
+  "scope_limits": [
+    "Only the four listed required PR jobs are accepted; candidate C4 overall remains pending full required matrix.",
+    "No Rust test harness coverage is credited from operator cargo builds.",
+    "Nonverbose scaffold logs support package success, not individual test-count or absence of individual runtime skips.",
+    "Windows scaffold three and Windows consensus one Linux-only workflow skips are explicit. No Windows race/fuzz credit.",
+    "Fuzz seed harness executions from ordinary go test are distinguished from Linux bounded fuzz campaigns.",
+    "No individual counts are summed across repeated platform/jobs/race invocations into unique coverage.",
+    "Build/upload markers evidence native execution and upload; this review does not download or independently verify bundle ZIP bytes.",
+    "Static checks have command starts, shell fail-fast semantics, subsequent commands and terminal successful steps; individual numeric zero exit codes are not separately printed.",
+    "No production, real funds, full capacity, power loss, disk full, or external cryptographic audit claim."
+  ],
+  "raw_total_bytes": 181325,
+  "step_totals": {
+    "success": 46,
+    "skipped": 4
+  }
+}

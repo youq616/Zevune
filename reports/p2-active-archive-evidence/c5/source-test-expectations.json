@@ -1,0 +1,1300 @@
+{
+  "schema": "zevune.c5.source-test-expectations.v1",
+  "generated_at": "2026-09-17T10:32:25.976249+00:00",
+  "reviewer_task": "/root/p2_archive_native_audit/source_expectations",
+  "author_of_candidate": false,
+  "review_status": "COMPLETE_STATIC_MAPPING_NO_ADDITIONAL_SEMANTIC_OR_MOUNT_BLOCKER_FOUND",
+  "runtime_acceptance": "NOT_ACCEPTED_NATIVE_FORMAT_FAILED",
+  "source_head": "99ef9e8217182c9a6f4f1e9349613c1917ddec50",
+  "source_tree": "598f55a8d850095500329989b2ea1fa5855d5db9",
+  "parent": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "pr": 13,
+  "pr_url": "https://github.com/youq616/Zevune/pull/13",
+  "expected_pr_synthetic": "44d9b13d1a1eed74158899717304aa42c1b5e30d",
+  "read_method": "Exact git show source and full C4-to-C5 diff; selected unchanged blobs byte-compared. Read one supplied exact C5 native formatting failure. No worktree read, local Rust execution, CI trigger, or GitHub polling.",
+  "module_mount": [
+    {
+      "path": "integration/orchard/src/lib.rs",
+      "line": 11,
+      "item": "pub mod pool;"
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "line": 805,
+      "item": "pub mod recovery;"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "line": 288,
+      "item": "pub mod active;"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "line": 277,
+      "item": "#[cfg(test)] mod tests;"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "line": 687,
+      "item": "#[path = \"namespace_tests.rs\"] mod namespace_tests;"
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "line": 811,
+      "item": "#[cfg(all(test, feature = \"local-funding-lab\"))] #[path = \"pool/active_flow_tests.rs\"] mod active_flow_tests;"
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "line": 1,
+      "item": "#![cfg(feature = \"local-funding-lab\")]"
+    },
+    {
+      "path": "integration/orchard/src/lib.rs",
+      "line": 12,
+      "item": "pub mod wire;"
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "line": 20,
+      "item": "#[cfg(test)] #[path = \"wire/fixed_key_tests.rs\"] mod fixed_key_tests;"
+    },
+    {
+      "path": "integration/orchard/src/wire/fixed_key_tests.rs",
+      "line": 9,
+      "item": "#[path = \"../../tests/support/fixtures.rs\"] mod fixtures; (support module; no extra integration target)"
+    }
+  ],
+  "expected_new_tests": [
+    {
+      "full_test_name": "pool::recovery::active::tests::checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 150,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        1
+      ],
+      "assertions": "128 bytes, all 128 truncations plus trailing byte, mutually exclusive magic, zero hashes, bounds/overflow and zero-height relations",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::exported_genesis_checkpoint_matches_independent_fixed_layout_vector",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 237,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        1
+      ],
+      "assertions": "fixed independent genesis/layout SHA-256 constants; 76-byte empty header and 92-byte layout input",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 267,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        2,
+        5
+      ],
+      "assertions": "heights 0 and 3; every physical byte source→backup→restored; no MANIFEST; ordinary writer continues; Unix0700/0600",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 317,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        2,
+        4
+      ],
+      "assertions": "committed pin/summary/bytes unchanged while prepared block remains committable; stale pin rejected after commit",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 346,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        1,
+        7
+      ],
+      "assertions": "legacy/active checkpoint APIs and codecs mutually reject without poisoning healthy pending commits",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 371,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4
+      ],
+      "assertions": "same-length segment overwrite with valid alternate history; Corrupt export, old committed state retained, store Unavailable, prepared commit rejected",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 415,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4
+      ],
+      "assertions": "same original owning genesis handle and same byte length; expected genesis binding rejects Genesis; committed state retained and export poisons store",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::repinned_headers_are_bounded_inside_the_physical_genesis_file",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 448,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4
+      ],
+      "assertions": "recomputed layout pins; physical header underflow/extra bytes, invalid point, wrong profile/network/domain; explicit Bounds/Corrupt/Genesis/Domain classes",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 489,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4
+      ],
+      "assertions": "recomputed matching layout hash; early rotation/split frame, checksum/final-state/trailing byte rejected Corrupt; wrong genesis/layout/tip explicit errors",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::creating_a_target_is_exclusive_and_source_validation_precedes_creation",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 573,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5,
+        6
+      ],
+      "assertions": "existing file/directory/source, relative/missing-parent/nested targets rejected unchanged; source corruption after open rejected before target creation",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 615,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        6
+      ],
+      "assertions": "faults1..4: partial genesis/partial first segment/full last file before sync/full synchronized copy before acknowledgement; targets preserved, complete targets verify, no overwrite/retry",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::final_source_and_target_namespace_changes_cannot_return_success",
+      "source_file": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "source_line": 657,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        6
+      ],
+      "assertions": "faults5/6 add source/target namespace markers; original file bytes retained; copy fails Corrupt; valid complete target after source fault remains explicitly verifiable",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::active_archive_locks_coordinate_real_processes",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 5,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "real subprocess same exact test; writer blocks archives, two shared archives coexist and block writer until final drop; copied target byte equality",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::readonly_source_files_copy_into_a_normally_writable_active_directory",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 86,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "source permissions readonly; Windows denied write open confirmed error5; readonly archive copies to writable ordinary store and commits next block",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 148,
+      "platforms": [
+        "ubuntu"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "Unix genesis/segment same-byte inode replacement, symlink, hardlink; retained archive rejects/no target; fresh same-byte replacement allowed but links rejected",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 196,
+      "platforms": [
+        "ubuntu"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "Unix source symlink and aliased nested targets rejected; persistent directory replacement invalidates retained archive, original bytes retained",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::failed_open_releases_all_acquired_file_and_directory_handles",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 232,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "corrupt archive open releases file locks/handles; every file and directory rename positive controls",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::unknown_entry_after_open_prevents_verification_and_creates_no_target",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 261,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4,
+        5
+      ],
+      "assertions": "persistent unexpected namespace entry after open rejects verify and copy without creating target or deleting bytes",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::recovery::active::tests::namespace_tests::windows_files_and_directory_cannot_be_renamed_or_deleted_until_last_reader_drops",
+      "source_file": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "source_line": 278,
+      "platforms": [
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5
+      ],
+      "assertions": "real Windows file rename/delete and directory rename denied5/32 while two/one readers; after final drop rename/delete succeeds",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_real_payment_backup_restore_and_receiver_spend",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 221,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        2,
+        7
+      ],
+      "assertions": "actual binary checkpoint/backup/verify/restore; genuine A→B60k fee1k; Bob first scans restored directory then B→C40k fee1k; double-spend rejected, balances39k/19k/40k+fees2k=100k, pending cleared, source/backup unchanged",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_genesis_without_segments_is_an_explicit_checkpoint",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 364,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        2,
+        7
+      ],
+      "assertions": "zero-height zero-segment checkpoint and actual CLI backup/verify/restore; ordinary restored writer continues to height1",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_bad_options_and_exact_tip_fail_without_changes",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 407,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        7
+      ],
+      "assertions": "missing/duplicate/unknown flags, acknowledgement, noncanonical/oversized hex/height, wrong exact tip, relative paths and wrong pins rejected; no new target/changed source; help lists four commands",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_locked_sources_and_existing_or_nested_targets_are_refused",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 493,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        5,
+        7
+      ],
+      "assertions": "actual binary separate process while live source writer; all operations fail; release control succeeds; existing file/dir/source/nested/missing-parent targets preserved",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_keeps_legacy_profiles_pins_commands_and_json_separate",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 567,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        1,
+        7
+      ],
+      "assertions": "active/legacy profile/pin/command rejection; successful legacy verify JSON remains exact previous schema",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 634,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4,
+        7
+      ],
+      "assertions": "wrong header/damaged/missing/extra/truncated/appended/early-rotation files reject all three CLI archive operations before creation; uses original pin, NOT authorization-layer credit",
+      "ignored": false
+    },
+    {
+      "full_test_name": "active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable",
+      "source_file": "integration/orchard/tests/active_recovery_cli.rs",
+      "source_line": 696,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        6,
+        7
+      ],
+      "assertions": "C4 same seventh CLI test: real writable-file verify control requires exact expected JSON; for checkpoint-active,verify-active,backup-active,restore-active each original readonly OS File is first probed write_all error then inherited as child stdout; each must exit exactly1 with standard failure/no-path output, sink/source unchanged; backup and restore outputs remain byte-exact and each separately verify with good stdout; existing target retry refused. No additional test/proof or cfg/skip.",
+      "ignored": false
+    },
+    {
+      "full_test_name": "wire::fixed_key_tests::concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold",
+      "source_file": "integration/orchard/src/wire/fixed_key_tests.rs",
+      "source_line": 13,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": null,
+      "expected_default_execution": true,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4,
+        8
+      ],
+      "supplemental_contract": "docs/FIXED_VERIFYING_KEY.zh-CN.md:44",
+      "assertions": "One genuine proof fixture; fixed circuit version and identical public-key pointer; distinct empty instance caches; first verifies without warming existing; four concurrent fresh verifiers independently verify valid bytes, reject proof-byte and binding-signature-byte mutations as Authorization after decode succeeds, do not cache invalid bytes, and retain valid-cache behavior; existing then independently verifies; a final newly constructed instance remains empty. The OnceLock is deliberately already initialized before the concurrency barrier.",
+      "genuine_proof_fixture_builds": 1,
+      "concurrent_worker_count": 4,
+      "cold_first_initialization_race_covered": false,
+      "ignored": false
+    }
+  ],
+  "expected_existing_active_flow_tests": [
+    {
+      "full_test_name": "pool::active_flow_tests::active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contract",
+      "source_file": "integration/orchard/src/pool/active_flow_tests.rs",
+      "source_line": 239,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4
+      ],
+      "assertions": "enhanced existing test calls assert_noncanonical_layouts_reject: genuine first payment binding-signature byte flipped, record SHA-256 recomputed, genesis/length/header/count/layout pin recomputed; both ordinary open and ActiveArchive::open explicitly return PoolError::Authorization; unchanged valid control succeeds",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::active_flow_tests::real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002",
+      "source_file": "integration/orchard/src/pool/active_flow_tests.rs",
+      "source_line": 447,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        2,
+        3,
+        4
+      ],
+      "assertions": "enhanced existing test:6963 actual empty commits then payment height6964 forces second default1MiB segment; exact archive→restore; restored writer continues actual empty commits to10000; genuine receiver second-hop at10001; second exact archive→restore; duplicate rejected unchanged; normal10002 empty commit and full balances/history/capacity assertions; C3 at10001 swaps the two existing physical segment byte vectors in a new directory, retains genesis and canonical names, rejects original pin Corrupt, recalculates complete pin and confirms production layout digest equality, confirms first record height6964 and base hash differs from genesis, then rejects recalculated pin Corrupt; original source and swapped fixture remain exact byte maps after each rejection; valid original proceeds through restore and10002.",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::active_flow_tests::legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal",
+      "source_file": "integration/orchard/src/pool/active_flow_tests.rs",
+      "source_line": 699,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        3,
+        7
+      ],
+      "assertions": "unchanged existing legacy ceiling regression retained under complete funded library",
+      "ignored": false
+    },
+    {
+      "full_test_name": "pool::active_flow_tests::active_write_failures_poison_store_without_publishing_partial_state",
+      "source_file": "integration/orchard/src/pool/active_flow_tests.rs",
+      "source_line": 764,
+      "platforms": [
+        "ubuntu",
+        "windows"
+      ],
+      "required_feature": "local-funding-lab",
+      "expected_default_execution": false,
+      "expected_funded_execution": true,
+      "frozen_acceptance_points": [
+        4,
+        6
+      ],
+      "assertions": "unchanged existing active write failure/nonpublication regression retained under complete funded library",
+      "ignored": false
+    }
+  ],
+  "counts": {
+    "new_library_function_definitions": 20,
+    "preserved_active_archive_library_function_definitions": 19,
+    "new_fixed_key_function_definitions": 1,
+    "preserved_active_archive_library_per_platform": {
+      "ubuntu": 18,
+      "windows": 17
+    },
+    "new_library_default_and_funded": {
+      "ubuntu": 19,
+      "windows": 18
+    },
+    "new_cli_function_definitions": 7,
+    "new_cli_funded": {
+      "ubuntu": 7,
+      "windows": 7
+    },
+    "new_cli_default": {
+      "ubuntu": 0,
+      "windows": 0
+    },
+    "new_unique_tests_under_funded": {
+      "ubuntu": 26,
+      "windows": 25
+    },
+    "existing_active_flow_tests_funded": 4,
+    "default_library_total_expected": {
+      "ubuntu": 140,
+      "windows": 133
+    },
+    "default_all_targets_total_expected": {
+      "ubuntu": 154,
+      "windows": 147
+    },
+    "default_complete_result_count_expected": 18,
+    "funded_library_total_expected": {
+      "ubuntu": 159,
+      "windows": 152
+    },
+    "funded_interfaces_total_expected": {
+      "ubuntu": 56,
+      "windows": 56
+    },
+    "funded_interfaces_complete_result_count_expected": 20,
+    "new_fixed_key_genuine_proof_fixtures": 1,
+    "preserved_cli_genuine_payment_builds": 2,
+    "basis": "Exactly one new unconditional private library test on both platforms and feature selections; unchanged earlier test definitions/targets. All totals are expectations, not C5 native test passes.",
+    "exclusion_note": "Platform cfg exclusions are not ignored tests. Repeated jobs, four concurrency workers, two mutation classes, two CLI proofs, four stdout modes, nested process probes and three replays are not additional top-level tests."
+  },
+  "cargo_metadata_expectation": {
+    "status": "STATIC_SOURCE_EXPECTATION_NOT_NATIVE_METADATA_OUTPUT",
+    "package": "zevune-orchard-lab",
+    "lib": [
+      "zevune_orchard_lab"
+    ],
+    "bin": [
+      "zevune-funded-scenario",
+      "zevune-orchard-worker",
+      "zevune-pool-recovery",
+      "zevune-pool-worker",
+      "zevune-wallet-local"
+    ],
+    "test": [
+      "active_recovery_cli",
+      "authorization_cache",
+      "bridge",
+      "cache_state_guards",
+      "default_worker_policy",
+      "genesis_domain",
+      "genesis_manifest_bounds",
+      "operator_cli",
+      "payment_preflight",
+      "pool_network",
+      "real_bundle",
+      "recipient_domain",
+      "recovery_cli",
+      "test_genesis"
+    ],
+    "target_count": 20,
+    "funded_interface_target_count": 19,
+    "documentation_tests_separate": true,
+    "support_file_not_target": "integration/orchard/tests/support/fixtures.rs",
+    "nested_bin_module_not_target": "integration/orchard/src/bin/operator_support/timing.rs",
+    "required_features": [
+      "local-funding-lab"
+    ]
+  },
+  "scheduler": {
+    "source": "scripts/run_funded_rust.py",
+    "metadata_command": [
+      "cargo",
+      "metadata",
+      "--manifest-path",
+      "<absolute integration/orchard/Cargo.toml>",
+      "--no-deps",
+      "--locked",
+      "--format-version=1",
+      "--features",
+      "local-funding-lab"
+    ],
+    "cohorts": {
+      "library": [
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--lib",
+          "--",
+          "--test-threads=1"
+        ]
+      ],
+      "interfaces": [
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--bin",
+          "zevune-funded-scenario",
+          "--bin",
+          "zevune-orchard-worker",
+          "--bin",
+          "zevune-pool-recovery",
+          "--bin",
+          "zevune-pool-worker",
+          "--bin",
+          "zevune-wallet-local",
+          "--test",
+          "active_recovery_cli",
+          "--test",
+          "authorization_cache",
+          "--test",
+          "bridge",
+          "--test",
+          "cache_state_guards",
+          "--test",
+          "default_worker_policy",
+          "--test",
+          "genesis_domain",
+          "--test",
+          "genesis_manifest_bounds",
+          "--test",
+          "operator_cli",
+          "--test",
+          "payment_preflight",
+          "--test",
+          "pool_network",
+          "--test",
+          "real_bundle",
+          "--test",
+          "recipient_domain",
+          "--test",
+          "recovery_cli",
+          "--test",
+          "test_genesis",
+          "--",
+          "--test-threads=1"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--doc",
+          "--",
+          "--test-threads=1"
+        ]
+      ]
+    },
+    "no_test_name_filter": true,
+    "inventory_is_generated_from_metadata_not_fixed_target_allowlist": true,
+    "rejection_rules": [
+      "wrong single-package workspace/manifest identity or metadata version",
+      "unknown/disabled test target or kind outside lib/bin/test",
+      "required feature other than local-funding-lab",
+      "library doctest disabled",
+      "duplicate or malformed target name",
+      "missing lib/bin/test category or lib count not exactly one"
+    ],
+    "completion_markers": [
+      "FUNDED_COHORT_COMPLETE library",
+      "FUNDED_COHORT_COMPLETE interfaces"
+    ],
+    "subprocess_check_true": true,
+    "workflow_path": ".github/workflows/funded-wallet.yml",
+    "workflow_os": [
+      "ubuntu-latest",
+      "windows-latest"
+    ],
+    "workflow_library_timeout_minutes": 30,
+    "workflow_interfaces_timeout_minutes": 30,
+    "workflow_no_test_filter_or_plan_only": true
+  },
+  "c5_delta_review": {
+    "changed_files": [
+      "docs/AUTHORIZATION_CACHE.zh-CN.md",
+      "docs/FIXED_VERIFYING_KEY.zh-CN.md",
+      "integration/orchard/src/wire.rs",
+      "integration/orchard/src/wire/fixed_key_tests.rs",
+      "integration/orchard/tests/authorization_cache.rs"
+    ],
+    "stat": "5 files, 175 insertions, 9 deletions",
+    "new_runtime_behavior": "Only fixed immutable public VerifyingKey material is shared per process via OnceLock. Every AuthorizationVerifier owns a newly constructed empty VerifiedCache.",
+    "authorization_cache_integration_change": "Only two comment lines changed; noncomment bytes and all assertions unchanged.",
+    "source_checks": {
+      "wire_fixed_key_getter": {
+        "path": "integration/orchard/src/wire.rs",
+        "line": 261,
+        "private": true,
+        "initializer": "VerifyingKey::build(CIRCUIT)",
+        "once_lock_type": "OnceLock<VerifyingKey>",
+        "no_external_key_or_version_selection": true,
+        "no_initializer_reentry": true,
+        "no_panic_fallback_or_catch": true
+      },
+      "circuit": {
+        "path": "integration/orchard/src/lib.rs",
+        "line": 27,
+        "constant": "OrchardCircuitVersion::FixedPostNu6_2",
+        "unchanged": true
+      },
+      "fresh_cache": {
+        "constructor_line": 284,
+        "key_line": 286,
+        "cache_line": 287,
+        "cache_type": "cache::VerifiedCache",
+        "default_representation": "a distinct Mutex<VecDeque<Entry>> initialized empty",
+        "cache_source_unchanged": true,
+        "global_authorization_cache_added": false
+      },
+      "verify_order": {
+        "path": "integration/orchard/src/wire.rs",
+        "line": 290,
+        "order": [
+          "canonical bounded decode",
+          "instance exact-byte cache lookup",
+          "all spend signatures",
+          "binding signature",
+          "upstream real proof verification",
+          "remember fully verified exact bytes in this instance"
+        ],
+        "body_identical_to_parent_except_reference_argument": true,
+        "old_proof_call": ".verify_proof(&self.key)",
+        "new_proof_call": ".verify_proof(self.key)"
+      },
+      "three_replays": {
+        "copy_source": "integration/orchard/src/pool/recovery/active.rs",
+        "source_verify_line": 236,
+        "target_verify_line": 251,
+        "final_source_verify_line": 256,
+        "verify_replay_line": 206,
+        "export_replay_line": 126,
+        "fresh_verifier_source": "integration/orchard/src/pool.rs",
+        "fresh_verifier_line": 476,
+        "complete_replay_loop_line": 479,
+        "production_sources_byte_identical_to_parent": true
+      },
+      "genuine_fixture": {
+        "new_test_call_line": 23,
+        "new_test_proving_key_line": 24,
+        "helper": "integration/orchard/tests/support/fixtures.rs",
+        "helper_line": 79,
+        "create_real_proof_line": 102,
+        "apply_real_signatures_line": 104,
+        "helper_byte_identical_to_parent": true,
+        "fixture_signing_domain": null,
+        "proof_mutation": "HEADER_SIZE + action_count * ACTION_SIZE + 4 selects first proof byte for this LAB1 fixture",
+        "signature_mutation": "raw.len() - 1 selects final binding-signature byte",
+        "mutations_decodable_then_require_authorization_error": true
+      },
+      "upstream_lock": {
+        "manifest": "integration/orchard/Cargo.toml",
+        "manifest_orchard": "=0.15.5",
+        "lock": "integration/orchard/Cargo.lock",
+        "orchard_version": "0.15.5",
+        "orchard_checksum": "a3cb2b35534bba3c63fbf640dc6cd9dfd1ece2fae886cdab4ab1f1e380dd6ca1",
+        "halo2_proofs": "0.3.5",
+        "halo2_gadgets": "0.5.0",
+        "pasta_curves": "0.5.2",
+        "reddsa": "0.5.2",
+        "rust_version": "1.98.1",
+        "manifest_and_lock_byte_identical_to_parent": true,
+        "native_compilation_required_for_concrete_Send_Sync_types": true
+      }
+    },
+    "byte_identical_to_parent": [
+      "integration/orchard/src/lib.rs",
+      "integration/orchard/src/pool.rs",
+      "integration/orchard/src/pool/recovery.rs",
+      "integration/orchard/src/pool/recovery/active.rs",
+      "integration/orchard/src/pool/recovery/active/tests.rs",
+      "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "integration/orchard/src/pool/active_flow_tests.rs",
+      "integration/orchard/tests/active_recovery_cli.rs",
+      "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "integration/orchard/src/wire/cache.rs",
+      "integration/orchard/tests/support/fixtures.rs",
+      "scripts/run_funded_rust.py",
+      "integration/orchard/Cargo.toml",
+      "integration/orchard/Cargo.lock",
+      ".github/workflows/active-ledger.yml",
+      ".github/workflows/ci.yml",
+      ".github/workflows/consensus-lab.yml",
+      ".github/workflows/crate-notices.yml",
+      ".github/workflows/development-source.yml",
+      ".github/workflows/funded-wallet.yml",
+      ".github/workflows/network-operator.yml",
+      ".github/workflows/orchard-bridge.yml",
+      ".github/workflows/orchard-consensus.yml",
+      ".github/workflows/orchard-lab.yml",
+      ".github/workflows/payment-resources.yml",
+      ".github/workflows/wallet-lab.yml",
+      "scripts/tests/test_crate_notices.py",
+      "scripts/tests/test_funded_rust.py",
+      "scripts/tests/test_local_bundle.py",
+      "scripts/tests/test_payment_resources.py",
+      "scripts/tests/test_payment_resources_evidence.py",
+      "scripts/tests/test_payment_resources_windows.py",
+      "scripts/tests/test_prepare_timing.py",
+      "scripts/tests/test_protocol_vectors.py",
+      "scripts/tests/test_source_snapshot.py",
+      "scripts/tests/test_verify_local_lab.py",
+      "scripts/tests/test_wallet_compaction.py",
+      "scripts/tests/test_wallet_network.py",
+      "scripts/tests/test_wallet_storage.py",
+      "scripts/tests/test_zevune_wallet.py"
+    ],
+    "new_test_name": "wire::fixed_key_tests::concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold",
+    "new_test_no_feature_or_os_gate": true,
+    "new_test_no_ignore_or_early_return": true,
+    "cold_initialization_race_explicitly_not_claimed": true,
+    "new_test_real_proof_not_mocked": true,
+    "no_workflow_dependency_budget_parallelism_test_fixture_or_replay_reduction": true
+  },
+  "native_format_observation": {
+    "job_id": 105166096614,
+    "raw_file": "c5/job-105166096614.log",
+    "raw_bytes": 20672,
+    "raw_sha256": "994c43ca2a98a46957c99dfe1dd755de2762fcd82a6acae006544894b5d64042",
+    "source": "99ef9e8217182c9a6f4f1e9349613c1917ddec50",
+    "synthetic_checkout": "44d9b13d1a1eed74158899717304aa42c1b5e30d",
+    "diff_line": 245,
+    "diff_at": "2026-09-17T10:25:48.9453241Z",
+    "only_hunk": "wire/fixed_key_tests.rs:32: rustfmt expands assert_eq!(first.key.circuit_version(), OrchardCircuitVersion::FixedPostNu6_2) into multiline form.",
+    "failure_line": 257,
+    "exit_code": 1,
+    "failure_at": "2026-09-17T10:25:48.9889686Z",
+    "new_tests_actual_pass_claimed": false,
+    "effect": "C5 NOT_ACCEPTED; this record does not predict acceptance of a future formatting candidate."
+  },
+  "native_log_acceptance_instructions": [
+    "Require exact source/synthetic/checkout/tree linkage separately, not inferred from this local source identity.",
+    "Require every expected platform/feature test name actual ok and full cohort completion marker.",
+    "Require each complete native target inventory and full execution union, including existing targets and doc tests; do not count default CLI zero tests as seven passes.",
+    "Two child lock probes run the same exact harness test in subprocesses; do not add subprocess one-test summaries to top-level library counts.",
+    "Do not count Go compilation with -run ^$ as execution.",
+    "Retain existing 100000-block growth,32+1 resource,four-node,Go/static requirements; this task does not audit their native logs.",
+    "Require actual ok for pool::active_flow_tests::real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002 in both C5 funded library cohorts; the44-line swap case is unconditional inside that test, not an additional test count. Source identity must be C5; earlier-candidate success cannot cover it.",
+    "Require exact C5 active_recovery_cli target7passed/0failed on both platforms, particularly active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable actual ok, then FUNDED_COHORT_COMPLETE interfaces after all remaining targets and doc tests.",
+    "The four stdout modes and writable positive control are assertions within the existing seventh test, not five additional test counts. No new payment proof construction was introduced.",
+    "Require actual ok for wire::fixed_key_tests::concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold in default and funded library execution on each platform; parent-candidate logs do not establish this.",
+    "Expected old active archive new names stay 18/17; adding the new wire case yields 19/18. Do not mistake the old count for all C5 new library tests.",
+    "The new concurrency regression starts after fixed-key initialization. Do not claim it proves a cold OnceLock initialization race or count four threads as four tests.",
+    "Require all exact C5 native static checks and complete cohort results. This source is currently not accepted because supplied native rustfmt exited 1."
+  ],
+  "limitations": [
+    "Static expectation and one actual formatting failure only; no C5 test run or successful compilation/Clippy result is established.",
+    "OnceLock shared-key Send/Sync compatibility must be confirmed by native compilation with the exact unchanged lock.",
+    "The test covers concurrent use of an already initialized key, not multi-process or cold-first-initialization races.",
+    "The changed code does not alter the separate crate-level Verifier key lifecycle or proof-generation key lifecycle.",
+    "A retained immutable public key remains live until process exit; no secret-key cache or authorization success cache is shared.",
+    "Prior C4 successes/cancellations/retries remain historical and cannot satisfy C5 gates.",
+    "Tests model trusted OS/parent directory and persistent namespace change, not arbitrary instantaneous replace-and-restore attacks.",
+    "Private fault3 proves process-visible complete bytes before sync; fault4 is after sync but not real power-loss testing.",
+    "Windows directory durability,full capacity,incremental backup,snapshots and validator/signing-state recovery remain outside this stage."
+  ],
+  "historical_parent_static_record": {
+    "path": "c4/source-test-expectations.json",
+    "sha256": "4e7c7d5c8673df2cf3f39bf5e379a80758dd80f3e1c81d6a35daa5d67254d74c",
+    "decision": "Immutable historical expectations; no C4 execution is transferred to C5."
+  },
+  "source_files": [
+    {
+      "path": ".github/workflows/active-ledger.yml",
+      "git_blob": "f0a7f81bfab291487fea1cef858f7007f5384ec5",
+      "bytes": 3853,
+      "sha256": "d6a23f40525f6dca01d3b03fd48649c180e63c65f145d67d5a12bfe7615c90c3"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "git_blob": "8b6b6c467afc743dfd749d160cb90f984784bf5d",
+      "bytes": 1207,
+      "sha256": "429eb85ef77e55fd1a3bc664329fa92d417f33f4b2abd76141108c4f30c3219d"
+    },
+    {
+      "path": ".github/workflows/consensus-lab.yml",
+      "git_blob": "50f265b292514e6aac596fa16bb66260ed6df0c5",
+      "bytes": 1444,
+      "sha256": "354b9e9e7e2c1a3a1a63f3ccd79d495d10d9e8cb40124f6db7f2e9d899670908"
+    },
+    {
+      "path": ".github/workflows/crate-notices.yml",
+      "git_blob": "35e7084b260f6c4c5fdd96f8bad05de9e7a4c338",
+      "bytes": 1016,
+      "sha256": "0570422d6e6157a279d888a87ce34e531bcaebe2a895512b354fceb372e7ca55"
+    },
+    {
+      "path": ".github/workflows/development-source.yml",
+      "git_blob": "0bc321519986195cc68bce37d47266860bcc146e",
+      "bytes": 1290,
+      "sha256": "7662eb5f641b44d1a17397a3c356ea47d39cc85c4fe882a90403e7df1013139c"
+    },
+    {
+      "path": ".github/workflows/funded-wallet.yml",
+      "git_blob": "9a60159e5765a07f109b83a6df2575bb23c98362",
+      "bytes": 5263,
+      "sha256": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296"
+    },
+    {
+      "path": ".github/workflows/network-operator.yml",
+      "git_blob": "af53882b37906a1a622df40b681b6a2978057873",
+      "bytes": 3903,
+      "sha256": "25ffb6fe7489d14e5e3a58e0710bb67f38bb15fbfb5492874d63f72665f94696"
+    },
+    {
+      "path": ".github/workflows/orchard-bridge.yml",
+      "git_blob": "fe78c2a02aaff2880fc2a25accf44ce37e261537",
+      "bytes": 3198,
+      "sha256": "bf190dd56d44b0aa1f464a0784022429fb8aa2cb0a263333e30eadfecf702398"
+    },
+    {
+      "path": ".github/workflows/orchard-consensus.yml",
+      "git_blob": "7cc16cebcddcc4c56051c6ebc0180693625755cf",
+      "bytes": 3290,
+      "sha256": "642161027b9f5e0a6da8f83e3829f28a5d728314103fa909774656005563d9ca"
+    },
+    {
+      "path": ".github/workflows/orchard-lab.yml",
+      "git_blob": "e2d80ee9126f31ebb9f3930e7309088a6d9934fd",
+      "bytes": 1540,
+      "sha256": "8d6554b2b4491c343d90f38e2f565196c78c75e69edd25eacaeb5f49ee37e0a2"
+    },
+    {
+      "path": ".github/workflows/payment-resources.yml",
+      "git_blob": "4a59f8175db5b3ef585c5b05299476808dabeb87",
+      "bytes": 5225,
+      "sha256": "d83634ff4aebac9befeec9c9dbaa554b75d8e2b3ba8368d39c3cb2fcc9a7b2eb"
+    },
+    {
+      "path": ".github/workflows/wallet-lab.yml",
+      "git_blob": "eb181add7d6bc09e66dc8e60dd399728e0122393",
+      "bytes": 1483,
+      "sha256": "32afa268bf17dc59279f100b4b7abcab3eaca803093b34dcce6967df2d8eeafb"
+    },
+    {
+      "path": "AGENTS.md",
+      "git_blob": "9025f6d8f33325a50fa58fc3047e11edbbdb6fc5",
+      "bytes": 3240,
+      "sha256": "bc5a7f3ba26bb99da6264427effd12b7df03a6f48c4c1a21281ade0b4c0b5f96"
+    },
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "git_blob": "b45bab9dde5acb2f09bc47b05196e9ee8961ef74",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee"
+    },
+    {
+      "path": "docs/AUTHORIZATION_CACHE.zh-CN.md",
+      "git_blob": "54a9544f4942bdc667dcad75886272c6d62e7977",
+      "bytes": 3169,
+      "sha256": "874ed9778bf0cd996601dd14f692146845677f8af1d618e30082adf294c30749"
+    },
+    {
+      "path": "docs/FIXED_VERIFYING_KEY.zh-CN.md",
+      "git_blob": "7304a1b9c32c338f0839c3f8960295acd66c841a",
+      "bytes": 4682,
+      "sha256": "363e6a9576b12e5f2eb39487b00486cef92e9a49bc5728d47bf266b23a14f5a5"
+    },
+    {
+      "path": "docs/STAGE_REVIEW.zh-CN.md",
+      "git_blob": "b9f02e3c5be64010e0a1420722929743b24a6cfd",
+      "bytes": 2139,
+      "sha256": "738d92594cb0851975bd05b5746edba9cd10512ea049cbdb02e1be8e2020bb46"
+    },
+    {
+      "path": "integration/orchard/Cargo.lock",
+      "git_blob": "2de27d6012d76201b124af81d4867f2d9db8f539",
+      "bytes": 29707,
+      "sha256": "34a1d8a6f67a3e85d8fee00682f6c8c5285f89a968b89ee66af861a237e74ff5"
+    },
+    {
+      "path": "integration/orchard/Cargo.toml",
+      "git_blob": "52cb6b759cd578845b29d319cd8da9111690f7d8",
+      "bytes": 841,
+      "sha256": "45d275f12a798c684bcf6b2e86034aff964414fbd32156b8601c4031d7487c7c"
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "git_blob": "1c02fe379bcaa9b0fb75553850f4d1aae280ad56",
+      "bytes": 11860,
+      "sha256": "6cc4a79f85a2f909e48eca5adfd9f7c624afdeb1ca747c84d34dbffb858e775e"
+    },
+    {
+      "path": "integration/orchard/src/lib.rs",
+      "git_blob": "9335ebbfa74c9d3009bca7b11abdbb5bb533c249",
+      "bytes": 10427,
+      "sha256": "c24ab910b0676f9010e704becdf59575fc9077e8b5280c57d55d4c8e95078bf9"
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "git_blob": "9f71c2a74e74e57be0fb59571d40fa8fc5113a05",
+      "bytes": 29008,
+      "sha256": "62a5257f4e8f7cec291564341435a769c2dbdc463b642e0b21b513cde9d8e316"
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "git_blob": "57b1a11149e31a90f93db33bb0b4635636e831a9",
+      "bytes": 34453,
+      "sha256": "4426a8b978649de8811a92ded3cf5957924b01db0600bb45af12c6d053796fce"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "git_blob": "1b832808ea6d0765eac4608d5786f906e0d7b831",
+      "bytes": 10944,
+      "sha256": "687bf63b9b464220fc7610970dbaa94e35d4fd386841642ca3b65158ce93229d"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "git_blob": "d90e7a8e9483940ba82e3c5af12316a4ce83b9bb",
+      "bytes": 10383,
+      "sha256": "77f47005568fad097edd6f563d3e1d0962957fe932dbd8565b0b4126ebe75137"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "git_blob": "724d788f6efd524f55f8e3544504de8783153a3e",
+      "bytes": 12441,
+      "sha256": "87602e83dd78343bcbeb981c37532d3c91f284c5a79d22103b869cafae16487b"
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "git_blob": "017ca249655321965eb4df148a16b99adf9b92cc",
+      "bytes": 27476,
+      "sha256": "96823dcd24bc4832d69f8639fff093da3b753950618bb90f4048923f798eba7e"
+    },
+    {
+      "path": "integration/orchard/src/pool/replay.rs",
+      "git_blob": "2579650949517b9cdd77030ef61dea6103470036",
+      "bytes": 9818,
+      "sha256": "4c25dcd5d92cf5e0ab592b11ae790dba8f3ab7761d3d7cbf7f5e94b13b9b3d64"
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "git_blob": "90083bc292b9666690ddd1bf2227ae3600170d4c",
+      "bytes": 11419,
+      "sha256": "d46959f81095fa44ec38f19f32861f6b7bd3b37855c435b66939d1283318efcb"
+    },
+    {
+      "path": "integration/orchard/src/wire/cache.rs",
+      "git_blob": "3f3049263b45e05f4fde4305bce60778c92dbc7a",
+      "bytes": 4110,
+      "sha256": "b78dd32ad8fd267ec9d23aac2d4d4eab9ddee294f194f7b2d8a00ceb7431a9fc"
+    },
+    {
+      "path": "integration/orchard/src/wire/fixed_key_tests.rs",
+      "git_blob": "8db6997d1cc455d19d8ba949c32365fc49bf7019",
+      "bytes": 3932,
+      "sha256": "33073a801e68b5eb2e404611485329cc03e904d5145766c0aeeedd993dd7aa60"
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "git_blob": "400eee352beb70c977da8e51296cf58fbd4a4b65",
+      "bytes": 27543,
+      "sha256": "03363db0cc52668e9aa6598fde23a1767827436ea7d553a0182ae740ed086959"
+    },
+    {
+      "path": "integration/orchard/tests/authorization_cache.rs",
+      "git_blob": "194a37285236310f95801f0fcee8c92078c4d356",
+      "bytes": 2958,
+      "sha256": "d0e0b54d7b58332b1850e456e083c353f3196fba3766674c260dc7c347e877b3"
+    },
+    {
+      "path": "integration/orchard/tests/support/fixtures.rs",
+      "git_blob": "7cc78ddbf4b87e0f26ab74e999ecee740bb82dcf",
+      "bytes": 3371,
+      "sha256": "b064d2e9086943d0e19564e4872027e3b2c3132a0f510e187079b17722ae0473"
+    },
+    {
+      "path": "scripts/run_funded_rust.py",
+      "git_blob": "300308b99bc3049ea5057aeef4798fc65e602827",
+      "bytes": 5739,
+      "sha256": "d7020b399362a56cbad7578255e9973a9c5be5592dcc2410624f46a0f639c97f"
+    },
+    {
+      "path": "scripts/tests/test_crate_notices.py",
+      "git_blob": "6f81d3c389faec5fe9ed08dea799c1d6bacef66c",
+      "bytes": 5822,
+      "sha256": "628475a7bf811c884e0f95c151e2827b1fa8ca409743842e01d9421560ab13eb"
+    },
+    {
+      "path": "scripts/tests/test_funded_rust.py",
+      "git_blob": "61d3cdc7a6ad6abcdc40e9dd847e935c5b9ec32b",
+      "bytes": 7405,
+      "sha256": "2123f0561a7a5eff67dc2b9aa17f1741106158eb309872d15deb9eda811d51b9"
+    },
+    {
+      "path": "scripts/tests/test_local_bundle.py",
+      "git_blob": "de2182596c93f0a1e7e1a295b3cbd3807d594827",
+      "bytes": 2046,
+      "sha256": "c6b3923d5504c43a033457b6effb2811b91d4baf5842e59edbd3912cb69d6ccf"
+    },
+    {
+      "path": "scripts/tests/test_payment_resources.py",
+      "git_blob": "b49fc50352bf4ddae275b55acd0795117b7f5dfb",
+      "bytes": 26198,
+      "sha256": "fdc03d1ea09e782e90aea3a86511dd6cc0eb049515217acb5bf6b1fb775cff15"
+    },
+    {
+      "path": "scripts/tests/test_payment_resources_evidence.py",
+      "git_blob": "e0d84b81a4446374509099a6a0db99f6345e901f",
+      "bytes": 22574,
+      "sha256": "6da831e50633d4e4782efc5c1c7d41168c2d0825045abfbff6d107b4220da23e"
+    },
+    {
+      "path": "scripts/tests/test_payment_resources_windows.py",
+      "git_blob": "54dffaf71d90e60d14b7c57e7c076f06c34e82c4",
+      "bytes": 14886,
+      "sha256": "116b67f4b9b37c9cde3924a152a3f93b97aa3b7aa98d1bbc3f3224e5531b3179"
+    },
+    {
+      "path": "scripts/tests/test_prepare_timing.py",
+      "git_blob": "e803af8e5a277de60c1d2b6c3788ceea7dd79c4d",
+      "bytes": 2946,
+      "sha256": "10c154a71a869dc2cad14752659dfe973b89e1cd1e3bc0e97208ccd8d2404a75"
+    },
+    {
+      "path": "scripts/tests/test_protocol_vectors.py",
+      "git_blob": "5e2bf31de2cbe7dc33a874215a279a93b6a77cb1",
+      "bytes": 1651,
+      "sha256": "bb361e83be912c80fb140ef360203582ff23c248966fb9b2f0b2562b2ce036fd"
+    },
+    {
+      "path": "scripts/tests/test_source_snapshot.py",
+      "git_blob": "06cb3cf3604415178548995e6a5ea1a2475949fa",
+      "bytes": 5091,
+      "sha256": "a2101ba0ab2ec1314b7242c446af029410c135918836992ff18577692462fce7"
+    },
+    {
+      "path": "scripts/tests/test_verify_local_lab.py",
+      "git_blob": "a6416d73e05ceb56df0381c295a71f3744afe4b8",
+      "bytes": 7528,
+      "sha256": "228042e8a67f1109075032564d79dc2975fdaf35b6babe116abbcd12a4240318"
+    },
+    {
+      "path": "scripts/tests/test_wallet_compaction.py",
+      "git_blob": "aa28a73d4e85b607fab7bef85720c0778f8aafd9",
+      "bytes": 5098,
+      "sha256": "35d41abb7f6c0d775ce96463da79cfb0031ff5718c6b247ea4b80976e88888f5"
+    },
+    {
+      "path": "scripts/tests/test_wallet_network.py",
+      "git_blob": "3ccd258d3fabdbb8515c3389de97229eaf3955b2",
+      "bytes": 9213,
+      "sha256": "e1f495f408a90fb58ce530646830a537db2af03577ce44094c82b66663db91dd"
+    },
+    {
+      "path": "scripts/tests/test_wallet_storage.py",
+      "git_blob": "7df01280b1bb79228ac4b6922e9cfc5f676222a3",
+      "bytes": 4176,
+      "sha256": "0f4438d6ef13ba317433a50f9a91e9570af91a3e03eec8df2e6c300a960c9298"
+    },
+    {
+      "path": "scripts/tests/test_zevune_wallet.py",
+      "git_blob": "7a1c8c7e72f5e95cf61bc376ab4b7918b9dce965",
+      "bytes": 4047,
+      "sha256": "0b1ea21f914977925bde75541e6d34d29e83ef6a56d214d687579de804909c8e"
+    }
+  ]
+}

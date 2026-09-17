@@ -1,0 +1,376 @@
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/bin/zevune-pool-recovery.rs:148:
+             "--app-hash",
+         ],
+         "locate-height" => &["--source", "--checkpoint", "--height"],
+-        "verify" | "verify-segments" | "index" | "verify-active" => {
+-            &["--source", "--checkpoint"]
+-        }
++        "verify" | "verify-segments" | "index" | "verify-active" => &["--source", "--checkpoint"],
+         _ => &["--source", "--output", "--checkpoint"],
+     };
+     if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active.rs:364:
+         expected_header_length: u32,
+     ) -> Result<(File, Self), PoolError> {
+         let header_length = u64::from(expected_header_length);
+-        if !(76..=MAX_HEADER_BYTES).contains(&header_length)
+-            || (header_length - 76) % 32 != 0
+-        {
++        if !(76..=MAX_HEADER_BYTES).contains(&header_length) || (header_length - 76) % 32 != 0 {
+             return Err(PoolError::Bounds);
+         }
+         let location = namespace::Directory::open(path)?;
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active.rs:373:
+-        let genesis =
+-            open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
++        let genesis = open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
+         genesis.try_lock_shared().map_err(|_| PoolError::Locked)?;
+-        let (genesis, journal) =
+-            Self::finish_open(path, location, genesis, header_length, false)?;
++        let (genesis, journal) = Self::finish_open(path, location, genesis, header_length, false)?;
+         journal.read_header(&genesis)?;
+         Ok((genesis, journal))
+     }
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active_flow_tests.rs:125:
+     let header = &entries["genesis"];
+     let mut raw = original.to_bytes();
+     raw[8..40].copy_from_slice(&Sha256::digest(header));
+-    let length = entries.values().map(|bytes| bytes.len() as u64).sum::<u64>();
++    let length = entries
++        .values()
++        .map(|bytes| bytes.len() as u64)
++        .sum::<u64>();
+     raw[80..88].copy_from_slice(&length.to_be_bytes());
+     raw[88..92].copy_from_slice(&(header.len() as u32).to_be_bytes());
+     let segments = entries.len() - 1;
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:41:
+     let d = Dir::new();
+     let source = d.path("source");
+     let (pin, original) = fixture(&source, 2);
+-    let encoded: String = pin
+-        .to_bytes()
+-        .iter()
+-        .map(|b| format!("{b:02x}"))
+-        .collect();
++    let encoded: String = pin.to_bytes().iter().map(|b| format!("{b:02x}")).collect();
+     let probe = |mode: &str| {
+         let output = std::process::Command::new(std::env::current_exe().unwrap())
+             .args(["--exact", TEST_NAME, "--nocapture"])
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:184:
+             drop(archive);
+             if kind == "replacement" {
+                 // A deliberate reopen may authenticate the same bytes anew.
+-                ActiveArchive::open(&source, pin)
+-                    .unwrap()
+-                    .verify()
+-                    .unwrap();
++                ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
+             } else {
+                 assert!(ActiveArchive::open(&source, pin).is_err());
+                 if kind == "hardlink" {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:231:
+     assert_eq!(directory_bytes(&source), original);
+     assert_eq!(directory_bytes(&moved), original);
+     drop(archive);
+-    ActiveArchive::open(&source, pin)
+-        .unwrap()
+-        .verify()
+-        .unwrap();
+-    ActiveArchive::open(&moved, pin)
+-        .unwrap()
+-        .verify()
+-        .unwrap();
++    ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
++    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
+ }
+ 
+ #[test]
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/namespace_tests.rs:324:
+         fs::rename(&to, source.join(name)).unwrap();
+     }
+     fs::rename(&source, &moved).unwrap();
+-    ActiveArchive::open(&moved, pin)
+-        .unwrap()
+-        .verify()
+-        .unwrap();
++    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
+     assert_eq!(directory_bytes(&moved), original);
+     // Positive delete controls use normal files after every archive is dropped.
+     for name in original.keys() {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:101:
+ // framing or state-replay rejection instead of merely failing the old hash.
+ // This does NOT authenticate an externally supplied checkpoint. The hard-coded
+ // independent vector below separately checks the production layout encoding.
+-fn repin(
+-    mut pin: ActiveRecoveryCheckpoint,
+-    entries: &DirectoryBytes,
+-) -> ActiveRecoveryCheckpoint {
++fn repin(mut pin: ActiveRecoveryCheckpoint, entries: &DirectoryBytes) -> ActiveRecoveryCheckpoint {
+     let header = &entries["genesis"];
+     pin.genesis = Sha256::digest(header).into();
+     pin.header_length = u32::try_from(header.len()).unwrap();
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:295:
+             );
+             for name in original.keys() {
+                 assert_eq!(
+-                    fs::metadata(restored.join(name)).unwrap().permissions().mode() & 0o777,
++                    fs::metadata(restored.join(name))
++                        .unwrap()
++                        .permissions()
++                        .mode()
++                        & 0o777,
+                     0o600
+                 );
+             }
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:335:
+     assert_ne!(fresh, pin);
+     drop(pool);
+     assert!(ActiveArchive::open(&source, pin).is_err());
+-    ActiveArchive::open(&source, fresh).unwrap().verify().unwrap();
++    ActiveArchive::open(&source, fresh)
++        .unwrap()
++        .verify()
++        .unwrap();
+ }
+ 
+ #[test]
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:394:
+     writer.write_all(&replacement[SEGMENT]).unwrap();
+     writer.sync_all().unwrap();
+     drop(writer);
+-    assert_eq!(fs::read(source.join(SEGMENT)).unwrap(), replacement[SEGMENT]);
++    assert_eq!(
++        fs::read(source.join(SEGMENT)).unwrap(),
++        replacement[SEGMENT]
++    );
+     assert_eq!(pool.active_recovery_checkpoint(), Err(PoolError::Corrupt));
+     assert_eq!(pool.state.summary(), committed);
+     assert_eq!(pool.summary(), Err(PoolError::Unavailable));
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:454:
+         let header = changed.get_mut("genesis").unwrap();
+         match label {
+             "borrow-segment-for-commitment" => header[72..76].copy_from_slice(&1u32.to_be_bytes()),
+-            "unbounded-commitment-count" => {
+-                header[72..76].copy_from_slice(&u32::MAX.to_be_bytes())
+-            }
++            "unbounded-commitment-count" => header[72..76].copy_from_slice(&u32::MAX.to_be_bytes()),
+             "extra-physical-header-bytes" => header.extend_from_slice(&[0; 32]),
+             "wrong-profile" => header[..8].copy_from_slice(b"ZVOPOL02"),
+             "wrong-network" => header[8] ^= 1,
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/tests.rs:506:
+         ));
+         assert_eq!(directory_bytes(&path), changed);
+     }
+-    for label in ["wrong-record-checksum", "wrong-final-state", "trailing-byte"] {
++    for label in [
++        "wrong-record-checksum",
++        "wrong-final-state",
++        "trailing-byte",
++    ] {
+         let mut changed = original.clone();
+         let records = changed.get_mut(SEGMENT).unwrap();
+         match label {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active.rs:96:
+             }
+         } else if segments == 0
+             || segments > self.height
+-            || records < MIN_FRAME.checked_mul(self.height).ok_or(PoolError::Bounds)?
+             || records
++                < MIN_FRAME
++                    .checked_mul(self.height)
++                    .ok_or(PoolError::Bounds)?
++            || records
+                 > segments
+                     .checked_mul(super::super::active::SEGMENT_BYTES)
+                     .ok_or(PoolError::Bounds)?
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active.rs:120:
+         let result = (|| {
+             let journal = self.active.as_ref().ok_or(PoolError::Bounds)?;
+             let before = journal.layout_hash(&self.file)?;
+-            let (state, _) =
+-                Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
++            let (state, _) = Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
+             if state.genesis != self.state.genesis
+                 || state.summary() != committed
+                 || journal.length() != self.length
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:130:
+ fn unchanged(path: &Path, expected: &DirectoryBytes) {
+     // Avoid printing complete public journal/transaction bytes on assertion
+     // failure; the contract being checked is byte equality, not their content.
+-    assert!(directory_bytes(path) == *expected, "directory bytes changed");
++    assert!(
++        directory_bytes(path) == *expected,
++        "directory bytes changed"
++    );
+ }
+ 
+ fn write_fixture(path: &Path, entries: &DirectoryBytes) {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:262:
+         ("verify-active", &backup, None),
+         ("restore-active", &backup, Some(restored.as_path())),
+     ] {
+-        success(&call(&archive_args(mode, input, &encoded, output)), mode, pin);
++        success(
++            &call(&archive_args(mode, input, &encoded, output)),
++            mode,
++            pin,
++        );
+         unchanged(&source, &original);
+         unchanged(&backup, &original);
+     }
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:286:
+     assert!(alice.pending_id().is_none());
+     drop(history);
+     let second = bob
+-        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)
++        .build_payment(
++            carol.receive_address(0).unwrap(),
++            40_000,
++            1_000,
++            100,
++            &prover,
++        )
+         .unwrap()
+         .bytes()
+         .to_vec();
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:354:
+     assert_eq!(f.pin.segment_count(), 0);
+     assert_eq!(f.pin.length(), f.original["genesis"].len() as u64);
+     success(
+-        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
++        &call(&checkpoint_args(
++            &f.source,
++            &f.manifest,
++            &f.genesis,
++            &f.state,
++        )),
+         "checkpoint-active",
+         f.pin,
+     );
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:390:
+     let target = f.dir.path("not-created");
+     let encoded = hex(&f.pin.to_bytes());
+     let base = archive_args("backup-active", &f.source, &encoded, Some(&target));
+-    let mut cases = vec![
+-        vec![],
+-        vec!["unknown".into()],
+-        vec!["backup-active".into()],
+-    ];
++    let mut cases = vec![vec![], vec!["unknown".into()], vec!["backup-active".into()]];
+     let mut missing_ack = base.clone();
+     missing_ack.retain(|arg| arg != "--no-real-funds");
+     cases.push(missing_ack);
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:485:
+         ("restore-active", Some(target.as_path())),
+         ("verify-active", None),
+     ] {
+-        failure(&call(&archive_args(mode, &f.source, &encoded, output)), &f.dir);
++        failure(
++            &call(&archive_args(mode, &f.source, &encoded, output)),
++            &f.dir,
++        );
+         assert!(!target.exists());
+     }
+     failure(
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:492:
+-        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
++        &call(&checkpoint_args(
++            &f.source,
++            &f.manifest,
++            &f.genesis,
++            &f.state,
++        )),
+         &f.dir,
+     );
+     assert_eq!(owner.summary().unwrap(), f.state);
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:528:
+         }
+     }
+     success(
+-        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
++        &call(&archive_args(
++            "backup-active",
++            &f.source,
++            &encoded,
++            Some(&target),
++        )),
+         "backup-active",
+         f.pin,
+     );
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:553:
+     let legacy_encoded = hex(&legacy_pin.to_bytes());
+     let active_encoded = hex(&f.pin.to_bytes());
+     let target = f.dir.path("profile-mismatch-output");
+-    failure(&call(&checkpoint_args(&source, &manifest, &legacy, &state)), &f.dir);
++    failure(
++        &call(&checkpoint_args(&source, &manifest, &legacy, &state)),
++        &f.dir,
++    );
+     let mut old_checkpoint = checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state);
+     old_checkpoint[0] = "checkpoint".into();
+     failure(&call(&old_checkpoint), &f.dir);
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:608:
+     bad_header.get_mut("genesis").unwrap()[0] ^= 1;
+     cases.push(bad_header);
+     let mut damaged = f.original.clone();
+-    *damaged.get_mut("00000000.journal").unwrap().last_mut().unwrap() ^= 1;
++    *damaged
++        .get_mut("00000000.journal")
++        .unwrap()
++        .last_mut()
++        .unwrap() ^= 1;
+     cases.push(damaged);
+     let mut missing = f.original.clone();
+     missing.remove("00000000.journal");
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:623:
+     appended.get_mut("00000000.journal").unwrap().push(0);
+     cases.push(appended);
+     let mut early_rotation = f.original.clone();
+-    let second = early_rotation.get_mut("00000000.journal").unwrap().split_off(150);
++    let second = early_rotation
++        .get_mut("00000000.journal")
++        .unwrap()
++        .split_off(150);
+     early_rotation.insert("00000001.journal".into(), second);
+     cases.push(early_rotation);
+     for (number, entries) in cases.into_iter().enumerate() {
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:635:
+             ("backup-active", Some(target.as_path())),
+             ("restore-active", Some(target.as_path())),
+         ] {
+-            failure(&call(&archive_args(mode, &candidate, &encoded, output)), &f.dir);
++            failure(
++                &call(&archive_args(mode, &candidate, &encoded, output)),
++                &f.dir,
++            );
+             assert!(!target.exists());
+             unchanged(&candidate, &entries);
+             unchanged(&f.source, &f.original);
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:662:
+     // fail on both supported platforms. Process creation still gets a valid
+     // inherited handle; this tests publication followed by a failed receipt.
+     let output = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
+-        .args(archive_args("backup-active", &f.source, &encoded, Some(&target)))
++        .args(archive_args(
++            "backup-active",
++            &f.source,
++            &encoded,
++            Some(&target),
++        ))
+         .stdout(Stdio::from(File::open(&sink).unwrap()))
+         .output()
+         .unwrap();
+Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_recovery_cli.rs:677:
+     );
+     // A later explicit command cannot replace the already complete target.
+     failure(
+-        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
++        &call(&archive_args(
++            "backup-active",
++            &f.source,
++            &encoded,
++            Some(&target),
++        )),
+         &f.dir,
+     );
+     unchanged(&target, &f.original);

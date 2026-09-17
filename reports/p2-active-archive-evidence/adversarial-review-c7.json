@@ -1,0 +1,852 @@
+{
+  "schema": "zevune-independent-adversarial-review-v1",
+  "candidate": "C7",
+  "reviewer_task": "/root/p2_archive_adversarial_review",
+  "independent_non_author": true,
+  "completed_at_utc": "2026-09-17T10:52:52.620633+00:00",
+  "repository": "https://github.com/youq616/Zevune",
+  "pull_request": "https://github.com/youq616/Zevune/pull/13",
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "head": "de474720431daf33afd4a7ebc32de2d230344a5a",
+  "tree": "e4dd17dfb1efd0e3ca20441168b62b72b6fc3108",
+  "parent": "88146d54f2eaac39958ceaaea9e13f71832d536e",
+  "candidate_identity_verified_from_local_git": true,
+  "worktree_clean_at_review_start_and_end": true,
+  "pr_synthetic": {
+    "certified": false,
+    "reason": "This code review binds source/tree; no C7 native merge checkout certified."
+  },
+  "candidate_code_modified_by_reviewer": false,
+  "candidate_tests_modified_by_reviewer": false,
+  "other_reviewers_findings_used_as_substitute": false,
+  "verdict": "PASS_STATIC",
+  "verdict_meaning": "Independent complete-stage code/test-design review of exact C7. No known open source blocker found. C7 native matrix mandatory and not certified; not stage acceptance.",
+  "scope": "base..C7 full16files plus33file inputs and related state/wallet/worker/replay/cache/fixtures. Current C7 fixture-module fix, fixed-public-key lifecycle and authorization-cache isolation, all archive invariants, history fixes and added tests.",
+  "changed_files": [
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "added": 185,
+      "removed": 0
+    },
+    {
+      "path": "docs/AUTHORIZATION_CACHE.zh-CN.md",
+      "added": 2,
+      "removed": 2
+    },
+    {
+      "path": "docs/FIXED_VERIFYING_KEY.zh-CN.md",
+      "added": 63,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "added": 95,
+      "removed": 2
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "added": 46,
+      "removed": 16
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "added": 227,
+      "removed": 8
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "added": 158,
+      "removed": 2
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "added": 3,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "added": 278,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "added": 321,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "added": 688,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool_tests.rs",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "added": 19,
+      "removed": 5
+    },
+    {
+      "path": "integration/orchard/src/wire/fixed_key_tests.rs",
+      "added": 89,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "added": 772,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/tests/authorization_cache.rs",
+      "added": 2,
+      "removed": 2
+    }
+  ],
+  "stage_diff": {
+    "files": 16,
+    "added": 2949,
+    "removed": 38
+  },
+  "c6_to_c7_diff": {
+    "files": 3,
+    "added": 5,
+    "removed": 5,
+    "scope": "cfg(test) fixture module visibility, re-export and import only"
+  },
+  "open_blocking_findings": [],
+  "closed_findings": [
+    {
+      "id": "AR-C1-01",
+      "severity": "P2",
+      "status": "SOURCE_COVERAGE_CLOSURE_PRESERVED_IN_C7",
+      "source": "integration/orchard/src/pool/active_flow_tests.rs:599",
+      "evidence": "AR-C1-01 real10001 two-segment swap rejects original and production-layout-matching repin; explicit predecessor mismatch, preserved bytes and normal10002 positive control.",
+      "exact_c7_native_execution_certified": false
+    },
+    {
+      "id": "AR-C3-02",
+      "severity": "P2",
+      "status": "SOURCE_FIX_PRESERVED_IN_C7",
+      "source": "integration/orchard/src/bin/zevune-pool-recovery.rs:53",
+      "evidence": "AR-C3-02 safe owned stdout duplicate to File, Windows NULL rejection; four-mode exit1/File probe/writable-file JSON/complete-copy posterior verification tests unchanged from C4.",
+      "exact_c7_native_execution_certified": false
+    },
+    {
+      "id": "AR-C6-03",
+      "severity": "P2",
+      "status": "SOURCE_FIX_REVIEWED_IN_C7_NATIVE_GATE_PENDING",
+      "source": [
+        "integration/orchard/src/pool_tests.rs:8",
+        "integration/orchard/src/pool.rs:785",
+        "integration/orchard/src/wire/fixed_key_tests.rs:3"
+      ],
+      "evidence": "One src fixture path/mod remains. pub(crate) module and cfg(test) pub(crate) re-export provide correct visibility to consumer; no second load, production entry, or lint allow.",
+      "exact_c7_native_execution_certified": false
+    }
+  ],
+  "checks": [
+    {
+      "id": "identity_and_scope",
+      "result": "PASS_STATIC",
+      "assessment": "Accurate C7 source/tree/parent, clean worktree and all 16 stage-changed files; 33-file inventory matches git objects."
+    },
+    {
+      "id": "single_fixture_module",
+      "result": "PASS_STATIC",
+      "assessment": "One src fixture path/mod remains. pub(crate) module and cfg(test) pub(crate) re-export provide correct visibility to consumer; no second load, production entry, or lint allow."
+    },
+    {
+      "id": "test_body_preservation",
+      "result": "PASS_STATIC",
+      "assessment": "Entire fixed-key #[test] function matches C6 byte-for-byte; physical fixture implementation unchanged from C4."
+    },
+    {
+      "id": "fixed_key_origin",
+      "result": "PASS_STATIC",
+      "assessment": "Only private OnceLock initializer VerifyingKey::build(CIRCUIT), compile-time FixedPostNu6_2, fixed dependencies and no external injection or fallback."
+    },
+    {
+      "id": "cache_isolation",
+      "result": "PASS_STATIC",
+      "assessment": "Each new/Default verifier owns fresh VerifiedCache; cache body unchanged; exact method comparison confirms unchanged verification order except reference adjustment."
+    },
+    {
+      "id": "concurrent_real_fixture",
+      "result": "PASS_STATIC",
+      "assessment": "Real proof, initially empty A/B/4 thread caches, pointer/version checks, real verification per instance, proof/binding mutants decode then exact Authorization and remain uncached. Barrier precedes thread assertions; scope joins."
+    },
+    {
+      "id": "initialization_lifetime",
+      "result": "PASS_STATIC",
+      "assessment": "Read-only public key process lifetime; panic propagates and uninitialized cell can retry same initializer; no callback/reentrancy path; no cold-init-race test claim."
+    },
+    {
+      "id": "state_and_callers",
+      "result": "PASS_STATIC",
+      "assessment": "Pool replay/create, worker, wallet/prover/vault preserve independent instances and ledger-domain/expiry/anchor/spent/output/fee checks; no acceptance result sharing."
+    },
+    {
+      "id": "bounded_checkpoint",
+      "result": "PASS_STATIC",
+      "assessment": "Exact128 encoding, hashes and checked bounds, legacy separation, physical genesis containment and independently expected genesis."
+    },
+    {
+      "id": "full_replay_and_export",
+      "result": "PASS_STATIC",
+      "assessment": "Fresh verifier on each complete replay, canonical frames/rotation, actual EOF, unpublished State until success; all committed Summary fields and capacity checked; PreparedBlock preserved."
+    },
+    {
+      "id": "copy_three_real_replays",
+      "result": "PASS_STATIC",
+      "assessment": "Source verification before create, target through original creation/locked handles, final full source replay, final target bytes/namespace; no replay removed by key reuse."
+    },
+    {
+      "id": "namespace_and_locks",
+      "result": "PASS_STATIC",
+      "assessment": "Source read-only/shared genesis lock vs exclusive writer; retained Unix identity/links and Windows no-delete-share/reparse safeguards; real-process and positive-control tests retained."
+    },
+    {
+      "id": "exclusive_copy",
+      "result": "PASS_STATIC",
+      "assessment": "Absolute/canonical parent/source binding, existing/nested/alias rejection, create-new only, original source unchanged, no truncate/delete/repair/retry."
+    },
+    {
+      "id": "io_and_faults",
+      "result": "PASS_STATIC",
+      "assessment": "Explicit offsets/rewind, true physical EOF, Interrupted/short-read handling, sticky failure; per-file sync and Unix directories, honest partial/complete target and lost-ack behavior."
+    },
+    {
+      "id": "segment_swap",
+      "result": "PASS_STATIC",
+      "assessment": "AR-C1-01 real10001 two-segment swap rejects original and production-layout-matching repin; explicit predecessor mismatch, preserved bytes and normal10002 positive control."
+    },
+    {
+      "id": "stdout_failure",
+      "result": "PASS_STATIC",
+      "assessment": "AR-C3-02 safe owned stdout duplicate to File, Windows NULL rejection; four-mode exit1/File probe/writable-file JSON/complete-copy posterior verification tests unchanged from C4."
+    },
+    {
+      "id": "compatibility_and_funded_flow",
+      "result": "PASS_STATIC",
+      "assessment": "Genuine low-height and above10000 payment/recovery tests, legacy pins/commands/JSON and Go active-profile refusal retained; no validator recovery escalation."
+    },
+    {
+      "id": "gates_preserved",
+      "result": "PASS_STATIC",
+      "assessment": "All 12 workflows, Cargo manifest/lock/toolchain and funded runner byte-identical to C4. Source test-name counts preserved; no native C7 certification."
+    }
+  ],
+  "mechanical_checks": {
+    "checked_at_utc": "2026-09-17T10:47:51.699987+00:00",
+    "worktree_clean": true,
+    "stage_totals": {
+      "files": 16,
+      "added": 2949,
+      "removed": 38
+    },
+    "c4_original_stage_identical": {
+      "docs/ACTIVE_ARCHIVE_V1.zh-CN.md": true,
+      "integration/orchard/src/bin/zevune-pool-recovery.rs": true,
+      "integration/orchard/src/pool.rs": false,
+      "integration/orchard/src/pool/active.rs": true,
+      "integration/orchard/src/pool/active_flow_tests.rs": true,
+      "integration/orchard/src/pool/recovery.rs": true,
+      "integration/orchard/src/pool/recovery/active.rs": true,
+      "integration/orchard/src/pool/recovery/active/namespace_tests.rs": true,
+      "integration/orchard/src/pool/recovery/active/tests.rs": true,
+      "integration/orchard/tests/active_recovery_cli.rs": true
+    },
+    "pool_runtime_equal_after_removing_only_cfg_test_alias": true,
+    "c7_whole_test_function_equal_to_c6": true,
+    "fixture_implementation_equal_c4": true,
+    "wire_equal_c5_c6": true,
+    "verify_logic_only_reference_adjustment_since_c4": true,
+    "cache_equal_c4": true,
+    "old_auth_noncomments_equal_c4": true,
+    "workflow_count": 12,
+    "unchanged_controls": [
+      ".github/workflows/active-ledger.yml",
+      ".github/workflows/ci.yml",
+      ".github/workflows/consensus-lab.yml",
+      ".github/workflows/crate-notices.yml",
+      ".github/workflows/development-source.yml",
+      ".github/workflows/funded-wallet.yml",
+      ".github/workflows/network-operator.yml",
+      ".github/workflows/orchard-bridge.yml",
+      ".github/workflows/orchard-consensus.yml",
+      ".github/workflows/orchard-lab.yml",
+      ".github/workflows/payment-resources.yml",
+      ".github/workflows/wallet-lab.yml",
+      "integration/orchard/Cargo.toml",
+      "integration/orchard/Cargo.lock",
+      "integration/orchard/rust-toolchain.toml",
+      "scripts/run_funded_rust.py"
+    ],
+    "independent_vector": {
+      "header_bytes": 76,
+      "header_sha256": "07782393f4021cabba3a8a09f0d2747e6ae4404457475c6e9df85100f734bc1e",
+      "layout_bytes": 92,
+      "layout_sha256": "325fba79e5d367646d57a58c594264ae5b0d216af5ce1858e88b0f26a6a882ed",
+      "executed_this_c7_review": true
+    },
+    "diff_check": {
+      "stage": {
+        "exit_code": 2,
+        "output": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md:185: new blank line at EOF.\n"
+      },
+      "c6_to_c7": {
+        "exit_code": 0,
+        "output": ""
+      }
+    },
+    "tools_present": {
+      "rustc": null,
+      "cargo": null,
+      "go": null
+    }
+  },
+  "independent_vector": {
+    "header_bytes": 76,
+    "header_sha256": "07782393f4021cabba3a8a09f0d2747e6ae4404457475c6e9df85100f734bc1e",
+    "layout_bytes": 92,
+    "layout_sha256": "325fba79e5d367646d57a58c594264ae5b0d216af5ce1858e88b0f26a6a882ed",
+    "executed_this_c7_review": true
+  },
+  "tools_present": {
+    "rustc": null,
+    "cargo": null,
+    "go": null
+  },
+  "executed_checks": [
+    "Read-only git source/tree/parent/status/diff checks",
+    "33 exact git blob/worktree hash comparisons",
+    "C4/C5/C6/C7 byte-preservation comparisons",
+    "C7 complete test-body and fixture implementation preservation",
+    "verify method exact comparison except reference change",
+    "12 workflow and dependency/runner comparisons",
+    "Source test-name and module mount enumeration",
+    "Independent Python fixed layout vector",
+    "Historical raw log and review byte/SHA integrity checks",
+    "git diff --check C6..C7 and base..C7"
+  ],
+  "static_whitespace_check": {
+    "stage": {
+      "exit_code": 2,
+      "output": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md:185: new blank line at EOF.\n"
+    },
+    "c6_to_c7": {
+      "exit_code": 0,
+      "output": ""
+    }
+  },
+  "native_tests_executed": false,
+  "ci_results_certified": false,
+  "native_gate_status": "EXACT_C7_COMPLETE_MATRIX_REQUIRED_PENDING_EXTERNAL_CERTIFICATION",
+  "stage_accepted": false,
+  "review_applies_to_later_commits": false,
+  "source_test_name_counts": {
+    "active_archive_core": 12,
+    "active_archive_namespace": 7,
+    "active_archive_namespace_unix": 6,
+    "active_archive_namespace_windows": 5,
+    "active_flow": 4,
+    "funded_active_cli": 7,
+    "new_fixed_key_unit": 1,
+    "are_native_pass_counts": false
+  },
+  "historical_c6_failure": {
+    "job_id": 105167396538,
+    "synthetic": "4bfe426af700303719bbc58344408e070af90467",
+    "source": "88146d54f2eaac39958ceaaea9e13f71832d536e",
+    "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+    "library_passed": 140,
+    "library_failed": 0,
+    "library_seconds": 66.85,
+    "new_key_test_passed": true,
+    "default_active_recovery_cli_tests": 0,
+    "later_clippy_error": "duplicate_mod with -D warnings",
+    "exit_code": 101,
+    "accepted": false,
+    "transferred_credit_to_c7": false,
+    "c6_json_created": false,
+    "md_completion_overstatements_corrected_in": "adversarial-review-c6-addendum.md"
+  },
+  "limitations": [
+    "No local rustc/cargo/go; no compile, fmt, Clippy, Rust/Go tests or C7 CI certified",
+    "Native Windows lock, file, stdout and exact candidate matrix remain separately required",
+    "No cold OnceLock initialization race, initializer panic/OOM execution or timing claim",
+    "No full capacity/descriptor budget, real power-loss/disk-full, Windows directory durability or arbitrary transient malicious filesystem proof",
+    "Public key lives to process exit; performance and peak resource savings not measured",
+    "Independent pin does not establish origin/latest tip/finality; NO-FUNDS and P2 developing, not validator recovery",
+    "Agent review is not external institutional security audit",
+    "Missing PROOF_CONTRACT.md and ARCHITECTURE.zh-CN.md not read or fabricated"
+  ],
+  "source_documents": [
+    {
+      "url": "https://doc.rust-lang.org/reference/visibility-and-privacy.html",
+      "supports": "pub(crate) scope and re-export through private implementation module; read during C7 review"
+    },
+    {
+      "url": "https://docs.rs/orchard/latest/orchard/circuit/struct.VerifyingKey.html",
+      "observed_version": "0.15.5",
+      "supports": [
+        "Explicit circuit version build",
+        "circuit_version getter",
+        "Send and Sync auto traits"
+      ],
+      "version_fixed_url_successfully_read": false
+    },
+    {
+      "url": "https://docs.rs/orchard/latest/src/orchard/circuit.rs.html",
+      "acquired_from": "API Source link",
+      "supports": [
+        "VerifyingKey build creates Params and Circuit::empty(version)",
+        "keygen_vk unwrap can panic",
+        "No project verifier callback"
+      ],
+      "vendored_crate_archive_authenticated_by_reviewer": false
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/sync/struct.OnceLock.html",
+      "observed_version": "1.98.1",
+      "supports": [
+        "Stable get_or_init",
+        "Single nonpanicking initialization under concurrency",
+        "Panic leaves uninitialized and propagates",
+        "Reentrancy invalid/current possible deadlock",
+        "OnceLock Sync requires T Send+Sync"
+      ]
+    },
+    {
+      "url": "https://doc.rust-lang.org/reference/items/static-items.html",
+      "supports": [
+        "Static lifetime",
+        "Static values do not run Drop at program end"
+      ]
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/thread/fn.scope.html",
+      "supports": "All scoped threads join before scope returns; unhandled child panic propagates"
+    },
+    {
+      "url": "https://doc.rust-lang.org/src/std/io/stdio.rs.html",
+      "supports": "Stdout adapter EBADF behavior, used for prior C3 diagnosis and retained C7 fix assessment"
+    },
+    {
+      "url": "https://doc.rust-lang.org/src/std/fs.rs.html",
+      "supports": "File OS-write propagation; flush is not fsync acknowledgement"
+    }
+  ],
+  "prior_review_artifacts_and_failure_log": [
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c1.md",
+      "bytes": 12848,
+      "sha256": "1b2f12b42dffb0a5bd5bea9c7f48945062534d46580c43ea194b9d6766b9b915",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c1.json",
+      "bytes": 13376,
+      "sha256": "3a89c3f602133431e12f4094cc0101859439198ed85000c5189c5dcf9f72dd47",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3.md",
+      "bytes": 12629,
+      "sha256": "127d9ef1b798aeb008542e58af6241a8efe24799cba59ef2014bc4ec7c7f0f2b",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3.json",
+      "bytes": 16155,
+      "sha256": "d151ef84e2e9aa35fdef9f07b3530651d53025ba222b70b950dfd1521253c825",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3-addendum.md",
+      "bytes": 7094,
+      "sha256": "abf56bdc75c9f1db074f1b04085330a8a9746fe409a3585f49ea385e441b5437",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c4.md",
+      "bytes": 15431,
+      "sha256": "5d736cf901527a97cf27725212088432f6a1b943a9caccd02e1b94521e34b844",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c4.json",
+      "bytes": 28068,
+      "sha256": "c39f3f128b121b6903fe9fd8603c699084f8361814fb3c49e5b528cb05fc584c",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-design-review-c5.md",
+      "bytes": 10300,
+      "sha256": "bb6debd63f36ea94d646dca36946142f3a2f2eec4806423a862a85035a0644c7",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-design-review-c5.json",
+      "bytes": 14546,
+      "sha256": "61afc0fca27939164768d4b3230bb13febb03db8ce4447bf45067c8aa6a6c32c",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c5-work-record.md",
+      "bytes": 2305,
+      "sha256": "a6d6c9a9ecb22f9f28cf9abf958a5e8bf0827a99c223105baaa7251de3d243fa",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c6.md",
+      "bytes": 15160,
+      "sha256": "1db32733360b82162e50279c7dad06c05cd262897c7143503a893484bcc201c7",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c6-addendum.md",
+      "bytes": 4600,
+      "sha256": "60bc0ad905450506cd29b292dfe2bbf08d2af96808d61f733e2334b4ecc2abdc",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c3/job-105131817273.log",
+      "bytes": 76073,
+      "sha256": "64c3e286d1f0ba3ed339d3047793b2e6190ea056a0c2b1f9bc037b06d6ff53bb",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c5/job-105166096614.log",
+      "bytes": 20672,
+      "sha256": "994c43ca2a98a46957c99dfe1dd755de2762fcd82a6acae006544894b5d64042",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c6/job-105167396538.log",
+      "bytes": 68156,
+      "sha256": "a0368cb426a63c9ed4763cd88429f5744b0d0404b30c50e419f0e86903b40e40",
+      "matches_immutable_original": true
+    }
+  ],
+  "review_report": {
+    "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c7.md",
+    "bytes": 16719,
+    "sha256": "f4f99272f42e0057a9012d9b8f1e7b8ad174e4a576f3acc094e8038f3acc969e"
+  },
+  "mechanical_check_record": {
+    "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c7-checks.json",
+    "bytes": 17950,
+    "sha256": "30524dae08757919e4f4a394fcec319b165c3c586fc347e2907f6b7026d6a4f9"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/funded-wallet.yml",
+      "bytes": 5263,
+      "sha256": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 3240,
+      "sha256": "bc5a7f3ba26bb99da6264427effd12b7df03a6f48c4c1a21281ade0b4c0b5f96",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/AUTHORIZATION_CACHE.zh-CN.md",
+      "bytes": 3169,
+      "sha256": "874ed9778bf0cd996601dd14f692146845677f8af1d618e30082adf294c30749",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/FIXED_VERIFYING_KEY.zh-CN.md",
+      "bytes": 4682,
+      "sha256": "363e6a9576b12e5f2eb39487b00486cef92e9a49bc5728d47bf266b23a14f5a5",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/STAGE_REVIEW.zh-CN.md",
+      "bytes": 2139,
+      "sha256": "738d92594cb0851975bd05b5746edba9cd10512ea049cbdb02e1be8e2020bb46",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/Cargo.lock",
+      "bytes": 29707,
+      "sha256": "34a1d8a6f67a3e85d8fee00682f6c8c5285f89a968b89ee66af861a237e74ff5",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/Cargo.toml",
+      "bytes": 841,
+      "sha256": "45d275f12a798c684bcf6b2e86034aff964414fbd32156b8601c4031d7487c7c",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/rust-toolchain.toml",
+      "bytes": 86,
+      "sha256": "887f9be066a15585a2c583578e84b0fcb541126d81546276bad3d2ff00d61167",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "bytes": 11860,
+      "sha256": "6cc4a79f85a2f909e48eca5adfd9f7c624afdeb1ca747c84d34dbffb858e775e",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/lib.rs",
+      "bytes": 10427,
+      "sha256": "c24ab910b0676f9010e704becdf59575fc9077e8b5280c57d55d4c8e95078bf9",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "legacy_and_bound_transcripts_match_independent_sha256_vectors",
+        "every_context_component_changes_the_bound_signature_message"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "bytes": 29054,
+      "sha256": "0faf50b4f90f61a3ef48baf0fceed47d8c7f13719378fd03905498faab99af70",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "bytes": 29276,
+      "sha256": "62f470f20534a649b04b0f08f538782b927a7e446172c4f5b397f5057f061586",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active/tests.rs",
+      "bytes": 22612,
+      "sha256": "9359290fe212650ce0223840a2e2fe7314f9291d642d033e900d4dd14195c3b5",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "create_is_exclusive_bounded_and_preserves_existing_bytes",
+        "full_segment_and_next_frame_rotate_canonically_without_crossing",
+        "budgets_include_framing_total_tail_and_the_independent_segment_cap",
+        "malformed_frame_and_capacity_rejection_create_no_files_or_bytes",
+        "early_rotation_and_split_frames_are_rejected_even_with_valid_checksums",
+        "unknown_missing_empty_and_truncated_segments_fail_closed_without_repair",
+        "readers_retain_the_exclusive_root_lock_and_have_independent_positions",
+        "another_process_cannot_open_held_genesis_lock",
+        "captured_reader_requires_each_real_eof_and_poisoned_readers_cannot_resume",
+        "unknown_entry_after_open_is_not_ignored_or_removed",
+        "interruption_leaves_metadata_unchanged_and_preserves_the_recoverable_prefix",
+        "failed_next_segment_publication_keeps_all_sealed_prefix_bytes_and_no_repair",
+        "symlinks_hard_links_and_replaced_names_are_rejected",
+        "adding_a_hard_link_after_open_poison_checks_without_modifying_ledger_bytes",
+        "windows_retained_handles_block_file_and_directory_rename_until_drop"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "bytes": 34453,
+      "sha256": "4426a8b978649de8811a92ded3cf5957924b01db0600bb45af12c6d053796fce",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contract",
+        "real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002",
+        "legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal",
+        "active_write_failures_poison_store_without_publishing_partial_state"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "bytes": 10944,
+      "sha256": "687bf63b9b464220fc7610970dbaa94e35d4fd386841642ca3b65158ce93229d",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "bytes": 10383,
+      "sha256": "77f47005568fad097edd6f563d3e1d0962957fe932dbd8565b0b4126ebe75137",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "bytes": 12441,
+      "sha256": "87602e83dd78343bcbeb981c37532d3c91f284c5a79d22103b869cafae16487b",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_archive_locks_coordinate_real_processes",
+        "readonly_source_files_copy_into_a_normally_writable_active_directory",
+        "persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified",
+        "parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive",
+        "failed_open_releases_all_acquired_file_and_directory_handles",
+        "unknown_entry_after_open_prevents_verification_and_creates_no_target",
+        "windows_files_and_directory_cannot_be_renamed_or_deleted_until_last_reader_drops"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "bytes": 27476,
+      "sha256": "96823dcd24bc4832d69f8639fff093da3b753950618bb90f4048923f798eba7e",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic",
+        "exported_genesis_checkpoint_matches_independent_fixed_layout_vector",
+        "genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally",
+        "checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes",
+        "incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores",
+        "checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state",
+        "retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change",
+        "repinned_headers_are_bounded_inside_the_physical_genesis_file",
+        "repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state",
+        "creating_a_target_is_exclusive_and_source_validation_precedes_creation",
+        "partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair",
+        "final_source_and_target_namespace_changes_cannot_return_success"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/segments.rs",
+      "bytes": 19939,
+      "sha256": "0097d04b955e822f3e214018b95eb79bddecaa465366b14dfdd2a3a5e15d6be4",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+      "bytes": 4949,
+      "sha256": "7927596f061d3d0fc4e05bf0f5cfd63d53cfdab4d382c1f10a2050c4689b3b3b",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/replay.rs",
+      "bytes": 9818,
+      "sha256": "4c25dcd5d92cf5e0ab592b11ae790dba8f3ab7761d3d7cbf7f5e94b13b9b3d64",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool_tests.rs",
+      "bytes": 11685,
+      "sha256": "228ee1f19ae790cfbbc63d0d8ec0b0a7320e35b39562b3ba4e3d529776a6b896",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "actual_two_hop_pool_commit_replay_and_corruption",
+        "empty_pool_lock_restart_and_no_overwrite",
+        "partial_write_poison_does_not_advance_memory_or_repair_disk",
+        "lost_sync_acknowledgement_remains_uncertain_until_replay",
+        "tampered_prepared_result_and_resource_limits",
+        "record_decoder_rejects_truncation_trailing_and_length_bombs"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/wallet.rs",
+      "bytes": 19392,
+      "sha256": "b4dbcbe3e6cd600c1c3327448ce78a452474ad10e4f9b06fa332072de2410ddf",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "shared_witnesses_match_upstream_frontier_for_odd_and_even_trees"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/wallet/vault/store.rs",
+      "bytes": 19742,
+      "sha256": "8ea8237f1c451422068ecd64b6307f10a271e59d0c7466edaaff505a595339a2",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "bytes": 11419,
+      "sha256": "d46959f81095fa44ec38f19f32861f6b7bd3b37855c435b66939d1283318efcb",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/wire/cache.rs",
+      "bytes": 4110,
+      "sha256": "b78dd32ad8fd267ec9d23aac2d4d4eab9ddee294f194f7b2d8a00ceb7431a9fc",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "exact_bytes_required_even_for_a_forced_digest_collision",
+        "fifo_capacity_and_duplicate_insert_are_bounded",
+        "invalid_sizes_cannot_fill_the_cache",
+        "concurrent_success_memoization_preserves_exact_entries_and_bounds"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/wire/fixed_key_tests.rs",
+      "bytes": 3911,
+      "sha256": "84f91eeef6b2c9b694cc2109bbd55896b3d64e75f7e7b7ba41c2d73738ea3eeb",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/worker.rs",
+      "bytes": 4694,
+      "sha256": "d02bec09c4ebb4269deec413d5b1895c34e81c82e1f3a3f6e82d5c5f9f65a51e",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "fingerprint_matches_go_vector",
+        "bounded_frame_rejections",
+        "frame_roundtrip"
+      ]
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "bytes": 27543,
+      "sha256": "03363db0cc52668e9aa6598fde23a1767827436ea7d553a0182ae740ed086959",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_cli_real_payment_backup_restore_and_receiver_spend",
+        "active_cli_genesis_without_segments_is_an_explicit_checkpoint",
+        "active_cli_bad_options_and_exact_tip_fail_without_changes",
+        "active_cli_locked_sources_and_existing_or_nested_targets_are_refused",
+        "active_cli_keeps_legacy_profiles_pins_commands_and_json_separate",
+        "active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation",
+        "active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable"
+      ]
+    },
+    {
+      "path": "integration/orchard/tests/authorization_cache.rs",
+      "bytes": 2958,
+      "sha256": "d0e0b54d7b58332b1850e456e083c353f3196fba3766674c260dc7c347e877b3",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "real_authorization_reuse_rejects_changed_bytes_and_restarts_cold"
+      ]
+    },
+    {
+      "path": "integration/orchard/tests/support/fixtures.rs",
+      "bytes": 3371,
+      "sha256": "b064d2e9086943d0e19564e4872027e3b2c3132a0f510e187079b17722ae0473",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "scripts/run_funded_rust.py",
+      "bytes": 5739,
+      "sha256": "d7020b399362a56cbad7578255e9973a9c5be5592dcc2410624f46a0f639c97f",
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    }
+  ]
+}

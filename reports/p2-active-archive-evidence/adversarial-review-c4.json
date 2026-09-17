@@ -1,0 +1,603 @@
+{
+  "schema": "zevune.independent-review.c4.v1",
+  "reviewer_task": "/root/p2_archive_adversarial_review",
+  "independent_non_author": true,
+  "completed_at_utc": "2026-09-17T09:29:42.723960+00:00",
+  "repository": "youq616/Zevune",
+  "pull_request": "https://github.com/youq616/Zevune/pull/13",
+  "base": "6913d4ab2fda6956db37e0ceb49790a4518c2762",
+  "head": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+  "tree": "3c44977028b58ddd387f52946632af594208edfb",
+  "parent": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+  "candidate_identity_verified_from_local_git": true,
+  "worktree_clean_at_review_start_and_end": true,
+  "pr_synthetic": {
+    "sha": "fb5ec39a59cb87aec0662c7706dce1f9e85e1962",
+    "provenance": "Parent task freeze message",
+    "independently_verified_by_this_reviewer": false,
+    "local_object_present": false
+  },
+  "candidate_code_modified_by_reviewer": false,
+  "candidate_tests_modified_by_reviewer": false,
+  "other_reviewers_findings_used_as_substitute": false,
+  "only_new_artifacts": [
+    "adversarial-review-c4.md",
+    "adversarial-review-c4.json"
+  ],
+  "verdict": "PASS_STATIC",
+  "verdict_meaning": "Complete exact-C4 independent code and test-design review has no known open blocking source finding; native CI is a separate mandatory acceptance gate and has not been certified here.",
+  "scope": "Full stage base..C4 data integrity, independent pin/genesis/tip, real authorization and replay, physical framing/EOF, read-only archive ownership, create-only copy, retained target validation, Windows/Unix locks/names, fault boundaries, all added tests and relevant callers; not runtime acceptance.",
+  "changed_files": [
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "added": 185,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "added": 95,
+      "removed": 2
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "added": 43,
+      "removed": 16
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "added": 227,
+      "removed": 8
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "added": 158,
+      "removed": 2
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "added": 3,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "added": 278,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "added": 321,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "added": 688,
+      "removed": 0
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "added": 772,
+      "removed": 0
+    }
+  ],
+  "stage_diff": {
+    "files": 10,
+    "added": 2770,
+    "removed": 28
+  },
+  "c3_to_c4_diff": {
+    "files": 2,
+    "added": 90,
+    "removed": 22,
+    "paths": [
+      "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "integration/orchard/tests/active_recovery_cli.rs"
+    ]
+  },
+  "open_blocking_findings": [],
+  "closed_findings": [
+    {
+      "id": "AR-C1-01",
+      "severity": "P2",
+      "status": "SOURCE_COVERAGE_CLOSURE_PRESERVED_IN_C4",
+      "original_candidate": "c5f60ac440ac39032f8f8efefc2fbfbf6e299a90",
+      "introduced_fix_candidate": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+      "evidence": "Real 10001 two-segment swap rejected both with original and production-layout-matching repin, explicit first-record predecessor mismatch, unchanged original/swap bytes, continued normal restore/10002 positive control.",
+      "source": "integration/orchard/src/pool/active_flow_tests.rs",
+      "source_line": 599,
+      "exact_c4_native_execution_certified": false
+    },
+    {
+      "id": "AR-C3-02",
+      "severity": "P2",
+      "status": "CLOSED_IN_CODE_NATIVE_VALIDATION_PENDING",
+      "original_candidate": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+      "fix_candidate": "50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+      "classification": "Actual active CLI OS write error converted to stdout success; not solely a fixture defect and not a cryptographic failure.",
+      "code_evidence": "Safe owned stdout duplicate converted to File under StdoutLock avoids stdio handle_ebadf; Windows NULL rejected; all active modes use helper.",
+      "code_source": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "code_line": 53,
+      "test_evidence": "Real readonly write probe and exit 1 for all 4 modes, writable-file exact JSON control, completed backup/restore byte equality and explicit verification, no fixture weakening.",
+      "test_source": "integration/orchard/tests/active_recovery_cli.rs",
+      "test_line": 696,
+      "exact_c4_native_execution_certified": false
+    }
+  ],
+  "checks": [
+    {
+      "id": "exact_candidate_and_full_scope",
+      "result": "PASS_STATIC",
+      "assessment": "Independent git source/tree/parent/worktree checks; all 10 stage-changed files in the 18-file scope; 16 files identical to reviewed C3; C3..C4 only CLI and CLI test +90/-22."
+    },
+    {
+      "id": "bounded_independent_pin",
+      "result": "PASS_STATIC",
+      "assessment": "128-byte distinct ZVARCP01, nonzero hashes, canonical header alignment, height/length/segment limits, zero-height relationships, checked record-byte bounds and private fields."
+    },
+    {
+      "id": "physical_genesis_and_expected_identity",
+      "result": "PASS_STATIC",
+      "assessment": "Retained physical genesis parsed alone with exact EOF, compared to logical header; freshly constructed genuine State must equal caller-independent expected genesis in ordinary open, export and archive."
+    },
+    {
+      "id": "fresh_genuine_replay",
+      "result": "PASS_STATIC",
+      "assessment": "Every operation uses a new AuthorizationVerifier, real Replay next_block/finish and physical-frame/canonical-rotation checks; no writable archive state, header borrowing, EOF bypass or cached permission."
+    },
+    {
+      "id": "committed_summary_and_repeat_verification",
+      "result": "PASS_STATIC",
+      "assessment": "Export compares complete committed Summary and capacity between bytes checks, preserves prepared work and poisons only real active errors; each archive verify replays and brackets tip checks with bytes/namespace checks."
+    },
+    {
+      "id": "independent_layout_vector",
+      "result": "PASS_STATIC",
+      "assessment": "Python independently reconstructed exact 76-byte genesis and 92-byte ZVARLY01 layout and matched frozen test vectors; encoding evidence only, not authenticity."
+    },
+    {
+      "id": "readonly_sources_and_cooperative_locks",
+      "result": "PASS_STATIC",
+      "assessment": "Readonly shared root ownership, ordinary writer exclusive lock, no duplicate relocking; real-process exact-name probe checks one test ran; readonly permission and drop-release positive controls remain."
+    },
+    {
+      "id": "retained_namespace_and_windows_controls",
+      "result": "PASS_STATIC",
+      "assessment": "Unix dev/inode/nlink and link rejection; Windows no DELETE sharing/reparse protection and writable-file rename/delete negative controls until all readers drop, followed by positive controls."
+    },
+    {
+      "id": "create_only_and_before_creation_validation",
+      "result": "PASS_STATIC",
+      "assessment": "Retained source binding, absolute/canonical parent checks and complete source replay precede new-directory creation; create_new, no overwrite/truncate/delete/automatic retry."
+    },
+    {
+      "id": "original_target_handles_and_sync",
+      "result": "PASS_STATIC",
+      "assessment": "Target genesis exclusive lock before writing, 64-KiB exact copy, per-file sync and Unix directories, full target verification through original owned handles then source replay and last target bytes check."
+    },
+    {
+      "id": "offsets_eof_and_poison",
+      "result": "PASS_STATIC",
+      "assessment": "Explicit offsets, header rewind and independent reader positions; short reads and Interrupted handled, actual EOF required and failed readers remain failed."
+    },
+    {
+      "id": "failure_injection_boundaries",
+      "result": "PASS_STATIC",
+      "assessment": "Private faults 1/2 partial targets, 3 process-visible full bytes before final sync, 4 after sync without acknowledgement, 5/6 intentional late namespace changes; none claims real power-loss durability."
+    },
+    {
+      "id": "real_restore_and_compatibility",
+      "result": "PASS_STATIC",
+      "assessment": "Genuine funded two-segment growth and recovered receiver spending preserved, legacy pin/profile/CLI/JSON and Go rejection unchanged; no protocol, dependency, capacity, runner or workflow changes."
+    },
+    {
+      "id": "ar_c1_01_segment_swap",
+      "result": "PASS_STATIC",
+      "assessment": "Actual 10001 two-segment swap, original pin Corrupt, repinned production layout equality, genuine first-record predecessor mismatch and repinned Corrupt, both directories unchanged then normal restore/10002 control."
+    },
+    {
+      "id": "ar_c3_02_direct_receipt_write",
+      "result": "PASS_STATIC",
+      "assessment": "StdoutLock held while safe owned duplicate becomes File; no stdout EBADF masking, NULL rejected on Windows, write/clone errors propagate without closing original stdout; File flush is not durable receipt delivery."
+    },
+    {
+      "id": "ar_c3_02_unweakened_runtime_fixture",
+      "result": "PASS_STATIC",
+      "assessment": "Same real readonly File write-failure probe and all four active CLI commands require exit code 1; writable-file exact JSON control, sink/source unchanged, complete backup/restore targets explicitly reverified and existing target retry rejected."
+    },
+    {
+      "id": "windows_ascii_receipt_primary_source",
+      "result": "PASS_STATIC",
+      "assessment": "Rust 1.98.1 official Windows File and stdio source both delegate applicable writes to Handle::write; active receipt is ASCII; this is source evidence and no interactive console execution is claimed."
+    },
+    {
+      "id": "test_mounting_and_gate_scope",
+      "result": "PASS_STATIC",
+      "assessment": "12 new core, 7 namespace source names with platform cfg, 7 funded CLI, 4 existing expanded active_flow; actual mounted modules and full funded library/interfaces plan retained; no native counts certified."
+    },
+    {
+      "id": "immutable_history",
+      "result": "PASS_STATIC",
+      "assessment": "All five old review originals and C3 failing native log match previously recorded byte lengths and SHA-256; C3 initial static PASS corrected by immutable REQUEST_CHANGES addendum; C3 never accepted."
+    }
+  ],
+  "frozen_design": {
+    "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+    "bytes": 13188,
+    "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+    "unchanged_since_c1": true
+  },
+  "independent_vector": {
+    "executed_by_reviewer": "Python hashlib + struct, no production implementation",
+    "header_construction": "ZVOPOL03 || SHA256(zevune-orchard-lab-1) || [7;32] || u32be(0)",
+    "header_bytes": 76,
+    "header_sha256": "07782393f4021cabba3a8a09f0d2747e6ae4404457475c6e9df85100f734bc1e",
+    "layout_construction": "ZVARLY01 || u32be(76) || header || u32be(0)",
+    "layout_bytes": 92,
+    "layout_sha256": "325fba79e5d367646d57a58c594264ae5b0d216af5ce1858e88b0f26a6a882ed",
+    "authenticity_or_finality_proof": false
+  },
+  "tools_present": {
+    "rustc": null,
+    "cargo": null,
+    "go": null
+  },
+  "executed_checks": [
+    "Read-only exact git identities and all stage/current diffs",
+    "Code/callers/tests/frozen-design inspection",
+    "Exact object and worktree SHA-256 inventory",
+    "Independent Python header/layout digest reconstruction",
+    "Rehash immutable previous reviews and known C3 failure logfile",
+    "Read-only git diff --check",
+    "Official Rust and Microsoft source contracts, including Rust 1.98.1 via GitHub plugin"
+  ],
+  "static_whitespace_check": {
+    "command": "git diff --check 6913d4ab2fda6956db37e0ceb49790a4518c2762 50ef0d9a5f7c7fdcf64118bd1e0f307457d37736",
+    "exit_code": 2,
+    "stdout": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md:185: new blank line at EOF.\n",
+    "classification": "Nonblocking frozen-design final blank line, preserved exact design bytes; not an all-tools pass."
+  },
+  "native_tests_executed": false,
+  "ci_results_certified": false,
+  "native_gate_status": "Exact C4 native CI must be separately completed and certified; no C3 CI success inherited.",
+  "stage_accepted": false,
+  "review_applies_to_later_commits": false,
+  "historical_c3_failure": {
+    "job_id": 105131817273,
+    "cohort": "Ubuntu funded interfaces",
+    "source": "7045af4ae254f0a5a5e4810f17004c91e649e474",
+    "tree": "4017bee976c18767ed568d7ec8a33f6d668b8c22",
+    "checkout_synthetic": "11402e8d8db1e2ae9b6d8615ea9f6362e8676606",
+    "log_path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c3/job-105131817273.log",
+    "log_bytes": 76073,
+    "log_sha256": "64c3e286d1f0ba3ed339d3047793b2e6190ea056a0c2b1f9bc037b06d6ff53bb",
+    "target_results": {
+      "passed": 6,
+      "failed": 1,
+      "ignored": 0,
+      "filtered": 0
+    },
+    "failed_assertion": "!output.status.success()",
+    "failure_position": "tests/active_recovery_cli.rs:106:5 in C3",
+    "following_failure_helper_and_postconditions_executed": false,
+    "c3_accepted": false
+  },
+  "source_test_name_counts": {
+    "new_active_core": 12,
+    "namespace_source_with_platform_cfg": 7,
+    "new_funded_cli": 7,
+    "existing_expanded_active_flow": 4,
+    "meaning": "Source names only, not native pass counts."
+  },
+  "limitations": [
+    "No local Rust/Cargo/Go compilation, formatting, linting or tests",
+    "No reviewer native Windows or interactive console execution",
+    "No C4 CI log certification; all required Ubuntu/Windows/default/funded and existing Go/consensus gates still apply",
+    "File flush is not fsync or guaranteed downstream receipt consumption",
+    "Trusted parents/OS/filesystem; no arbitrary transient substitution or memory-mapped attacker proof",
+    "No genuine disk-full/power-loss/Windows directory durability testing",
+    "Potential 2048 source and target segment handles plus reader clones; no new whole-capacity descriptor/memory/archive performance measurements",
+    "Independent checkpoint does not establish origin/latestness/finality; P2 remains in progress, NO-FUNDS and not validator recovery or external security audit"
+  ],
+  "source_documents": [
+    {
+      "url": "https://doc.rust-lang.org/src/std/io/stdio.rs.html",
+      "supports": "StdoutRaw handle_ebadf converts certain invalid-handle writes to success."
+    },
+    {
+      "url": "https://doc.rust-lang.org/src/std/sys/stdio/unix.rs.html",
+      "supports": "Unix stdio EBADF classification and flush behavior."
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/os/fd/struct.BorrowedFd.html",
+      "supports": "Safe owned descriptor clone shares underlying description."
+    },
+    {
+      "url": "https://doc.rust-lang.org/src/std/os/windows/io/handle.rs.html",
+      "supports": "Same-access owned duplicate, NULL special case and File conversion."
+    },
+    {
+      "url": "https://doc.rust-lang.org/src/std/fs.rs.html",
+      "supports": "File Write delegation lacks stdout EBADF adapter and File flush is no-op on Unix/Windows."
+    },
+    {
+      "url": "https://github.com/rust-lang/rust/blob/1.98.1/library/std/src/sys/fs/windows.rs",
+      "supports": "File write delegates Handle::write; flush returns success.",
+      "acquired_via": "GitHub plugin fetch_file",
+      "ref": "1.98.1",
+      "git_blob_sha": "e3e7b081b47d59b3ac441a42bc26f304c90a32af",
+      "returned_source_lines": [
+        550,
+        780
+      ]
+    },
+    {
+      "url": "https://github.com/rust-lang/rust/blob/1.98.1/library/std/src/sys/stdio/windows.rs",
+      "supports": "UTF-8 console and non-console stdout use same Handle::write; other console path converts text.",
+      "acquired_via": "GitHub plugin fetch_file",
+      "ref": "1.98.1",
+      "git_blob_sha": "475a0592528b484a8b5cfc28ff04cc54d85995f4",
+      "returned_source_lines": [
+        1,
+        230
+      ]
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/fs/struct.File.html",
+      "supports": "File ownership, locking and duplicate-handle contracts; ignored close errors and sync limits."
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/os/windows/fs/trait.OpenOptionsExt.html",
+      "supports": "Windows sharing and custom flag behavior."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+      "supports": "DELETE sharing governs rename/delete access."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex",
+      "supports": "Shared/exclusive locks and memory-mapping limitations."
+    },
+    {
+      "url": "https://doc.rust-lang.org/std/primitive.u64.html#method.is_multiple_of",
+      "supports": "Nonzero fixed divisor and stable API since 1.87.0."
+    }
+  ],
+  "prior_review_artifacts_and_failure_log": [
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c1.md",
+      "bytes": 12848,
+      "sha256": "1b2f12b42dffb0a5bd5bea9c7f48945062534d46580c43ea194b9d6766b9b915",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c1.json",
+      "bytes": 13376,
+      "sha256": "3a89c3f602133431e12f4094cc0101859439198ed85000c5189c5dcf9f72dd47",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3.md",
+      "bytes": 12629,
+      "sha256": "127d9ef1b798aeb008542e58af6241a8efe24799cba59ef2014bc4ec7c7f0f2b",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3.json",
+      "bytes": 16155,
+      "sha256": "d151ef84e2e9aa35fdef9f07b3530651d53025ba222b70b950dfd1521253c825",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c3-addendum.md",
+      "bytes": 7094,
+      "sha256": "abf56bdc75c9f1db074f1b04085330a8a9746fe409a3585f49ea385e441b5437",
+      "matches_immutable_original": true
+    },
+    {
+      "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/c3/job-105131817273.log",
+      "bytes": 76073,
+      "sha256": "64c3e286d1f0ba3ed339d3047793b2e6190ea056a0c2b1f9bc037b06d6ff53bb",
+      "matches_immutable_original": true
+    }
+  ],
+  "review_report": {
+    "path": "/workspace/scratch/1753b04c9dbb/zevune-p2-active-archive/adversarial-review-c4.md",
+    "bytes": 15431,
+    "sha256": "5d736cf901527a97cf27725212088432f6a1b943a9caccd02e1b94521e34b844"
+  },
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 3240,
+      "sha256": "bc5a7f3ba26bb99da6264427effd12b7df03a6f48c4c1a21281ade0b4c0b5f96",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/STAGE_REVIEW.zh-CN.md",
+      "bytes": 2139,
+      "sha256": "738d92594cb0851975bd05b5746edba9cd10512ea049cbdb02e1be8e2020bb46",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+      "bytes": 13188,
+      "sha256": "de6d9639d724b777a8d4a937fa5e21b1b70880585ec8d0c0bf9336bff87a9cee",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool.rs",
+      "bytes": 29008,
+      "sha256": "62a5257f4e8f7cec291564341435a769c2dbdc463b642e0b21b513cde9d8e316",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active.rs",
+      "bytes": 29276,
+      "sha256": "62f470f20534a649b04b0f08f538782b927a7e446172c4f5b397f5057f061586",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/active/tests.rs",
+      "bytes": 22612,
+      "sha256": "9359290fe212650ce0223840a2e2fe7314f9291d642d033e900d4dd14195c3b5",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "create_is_exclusive_bounded_and_preserves_existing_bytes",
+        "full_segment_and_next_frame_rotate_canonically_without_crossing",
+        "budgets_include_framing_total_tail_and_the_independent_segment_cap",
+        "malformed_frame_and_capacity_rejection_create_no_files_or_bytes",
+        "early_rotation_and_split_frames_are_rejected_even_with_valid_checksums",
+        "unknown_missing_empty_and_truncated_segments_fail_closed_without_repair",
+        "readers_retain_the_exclusive_root_lock_and_have_independent_positions",
+        "another_process_cannot_open_held_genesis_lock",
+        "captured_reader_requires_each_real_eof_and_poisoned_readers_cannot_resume",
+        "unknown_entry_after_open_is_not_ignored_or_removed",
+        "interruption_leaves_metadata_unchanged_and_preserves_the_recoverable_prefix",
+        "failed_next_segment_publication_keeps_all_sealed_prefix_bytes_and_no_repair",
+        "symlinks_hard_links_and_replaced_names_are_rejected",
+        "adding_a_hard_link_after_open_poison_checks_without_modifying_ledger_bytes",
+        "windows_retained_handles_block_file_and_directory_rename_until_drop"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/replay.rs",
+      "bytes": 9818,
+      "sha256": "4c25dcd5d92cf5e0ab592b11ae790dba8f3ab7761d3d7cbf7f5e94b13b9b3d64",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery.rs",
+      "bytes": 10944,
+      "sha256": "687bf63b9b464220fc7610970dbaa94e35d4fd386841642ca3b65158ce93229d",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+      "bytes": 4949,
+      "sha256": "7927596f061d3d0fc4e05bf0f5cfd63d53cfdab4d382c1f10a2050c4689b3b3b",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active.rs",
+      "bytes": 10383,
+      "sha256": "77f47005568fad097edd6f563d3e1d0962957fe932dbd8565b0b4126ebe75137",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/tests.rs",
+      "bytes": 27476,
+      "sha256": "96823dcd24bc4832d69f8639fff093da3b753950618bb90f4048923f798eba7e",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic",
+        "exported_genesis_checkpoint_matches_independent_fixed_layout_vector",
+        "genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally",
+        "checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes",
+        "incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores",
+        "checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state",
+        "retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change",
+        "repinned_headers_are_bounded_inside_the_physical_genesis_file",
+        "repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state",
+        "creating_a_target_is_exclusive_and_source_validation_precedes_creation",
+        "partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair",
+        "final_source_and_target_namespace_changes_cannot_return_success"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/namespace_tests.rs",
+      "bytes": 12441,
+      "sha256": "87602e83dd78343bcbeb981c37532d3c91f284c5a79d22103b869cafae16487b",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_archive_locks_coordinate_real_processes",
+        "readonly_source_files_copy_into_a_normally_writable_active_directory",
+        "persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified",
+        "parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive",
+        "failed_open_releases_all_acquired_file_and_directory_handles",
+        "unknown_entry_after_open_prevents_verification_and_creates_no_target",
+        "windows_files_and_directory_cannot_be_renamed_or_deleted_until_last_reader_drops"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/active_flow_tests.rs",
+      "bytes": 34453,
+      "sha256": "4426a8b978649de8811a92ded3cf5957924b01db0600bb45af12c6d053796fce",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contract",
+        "real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002",
+        "legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal",
+        "active_write_failures_poison_store_without_publishing_partial_state"
+      ]
+    },
+    {
+      "path": "integration/orchard/src/wire.rs",
+      "bytes": 10866,
+      "sha256": "8359d8611b346abb1e74d1fb947fcf7b3818c5e3f824f54eb3968cc7b62998f1",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/src/bin/zevune-pool-recovery.rs",
+      "bytes": 11860,
+      "sha256": "6cc4a79f85a2f909e48eca5adfd9f7c624afdeb1ca747c84d34dbffb858e775e",
+      "byte_identical_to_c3": false,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": "integration/orchard/tests/active_recovery_cli.rs",
+      "bytes": 27543,
+      "sha256": "03363db0cc52668e9aa6598fde23a1767827436ea7d553a0182ae740ed086959",
+      "byte_identical_to_c3": false,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": [
+        "active_cli_real_payment_backup_restore_and_receiver_spend",
+        "active_cli_genesis_without_segments_is_an_explicit_checkpoint",
+        "active_cli_bad_options_and_exact_tip_fail_without_changes",
+        "active_cli_locked_sources_and_existing_or_nested_targets_are_refused",
+        "active_cli_keeps_legacy_profiles_pins_commands_and_json_separate",
+        "active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation",
+        "active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable"
+      ]
+    },
+    {
+      "path": "scripts/run_funded_rust.py",
+      "bytes": 5739,
+      "sha256": "d7020b399362a56cbad7578255e9973a9c5be5592dcc2410624f46a0f639c97f",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    },
+    {
+      "path": ".github/workflows/funded-wallet.yml",
+      "bytes": 5263,
+      "sha256": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296",
+      "byte_identical_to_c3": true,
+      "worktree_matches_exact_git_object": true,
+      "test_function_source_names": []
+    }
+  ]
+}
