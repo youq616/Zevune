@@ -4,6 +4,11 @@
 
 源码分为根 Go、嵌套 CometBFT Go 和独立 Rust 模块。根目录 `go test ./...` 不会运行全部嵌套模块。
 
+本次接手基线、PR #7的独立审核、构建修复和准确提交的验收状态，见
+[2026-09-16接手记录](reports/project-handoff-2026-09-16.md)。
+统一开发入口仍是 `dev/m12-genesis-domain`；整体交付范围见
+[八工作包计划](docs/DELIVERY_PLAN.zh-CN.md)。
+
 | 组件 | 范围 |
 |---|---|
 | 根程序 `zevuned`，0.1.2-dev | 原单机诊断、预执行、Go 日志恢复，付款仍关闭 |
@@ -42,7 +47,7 @@ V2 不解决完全克隆网络、分叉、网络匿名或密钥泄露。详见
 控制台只使用 Python 3.10+ 标准库和本地 Rust 后端，不需要 Docker。密码使用不回显输入；付款地址、金额、手续费及有效期通过交互输入，不传入子进程参数或环境变量。Rust 请求解码有固定容量和字段数量，拒绝截断、尾随字节及未知操作。
 
 ```text
-cargo build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local
+cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local
 python scripts/zevune_wallet.py --help
 ```
 
@@ -107,3 +112,14 @@ Go 启动层新增有界的公开创世帧检查；无效清单在创建节点�
 完整提案验证、最终执行、提交和日志重放仍执行原有真实授权与账本检查。IPC第3代组件必须成套更新，旧组件握手失败；交易、签名、创世和日志格式不变，不迁移现有数据。三笔真实付款的应用计数对照为旧前缀方法6次、新方法3次，这不是实际速度倍数、TPS或端到端5秒到账承诺。
 
 P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完成。[实现与兼容边界](docs/INCREMENTAL_PROPOSAL_SELECTION.zh-CN.md) · [精确源码与验证记录](reports/p7-proposal-selection-validation.md)。
+
+## P2 分段备份与历史高度定位
+
+`zevune-pool-recovery` 已接入独立检查点绑定的 `pack`、`verify-segments`、
+`restore-segments`、`index` 和 `locate-height`。分段备份保存原账本的完整字节，
+恢复只创建新日志；完整真实授权重放、EOF和源归档身份核验通过后才返回结果。
+历史索引由完整区块记录派生，支持记录跨越分段边界，不接受外部索引作为状态或授权。
+
+这些操作仍受原64 MiB日志、10000条记录等限制；每次CLI索引调用都重新完整校验。
+活动节点分段存储、快照和增量备份尚未完成，P2继续保持开发中。
+[分段备份](docs/SEGMENTED_BACKUP.zh-CN.md) · [重放派生索引](docs/REPLAY_DERIVED_INDEX.zh-CN.md)。
