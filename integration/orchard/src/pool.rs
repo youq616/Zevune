@@ -91,6 +91,9 @@ struct State {
     signing_domain: Option<Hash>,
     fees: u64,
     frontier: Frontier<MerkleHashOrchard, 32>,
+    // Derived only from this frontier; never imported or serialized. Updating
+    // the frontier and this root is one unpublished transaction state change.
+    commitment_root: Hash,
     spent: BTreeSet<Hash>,
     outputs: BTreeSet<Hash>,
     anchors: VecDeque<Hash>,
@@ -132,6 +135,7 @@ impl State {
             signing_domain,
             fees: 0,
             frontier,
+            commitment_root: root,
             spent: BTreeSet::new(),
             outputs,
             anchors: VecDeque::from([root]),
@@ -145,7 +149,7 @@ impl State {
         h.update(self.head);
         h.update(self.fees.to_be_bytes());
         h.update(self.frontier.tree_size().to_be_bytes());
-        let root = self.frontier.root().to_bytes();
+        let root = self.commitment_root;
         h.update(root);
         h.update((self.spent.len() as u64).to_be_bytes());
         for nf in &self.spent {
@@ -271,6 +275,7 @@ impl State {
                 return Err(PoolError::Bounds);
             }
         }
+        let commitment_root = frontier.root().to_bytes();
         // No fallible operation follows this point. A rejected candidate must
         // not leak partial fees, nullifiers or outputs into the next candidate.
         for a in decoded.bundle.actions().iter() {
@@ -279,12 +284,13 @@ impl State {
         }
         self.fees = fees;
         self.frontier = frontier;
+        self.commitment_root = commitment_root;
         Ok(())
     }
     fn finish_block(&mut self, height: u64, block_id: Hash) {
         self.height = height;
         self.head = block_id;
-        let root = self.frontier.root().to_bytes();
+        let root = self.commitment_root;
         if self.anchors.back() != Some(&root) {
             self.anchors.push_back(root);
             if self.anchors.len() > MAX_ANCHORS {
@@ -778,3 +784,7 @@ mod active;
 #[cfg(all(test, feature = "local-funding-lab"))]
 #[path = "pool/active_flow_tests.rs"]
 mod active_flow_tests;
+
+#[cfg(all(test, feature = "local-funding-lab"))]
+#[path = "pool/root_cache_tests.rs"]
+mod root_cache_tests;

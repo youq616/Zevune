@@ -2,6 +2,7 @@
 //! No height edits, accepting verifier, synthetic record execution or reduced
 //! segment capacity stands in for the 10000-record and 1 MiB growth checks.
 use super::*;
+use crate::pool::root_cache_tests::assert_state;
 use crate::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use crate::wallet::{Wallet, WalletError, WalletProver};
 use rand::{rngs::OsRng, RngCore};
@@ -49,6 +50,7 @@ fn commit(pool: &mut PoolStore, height: u64, txs: &[Vec<u8>]) -> Summary {
 
 fn selected_commit(pool: &mut PoolStore, height: u64, txs: &[Vec<u8>]) -> Summary {
     let before = pool.active_capacity().unwrap();
+    assert_eq!(assert_state(&pool.state), before.0);
     let selection = pool
         .select_proposal(height, block_id(height), selection::MAX_PROPOSAL_BYTES, txs)
         .unwrap();
@@ -59,6 +61,7 @@ fn selected_commit(pool: &mut PoolStore, height: u64, txs: &[Vec<u8>]) -> Summar
     let committed = pool.commit(plan).unwrap();
     assert_eq!(committed, selection.result);
     assert_eq!(pool.summary().unwrap(), committed);
+    assert_eq!(assert_state(&pool.state), committed);
     committed
 }
 
@@ -149,6 +152,7 @@ fn assert_noncanonical_layouts_reject(
     write_directory(&path, original);
     let mut reopened = genesis.open_pool(&path).unwrap();
     assert_eq!(&reopened.summary().unwrap(), expected);
+    assert_eq!(&assert_state(&reopened.state), expected);
     assert_eq!(
         genesis.wallet_history(&mut reopened).unwrap().tip(),
         expected
@@ -221,6 +225,9 @@ fn active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contr
     assert_eq!(active.summary().unwrap(), initial);
     assert_eq!(legacy_pool.summary().unwrap(), legacy_initial);
     assert_eq!(old_pool.summary().unwrap(), old_initial);
+    for pool in [&active, &legacy_pool, &old_pool] {
+        assert_state(&pool.state);
+    }
     let initial_capacity = active.active_capacity().unwrap();
     assert_eq!(initial_capacity, (initial.clone(), 108, 0, 0));
     let old_plan = legacy_pool.prepare(1, block_id(1), &[]).unwrap();
@@ -334,6 +341,8 @@ fn active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contr
     assert_eq!(active.active_capacity().unwrap(), initial_capacity);
     assert_eq!(legacy_pool.summary().unwrap(), legacy_initial);
     assert_eq!(alice.pending_id(), reservation);
+    assert_eq!(assert_state(&active.state), initial);
+    assert_eq!(assert_state(&legacy_pool.state), legacy_initial);
     assert_eq!(alice.balance().unwrap(), TEST_SUPPLY);
     assert_eq!(alice.available_balance().unwrap(), 0);
     drop(active);
@@ -344,7 +353,9 @@ fn active_profile_domain_rejections_preserve_bytes_reservations_and_legacy_contr
 
     let mut active = genesis.open_pool(&active_path).unwrap();
     assert_eq!(commit(&mut active, 1, &[raw]), selected.result);
+    assert_eq!(assert_state(&active.state), selected.result);
     let expected = commit(&mut active, 2, &[]);
+    assert_eq!(assert_state(&active.state), expected);
     let history = genesis.wallet_history(&mut active).unwrap();
     alice.sync(&history).unwrap();
     bob.sync(&history).unwrap();
@@ -474,6 +485,7 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
 
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.summary().unwrap(), at_10001);
+    assert_eq!(assert_state(&pool.state), at_10001);
     assert_eq!(pool.active_capacity().unwrap(), before_reopen);
     pool.check_checkpoint(at_10001.height, at_10001.app_hash)
         .unwrap();
@@ -542,6 +554,7 @@ fn legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal() {
     }
     let before = pool.summary().unwrap();
     assert_eq!(before.height, 10_000);
+    assert_eq!(assert_state(&pool.state), before);
     assert_eq!(before.commitments, 0);
     assert_eq!(before.nullifiers, 0);
     assert_eq!(before.fees, 0);
@@ -571,6 +584,7 @@ fn legacy_normal_commits_stop_at_10000_without_mutating_state_or_journal() {
     let reopened = PoolStore::open(&path).unwrap();
     assert_eq!(reopened.storage_profile(), StorageProfile::LegacyJournal);
     assert_eq!(reopened.summary().unwrap(), before);
+    assert_eq!(assert_state(&reopened.state), before);
     assert!(matches!(
         reopened.prepare(10_001, block_id(10_001), &[]),
         Err(PoolError::Height)
@@ -610,6 +624,7 @@ fn active_write_failures_poison_store_without_publishing_partial_state() {
         assert_eq!(pool.commit(plan), Err(PoolError::Storage));
         assert_eq!(pool.summary(), Err(PoolError::Unavailable));
         assert_eq!(pool.state.summary(), before);
+        assert_eq!(assert_state(&pool.state), before);
         assert_eq!(pool.length, old_length);
         assert_eq!(pool.active.as_ref().unwrap().capacity(), old_capacity);
         assert!(matches!(
@@ -642,6 +657,7 @@ fn active_write_failures_poison_store_without_publishing_partial_state() {
             // same OS and must execute full replay before returning height 1.
             let mut reopened = genesis.open_pool(&path).unwrap();
             assert_eq!(reopened.summary().unwrap(), expected);
+            assert_eq!(assert_state(&reopened.state), expected);
             assert_eq!(
                 reopened.active_capacity().unwrap(),
                 (expected, old_length + EMPTY_FRAME_BYTES as u64, 1, 150)
