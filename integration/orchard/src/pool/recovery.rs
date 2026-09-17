@@ -283,3 +283,6 @@ mod tests;
 
 /// Immutable segmented backup format; does not change live journal capacity.
 pub mod segments;
+
+/// Exact active-directory copies with a distinct pin and full genuine replay.
+pub mod active;

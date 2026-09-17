@@ -2,6 +2,7 @@
 //! Structural decoding never establishes a proof or committed ledger membership.
 use std::collections::BTreeSet;
 use std::fmt;
+use std::sync::OnceLock;
 
 use nonempty::NonEmpty;
 use orchard::bundle::Authorized;
@@ -15,6 +16,10 @@ use sha2::{Digest, Sha256};
 use crate::{signing_digest, Context, CIRCUIT, MAX_ACTIONS, NETWORK, VERSION};
 
 mod cache;
+
+#[cfg(test)]
+#[path = "wire/fixed_key_tests.rs"]
+mod fixed_key_tests;
 
 pub const MAGIC: &[u8; 8] = b"ZVORLAB1";
 pub const BOUND_MAGIC: &[u8; 8] = b"ZVORLAB2";
@@ -250,15 +255,24 @@ pub fn payload_digest(raw: &[u8]) -> [u8; 32] {
     Sha256::digest(raw).into()
 }
 
-/// Reuses a fixed public verifying key. This is ledger-independent authorization
-/// only. A bounded, process-local cache remembers ONLY fully checked exact bytes.
+// Only immutable, fixed public circuit material is shared between instances.
+// Do not move an authorization cache here or accept an externally selected key.
+// The initializer must not call back into this getter or a verifier constructor.
+fn fixed_verifying_key() -> &'static VerifyingKey {
+    static KEY: OnceLock<VerifyingKey> = OnceLock::new();
+    KEY.get_or_init(|| VerifyingKey::build(CIRCUIT))
+}
+
+/// Shares a fixed public verifying key for the process lifetime. This is
+/// ledger-independent authorization only. Each new instance owns a fresh,
+/// bounded cache that remembers ONLY fully checked exact bytes.
 /// Canonical decoding still runs on every call; no cache entries are imported.
 /// The caller must separately validate expiry, trusted roots, prior spends,
 /// issuance, fees and atomic state updates against a committed ledger snapshot.
 /// Individual upstream signature verification and SingleVerifier avoid a new
 /// randomized signature-batch acceptance decision at this process boundary.
 pub struct AuthorizationVerifier {
-    key: VerifyingKey,
+    key: &'static VerifyingKey,
     verified: cache::VerifiedCache,
 }
 impl Default for AuthorizationVerifier {
@@ -269,7 +283,7 @@ impl Default for AuthorizationVerifier {
 impl AuthorizationVerifier {
     pub fn new() -> Self {
         Self {
-            key: VerifyingKey::build(CIRCUIT),
+            key: fixed_verifying_key(),
             verified: cache::VerifiedCache::default(),
         }
     }
@@ -294,7 +308,7 @@ impl AuthorizationVerifier {
             .map_err(|_| WireError::Authorization)?;
         decoded
             .bundle
-            .verify_proof(&self.key)
+            .verify_proof(self.key)
             .map_err(|_| WireError::Authorization)?;
         self.verified.remember(raw, payload)?;
         Ok(payload)

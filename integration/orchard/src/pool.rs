@@ -414,25 +414,11 @@ impl PoolStore {
         profile: StorageProfile,
     ) -> Result<Self, PoolError> {
         if profile == StorageProfile::ActiveSegmentsV1 {
-            let state = State::from_storage_policy(initial, signing_domain, profile)?;
             let expected_header = genesis_bytes_profile(initial, signing_domain, profile)?;
             let (file, active) = active::ActiveJournal::open(path, &expected_header)?;
             let length = active.length();
-            let mut reader = active.reader(&file)?;
-            let header = replay::read_header_profile(&mut reader, length, profile)?;
-            if header.initial != initial || header.signing_domain != signing_domain {
-                return Err(PoolError::Genesis);
-            }
-            let verifier = AuthorizationVerifier::new();
-            let mut replay = replay::Replay::new(reader, length, header.length, state)?;
-            let mut start = header.length;
-            while replay.next_block(&verifier)?.is_some() {
-                let end = replay.byte_position()?;
-                active.validate_frame(start, end)?;
-                start = end;
-            }
-            let (state, _) = replay.finish()?;
-            active.check(&file)?;
+            let expected_genesis = Sha256::digest(&expected_header).into();
+            let (state, verifier) = Self::replay_active_handles(&file, &active, expected_genesis)?;
             return Ok(Self {
                 file,
                 active: Some(active),
@@ -457,6 +443,47 @@ impl PoolStore {
             .map_err(|_| PoolError::Storage)?;
         file.try_lock().map_err(|_| PoolError::Locked)?;
         Self::replay_locked_file(file, initial, signing_domain)
+    }
+
+    // Every caller keeps the original owning handles and their lock. Archives
+    // discard the unpublished state; ordinary open publishes it only after this
+    // complete replay. A fresh verifier prevents a previous verification result
+    // from becoming an archive-authentication shortcut.
+    fn replay_active_handles(
+        file: &File,
+        active: &active::ActiveJournal,
+        expected_genesis: Hash,
+    ) -> Result<(State, AuthorizationVerifier), PoolError> {
+        let profile = StorageProfile::ActiveSegmentsV1;
+        // Parse the physical genesis alone first. An oversized commitment count
+        // must never borrow its alleged header bytes from the first journal.
+        let physical_header = active.read_header(file)?;
+        let length = active.length();
+        let mut reader = active.reader(file)?;
+        let header = replay::read_header_profile(&mut reader, length, profile)?;
+        if header.length != physical_header.length
+            || header.initial != physical_header.initial
+            || header.signing_domain != physical_header.signing_domain
+        {
+            return Err(PoolError::Genesis);
+        }
+        let state = State::from_storage_policy(&header.initial, header.signing_domain, profile)?;
+        // Bind the header actually replayed now to the caller's independent
+        // policy/pin, not only to a header read earlier while opening names.
+        if state.genesis != expected_genesis {
+            return Err(PoolError::Genesis);
+        }
+        let verifier = AuthorizationVerifier::new();
+        let mut replay = replay::Replay::new(reader, length, header.length, state)?;
+        let mut start = header.length;
+        while replay.next_block(&verifier)?.is_some() {
+            let end = replay.byte_position()?;
+            active.validate_frame(start, end)?;
+            start = end;
+        }
+        let (state, _) = replay.finish()?;
+        active.check(file)?;
+        Ok((state, verifier))
     }
     // The caller owns the file and its lock for the entire replay. Recovery
     // readers keep the returned store private and never expose a write API.
@@ -754,6 +781,9 @@ impl Record {
 #[cfg(test)]
 #[path = "pool_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+pub(crate) use tests::fixtures;
 
 #[path = "wallet_history.rs"]
 pub mod history;
