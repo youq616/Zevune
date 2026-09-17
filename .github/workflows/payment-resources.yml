@@ -1,0 +1,104 @@
+name: payment-resource-baseline
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'scripts/check_payment_resources.py', 'scripts/tests/test_payment_resources*.py', 'go.mod', 'go.sum', 'docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md', '.github/workflows/payment-resources.yml', '.gitattributes']
+  pull_request:
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'scripts/check_payment_resources.py', 'scripts/tests/test_payment_resources*.py', 'go.mod', 'go.sum', 'docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md', '.github/workflows/payment-resources.yml', '.gitattributes']
+permissions:
+  contents: read
+jobs:
+  resources:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_RESOURCE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Preserve initial identity even if setup or compilation fails
+        run: |
+          python - <<'PY'
+          import datetime, json, os, pathlib, subprocess
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          output = pathlib.Path('ci-results')
+          output.mkdir(exist_ok=True)
+          snapshot = {
+              'schema_version': 1,
+              'kind': 'workflow_setup_observation',
+              'observed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'source_head': os.environ['ZEVUNE_RESOURCE_SOURCE_HEAD'],
+              'checkout_commit': git('rev-parse', 'HEAD'),
+              'checkout_tree': git('rev-parse', 'HEAD^{tree}'),
+              'observed_execution_status': 'not_started',
+              'scope': 'initial observation only; final workflow steps and resource result determine completion',
+          }
+          with (output / 'payment-resource-setup.json').open('x', encoding='utf-8') as f:
+              json.dump(snapshot, f, indent=2)
+              f.write('\n')
+          PY
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Install fixed Rust formatter and compiler
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+      - name: Test resource evidence validation and process measurement
+        run: python -m unittest discover -s scripts/tests -p 'test_payment_resources*.py' -v
+      - name: Check source formatting without rewriting the candidate
+        run: |
+          test -z "$(gofmt -l internal/poolbridge)"
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+      - name: Compile and vet the explicit resource test tag
+        run: |
+          python - <<'PY'
+          import os, pathlib, subprocess
+          directory = pathlib.Path('.ci-build')
+          directory.mkdir(exist_ok=True)
+          name = 'payment-resources.test' + ('.exe' if os.name == 'nt' else '')
+          subprocess.run(['go', 'test', '-c', '-mod=readonly', '-tags=payment_resource_e2e',
+                          '-o', str(directory / name), './internal/poolbridge'], check=True)
+          subprocess.run(['go', 'vet', '-mod=readonly', '-tags=payment_resource_e2e',
+                          './internal/poolbridge'], check=True)
+          PY
+      - name: Build the actual fixed-profile worker and wallet scenario
+        run: cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins
+      - name: Execute 32 real payments, full recovery and payment 33 with OS resource gates
+        run: |
+          python - <<'PY'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          root = pathlib.Path.cwd()
+          binaries = root / 'integration/orchard/target/release'
+          subprocess.run([
+              sys.executable, 'scripts/check_payment_resources.py',
+              '--test-executable', str(root / '.ci-build' / ('payment-resources.test' + suffix)),
+              '--worker', str(binaries / ('zevune-pool-worker' + suffix)),
+              '--scenario', str(binaries / ('zevune-funded-scenario' + suffix)),
+              '--output', str(root / 'ci-results/payment-resources.json'),
+          ], check=True)
+          PY
+      - name: Assert exact source and dependency locks
+        run: git diff --exit-code
+      - name: Preserve only public setup and resource evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: payment-resources-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            ci-results/payment-resource-setup.json
+            ci-results/payment-resources.json
+          if-no-files-found: error
+          retention-days: 14
