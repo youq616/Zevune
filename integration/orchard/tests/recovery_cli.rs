@@ -197,3 +197,177 @@ fn recovery_cli_bad_options_do_not_touch_source_or_existing_target() {
     }
     assert!(call(&["--help"]).status.success());
 }
+
+#[test]
+fn segmented_cli_pack_verify_restore_and_reject_overwrite() {
+    let d = Dir::new();
+    let source = d.path("pool");
+    let folder = d.path("archive");
+    let target = d.path("restored");
+    let mut pool = zevune_orchard_lab::pool::PoolStore::create(&source).unwrap();
+    let prepared = pool.prepare(1, [1; 32], &[]).unwrap();
+    pool.commit(prepared).unwrap();
+    let cp = pool.recovery_checkpoint().unwrap();
+    let encoded = hex(&cp.to_bytes());
+    drop(pool);
+    let before = fs::read(&source).unwrap();
+    for (mode, input, output) in [
+        ("pack", &source, Some(&folder)),
+        ("verify-segments", &folder, None),
+        ("restore-segments", &folder, Some(&target)),
+    ] {
+        let mut args = vec![
+            mode,
+            "--no-real-funds",
+            "--source",
+            text(input),
+            "--checkpoint",
+            &encoded,
+        ];
+        if let Some(output) = output {
+            args.extend(["--output", text(output)]);
+        }
+        assert_eq!(pin(&call(&args)), encoded);
+        if output.is_some() {
+            let refused = call(&args);
+            assert!(!refused.status.success());
+            assert!(refused.stdout.is_empty());
+        }
+        // Explicit no-funds acknowledgement cannot be omitted on new commands.
+        args.retain(|x| *x != "--no-real-funds");
+        assert!(!call(&args).status.success());
+    }
+    assert_eq!(fs::read(&source).unwrap(), before);
+    assert_eq!(fs::read(&target).unwrap(), before);
+}
+
+#[test]
+fn indexed_cli_locations_match_original_frames_without_writing_sidecars() {
+    let d = Dir::new();
+    let source = d.path("source");
+    let folder = d.path("archive");
+    let mut pool = zevune_orchard_lab::pool::PoolStore::create(&source).unwrap();
+    for id in 1..=3 {
+        let block = pool.prepare(id, [id as u8; 32], &[]).unwrap();
+        pool.commit(block).unwrap();
+    }
+    let cp = pool.recovery_checkpoint().unwrap();
+    let encoded = hex(&cp.to_bytes());
+    drop(pool);
+    assert_eq!(
+        pin(&call(&[
+            "pack",
+            "--no-real-funds",
+            "--source",
+            text(&source),
+            "--output",
+            text(&folder),
+            "--checkpoint",
+            &encoded
+        ])),
+        encoded
+    );
+    let before: Vec<_> = fs::read_dir(&folder)
+        .unwrap()
+        .map(|p| {
+            let p = p.unwrap().path();
+            (p.file_name().unwrap().to_owned(), fs::read(p).unwrap())
+        })
+        .collect();
+    let out = call(&[
+        "index",
+        "--no-real-funds",
+        "--source",
+        text(&folder),
+        "--checkpoint",
+        &encoded,
+    ]);
+    assert_eq!(pin(&out), encoded);
+    let report = String::from_utf8(out.stdout).unwrap();
+    assert!(report.contains("\"header_bytes\":44"));
+    assert!(report.contains("\"total_records\":3"));
+    assert!(report.contains("\"height\":1,\"offset\":44,\"length\":150"));
+    assert!(report.contains("\"height\":3,\"offset\":344,\"length\":150"));
+    let out = call(&[
+        "locate-height",
+        "--no-real-funds",
+        "--source",
+        text(&folder),
+        "--checkpoint",
+        &encoded,
+        "--height",
+        "2",
+    ]);
+    assert_eq!(pin(&out), encoded);
+    let report = String::from_utf8(out.stdout).unwrap();
+    assert!(report.contains("\"height\":2,\"offset\":194,\"length\":150"));
+    assert!(!report.contains("\"offset\":44,"));
+    assert!(!report.contains("\"offset\":344,"));
+    for height in [
+        "0",
+        "4",
+        "18446744073709551615",
+        "18446744073709551616",
+        "01",
+        "+1",
+        "-1",
+        " 1",
+    ] {
+        let out = call(&[
+            "locate-height",
+            "--no-real-funds",
+            "--source",
+            text(&folder),
+            "--checkpoint",
+            &encoded,
+            "--height",
+            height,
+        ]);
+        assert!(!out.status.success(), "height {height}");
+        assert!(out.stdout.is_empty());
+        assert!(!String::from_utf8_lossy(&out.stderr).contains(text(&d.0)));
+    }
+    for mode in ["index", "locate-height"] {
+        assert!(!call(&[
+            mode,
+            "--source",
+            text(&folder),
+            "--checkpoint",
+            &encoded,
+            "--height",
+            "1"
+        ])
+        .status
+        .success());
+        assert!(!call(&[
+            mode,
+            "--no-real-funds",
+            "--source",
+            text(&folder),
+            "--checkpoint",
+            &encoded,
+            "--output",
+            text(&d.path("not-created"))
+        ])
+        .status
+        .success());
+    }
+    assert!(!d.path("not-created").exists());
+    assert_eq!(fs::read_dir(&folder).unwrap().count(), before.len());
+    for (name, contents) in before {
+        assert_eq!(fs::read(folder.join(name)).unwrap(), contents);
+    }
+    let mut raw = fs::read(folder.join("segment-000000.bin")).unwrap();
+    *raw.last_mut().unwrap() ^= 1;
+    fs::write(folder.join("segment-000000.bin"), raw).unwrap();
+    let out = call(&[
+        "index",
+        "--no-real-funds",
+        "--source",
+        text(&folder),
+        "--checkpoint",
+        &encoded,
+    ]);
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+}
