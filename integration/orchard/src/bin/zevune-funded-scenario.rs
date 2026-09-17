@@ -1,7 +1,8 @@
 //! Interactive, bounded NO-FUNDS integration driver, not a general wallet CLI.
-//! Creates three ephemeral encrypted wallets. Secrets remain in this process;
+//! Creates ephemeral encrypted wallets. Secrets remain in this process;
 //! the Go test coordinator exchanges only public blocks, proofs and test results.
 //! The optional --active-segments-v1 argument creates a distinct new genesis.
+//! --active-resource-v1 selects a separate fixed two-wallet, 32+1-payment test.
 #![forbid(unsafe_code)]
 use rand::{rngs::OsRng, RngCore};
 use std::error::Error;
@@ -12,12 +13,21 @@ use zeroize::Zeroizing;
 use zevune_orchard_lab::pool::testnet::TestGenesis;
 use zevune_orchard_lab::pool::{PoolStore, Summary};
 use zevune_orchard_lab::wallet::address::Recipient;
-use zevune_orchard_lab::wallet::vault::store::{StoreError, WalletStore};
+use zevune_orchard_lab::wallet::vault::store::{StorageStatus, StoreError, WalletStore};
 use zevune_orchard_lab::wallet::{WalletError, WalletProver};
-use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
+use zevune_orchard_lab::wire::{decode, MAX_ENVELOPE_SIZE};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const LIMIT: usize = 524_288;
+const RESOURCE_RECOVERY_HEIGHT: u64 = 32;
+const RESOURCE_FINAL_HEIGHT: u64 = 33;
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum Mode {
+    Legacy,
+    ActiveBoundary,
+    ActiveResource,
+}
 fn bad() -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidData,
@@ -65,52 +75,74 @@ fn summary(s: &Summary) -> Vec<u8> {
     b
 }
 struct Scenario {
+    mode: Mode,
     root: PathBuf,
     genesis: TestGenesis,
     pool: Option<PoolStore>,
     wallets: Vec<Option<WalletStore>>,
+    wallet_paths: Vec<PathBuf>,
     passwords: Vec<Zeroizing<[u8; 32]>>,
     prover: WalletProver,
     phase: u8,
     backup_counter: u64,
+    resource_recovered: bool,
+    resource_pending_restored: bool,
 }
 impl Scenario {
-    fn new(root: &Path, active_segments: bool) -> Result<Self> {
+    fn new(root: &Path, mode: Mode) -> Result<Self> {
         ensure(root.is_absolute() && fs::symlink_metadata(root)?.file_type().is_dir())?;
         ensure(fs::read_dir(root)?.next().is_none())?;
         let mut wallets = Vec::new();
+        let mut wallet_paths = Vec::new();
         let mut passwords = Vec::new();
-        for i in 0..3 {
+        let wallet_count = if mode == Mode::ActiveResource { 2 } else { 3 };
+        for i in 0..wallet_count {
             let mut password = Zeroizing::new([0; 32]);
             OsRng.try_fill_bytes(password.as_mut())?;
             let path = root.join(format!("actor-{i}.zwallet"));
             wallets.push(Some(WalletStore::create(&path, password.as_ref())?));
+            wallet_paths.push(path);
             passwords.push(password);
         }
         let w = wallets[0].as_ref().ok_or_else(bad)?.view()?;
         let allocations = [
             (w.receive_address(0)?, 50_000),
-            (w.receive_address(1)?, 50_000),
+            (
+                if mode == Mode::ActiveResource {
+                    wallets[1]
+                        .as_ref()
+                        .ok_or_else(bad)?
+                        .view()?
+                        .receive_address(0)?
+                } else {
+                    w.receive_address(1)?
+                },
+                50_000,
+            ),
         ];
         // This is an explicit new laboratory genesis, never a migration or a
-        // capacity override for an existing deployment. Both modes keep the
-        // same genuine Orchard payments and fixed public test allocation.
-        let genesis = if active_segments {
-            TestGenesis::generate_active(&allocations)?
-        } else {
+        // capacity override for an existing deployment. All modes retain real
+        // Orchard payments and the fixed public test supply.
+        let genesis = if mode == Mode::Legacy {
             TestGenesis::generate(&allocations)?
+        } else {
+            TestGenesis::generate_active(&allocations)?
         };
         genesis.write_new(&root.join("test-genesis.bin"))?;
         let pool = genesis.create_pool(&root.join("replay.journal"))?;
         let mut s = Self {
+            mode,
             root: root.into(),
             genesis,
             pool: Some(pool),
             wallets,
+            wallet_paths,
             passwords,
             prover: WalletProver::new(),
             phase: 0,
             backup_counter: 0,
+            resource_recovered: false,
+            resource_pending_restored: false,
         };
         s.sync_wallets()?;
         Ok(s)
@@ -124,20 +156,84 @@ impl Scenario {
         }
         Ok(())
     }
+    fn checked_wallet_storage(&mut self, index: usize) -> Result<StorageStatus> {
+        let status = self.wallets[index]
+            .as_mut()
+            .ok_or_else(bad)?
+            .storage_status()?;
+        let metadata = fs::symlink_metadata(&self.wallet_paths[index])?;
+        ensure(metadata.file_type().is_file() && metadata.len() == status.file_bytes)?;
+        Ok(status)
+    }
+    fn check_resource_summary(state: &Summary) -> Result<()> {
+        ensure(
+            state.height <= RESOURCE_FINAL_HEIGHT
+                && state.commitments == 2 + 2 * state.height
+                && state.nullifiers == 2 * state.height
+                && state.fees == 1_000 * state.height,
+        )
+    }
     fn status(&mut self) -> Result<Vec<u8>> {
         self.sync_wallets()?;
-        let mut b = summary(&self.pool.as_ref().ok_or_else(bad)?.summary()?);
-        for w in &self.wallets {
-            let w = w.as_ref().ok_or_else(bad)?.view()?;
-            b.extend_from_slice(&w.balance()?.to_be_bytes());
-            b.extend_from_slice(&w.available_balance()?.to_be_bytes());
-            b.push(u8::from(w.pending_id().is_some()));
+        let state = self.pool.as_ref().ok_or_else(bad)?.summary()?;
+        let resource = self.mode == Mode::ActiveResource;
+        if resource {
+            Self::check_resource_summary(&state)?;
+        }
+        let mut b = summary(&state);
+        for index in 0..self.wallets.len() {
+            let storage = if resource {
+                Some(self.checked_wallet_storage(index)?)
+            } else {
+                None
+            };
+            let w = self.wallets[index].as_ref().ok_or_else(bad)?.view()?;
+            let balance = w.balance()?;
+            let available = w.available_balance()?;
+            let pending = w.pending_id().is_some();
+            b.extend_from_slice(&balance.to_be_bytes());
+            b.extend_from_slice(&available.to_be_bytes());
+            b.push(u8::from(pending));
+            if let Some(storage) = storage {
+                let sent = (state.height + u64::from(index == 0)) / 2;
+                let received = state.height - sent;
+                let expected_balance = 50_000 + 1_000 * received - 2_000 * sent;
+                // Pending reserves the entire selected large note, not only
+                // the transfer and fee. The smaller received notes stay free.
+                let expected_available = if pending {
+                    ensure(
+                        state.height < RESOURCE_FINAL_HEIGHT
+                            && index == (state.height % 2) as usize,
+                    )?;
+                    expected_balance - (50_000 - 2_000 * sent)
+                } else {
+                    expected_balance
+                };
+                ensure(
+                    balance == expected_balance
+                        && available == expected_available
+                        && storage.records_used == 2 + state.height + sent + u64::from(pending),
+                )?;
+                // Only resource mode appends these fields to each wallet's
+                // legacy balance/available/pending tuple: 96 + 2 * 33 bytes.
+                b.extend_from_slice(&storage.records_used.to_be_bytes());
+                b.extend_from_slice(&storage.file_bytes.to_be_bytes());
+            }
         }
         Ok(b)
     }
     fn payment(&mut self, op: u8) -> Result<Vec<u8>> {
         self.sync_wallets()?;
-        let (sender, recipient, value) = if op == 1 {
+        let resource = self.mode == Mode::ActiveResource;
+        let height = self.pool.as_ref().ok_or_else(bad)?.summary()?.height;
+        let (sender, recipient, value) = if resource {
+            ensure(op == 1 && height < RESOURCE_FINAL_HEIGHT)?;
+            if height == RESOURCE_RECOVERY_HEIGHT {
+                ensure(self.resource_recovered)?;
+            }
+            let sender = (height % 2) as usize;
+            (sender, 1 - sender, 1_000)
+        } else if op == 1 {
             ensure(self.phase == 0)?;
             (0, 1, 60_000)
         } else {
@@ -160,6 +256,11 @@ impl Scenario {
             .checked_add(100)
             .ok_or_else(bad)?;
         let sender = self.wallets[sender].as_mut().ok_or_else(bad)?;
+        if resource {
+            // No prepare counter advances: only a committed height selects
+            // the next sender. A repeated prepare cannot skip the outbox.
+            ensure(sender.pending_payment()?.is_none())?;
+        }
         let domain = sender.view()?.signing_domain()?.ok_or_else(bad)?;
         let receiver = destination.for_domain(Some(domain))?;
         let mut other = domain;
@@ -180,7 +281,20 @@ impl Scenario {
             ensure(sender.receipt()? == before && sender.pending_payment()?.is_none())?;
         }
         let tx = sender.prepare_payment_to(&destination, value, 1_000, expiry, &self.prover)?;
-        self.phase += 1;
+        if resource {
+            let decoded = decode(tx.bytes())?;
+            ensure(
+                decoded.bundle.actions().len() == 2
+                    && decoded.context.signing_domain == Some(self.genesis.digest())
+                    && decoded.context.expiry_height == expiry
+                    && decoded.context.fee == 1_000,
+            )?;
+            if height == RESOURCE_RECOVERY_HEIGHT {
+                self.resource_pending_restored = false;
+            }
+        } else {
+            self.phase += 1;
+        }
         Ok(tx.bytes().to_vec())
     }
     fn apply(&mut self, raw: &[u8]) -> Result<Vec<u8>> {
@@ -189,6 +303,18 @@ impl Scenario {
         let hash = raw[8..40].try_into()?;
         let count = u16::from_be_bytes(raw[40..42].try_into()?) as usize;
         ensure(count <= 16)?;
+        let resource = self.mode == Mode::ActiveResource;
+        if resource {
+            let committed = self.pool.as_ref().ok_or_else(bad)?.summary()?;
+            ensure(
+                height == committed.height.checked_add(1).ok_or_else(bad)?
+                    && height <= RESOURCE_FINAL_HEIGHT
+                    && count == 1,
+            )?;
+            if height == RESOURCE_FINAL_HEIGHT {
+                ensure(self.resource_recovered && self.resource_pending_restored)?;
+            }
+        }
         let mut p = 42;
         let mut txs = Vec::with_capacity(count);
         for _ in 0..count {
@@ -200,26 +326,59 @@ impl Scenario {
             p = end;
         }
         ensure(p == raw.len())?;
+        if resource {
+            let sender = ((height - 1) % 2) as usize;
+            let pending = self.wallets[sender]
+                .as_ref()
+                .ok_or_else(bad)?
+                .pending_payment()?
+                .ok_or_else(bad)?;
+            ensure(pending.bytes() == txs[0].as_slice())?;
+            ensure(
+                self.wallets[1 - sender]
+                    .as_ref()
+                    .ok_or_else(bad)?
+                    .pending_payment()?
+                    .is_none(),
+            )?;
+        }
         let pool = self.pool.as_mut().ok_or_else(bad)?;
         let prepared = pool.prepare(height, hash, &txs)?;
-        Ok(summary(&pool.commit(prepared)?))
+        let committed = pool.commit(prepared)?;
+        if resource {
+            Self::check_resource_summary(&committed)?;
+        }
+        // Wallet sync is a separate operation so the coordinator can measure
+        // independent ledger execution and full wallet history costs separately.
+        Ok(summary(&committed))
     }
     fn restore(&mut self, index: usize) -> Result<Vec<u8>> {
-        ensure(index < 3)?;
+        ensure(index < self.wallets.len())?;
         self.sync_wallets()?;
+        let resource = self.mode == Mode::ActiveResource;
+        let before_storage = if resource {
+            Some(self.checked_wallet_storage(index)?)
+        } else {
+            None
+        };
         let old = self.wallets[index].as_mut().ok_or_else(bad)?;
+        let before_receipt = if resource { Some(old.receipt()?) } else { None };
         let pending = old.pending_payment()?.map(|p| p.bytes().to_vec());
         self.backup_counter += 1;
         let path = self
             .root
             .join(format!("backup-{}-{index}.zwallet", self.backup_counter));
         let receipt = old.backup_new(&path)?;
+        if let Some(before) = before_receipt {
+            ensure(before == receipt)?;
+        }
         drop(self.wallets[index].take());
         self.wallets[index] = Some(WalletStore::open(
             &path,
             self.passwords[index].as_ref(),
             Some(receipt),
         )?);
+        self.wallet_paths[index] = path;
         self.sync_wallets()?;
         let restored = self.wallets[index]
             .as_ref()
@@ -227,19 +386,63 @@ impl Scenario {
             .pending_payment()?
             .map(|p| p.bytes().to_vec());
         ensure(pending == restored)?;
+        if let Some(before) = before_storage {
+            ensure(self.checked_wallet_storage(index)? == before)?;
+            ensure(self.wallets[index].as_ref().ok_or_else(bad)?.receipt()? == receipt)?;
+            if index == 0
+                && self.pool.as_ref().ok_or_else(bad)?.summary()?.height == RESOURCE_RECOVERY_HEIGHT
+                && restored.is_some()
+            {
+                ensure(self.resource_recovered)?;
+                self.resource_pending_restored = true;
+            }
+        }
         Ok(restored.unwrap_or_default())
     }
     fn reopen(&mut self) -> Result<Vec<u8>> {
         let before = self.pool.as_ref().ok_or_else(bad)?.summary()?;
+        let resource = self.mode == Mode::ActiveResource;
+        if resource {
+            ensure(before.height == RESOURCE_RECOVERY_HEIGHT && !self.resource_recovered)?;
+            self.sync_wallets()?;
+            for wallet in &self.wallets {
+                ensure(
+                    wallet
+                        .as_ref()
+                        .ok_or_else(bad)?
+                        .pending_payment()?
+                        .is_none(),
+                )?;
+            }
+        }
         drop(self.pool.take());
         self.pool = Some(self.genesis.open_pool(&self.root.join("replay.journal"))?);
         ensure(self.pool.as_ref().ok_or_else(bad)?.summary()? == before)?;
-        for i in 0..3 {
+        for i in 0..self.wallets.len() {
             self.restore(i)?;
         }
-        self.status()
+        let result = self.status()?;
+        if resource {
+            self.resource_recovered = true;
+        }
+        Ok(result)
     }
     fn finish(&mut self) -> Result<Vec<u8>> {
+        if self.mode == Mode::ActiveResource {
+            ensure(self.resource_recovered && self.resource_pending_restored)?;
+            ensure(self.pool.as_ref().ok_or_else(bad)?.summary()?.height == RESOURCE_FINAL_HEIGHT)?;
+            let result = self.status()?;
+            for wallet in &self.wallets {
+                ensure(
+                    wallet
+                        .as_ref()
+                        .ok_or_else(bad)?
+                        .pending_payment()?
+                        .is_none(),
+                )?;
+            }
+            return Ok(result);
+        }
         ensure(self.phase == 2)?;
         let result = self.status()?;
         for (i, expected) in [39_000, 19_000, 40_000].iter().enumerate() {
@@ -257,12 +460,13 @@ impl Scenario {
 }
 fn run() -> Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
-    let active_segments = match args.as_slice() {
-        [_, _] => false,
-        [_, _, flag] if flag == "--active-segments-v1" => true,
+    let mode = match args.as_slice() {
+        [_, _] => Mode::Legacy,
+        [_, _, flag] if flag == "--active-segments-v1" => Mode::ActiveBoundary,
+        [_, _, flag] if flag == "--active-resource-v1" => Mode::ActiveResource,
         _ => return Err(bad().into()),
     };
-    let mut scenario = Scenario::new(Path::new(&args[1]), active_segments)?;
+    let mut scenario = Scenario::new(Path::new(&args[1]), mode)?;
     let mut ready = scenario.genesis.digest().to_vec();
     ready.extend_from_slice(&summary(&scenario.genesis.initial_summary()?));
     let stdin = io::stdin();
@@ -274,7 +478,8 @@ fn run() -> Result<()> {
         let (op, data) = (request[0], &request[1..]);
         let body = match op {
             0 if data.is_empty() => scenario.status()?,
-            1 | 3 if data.is_empty() => scenario.payment(op)?,
+            1 if data.is_empty() => scenario.payment(op)?,
+            3 if data.is_empty() && mode != Mode::ActiveResource => scenario.payment(op)?,
             2 => scenario.apply(data)?,
             4 if data.len() == 1 => scenario.restore(data[0] as usize)?,
             5 if data.is_empty() => scenario.reopen()?,
