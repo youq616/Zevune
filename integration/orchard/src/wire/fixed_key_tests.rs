@@ -1,13 +1,10 @@
 //! Real authorization across independent caches sharing only a fixed public key.
 use super::{decode, encode, payload_digest, AuthorizationVerifier, WireError};
-use crate::{CIRCUIT, NETWORK};
+use crate::{pool::fixtures, CIRCUIT, NETWORK};
 use orchard::circuit::{OrchardCircuitVersion, ProvingKey};
 use orchard::keys::{FullViewingKey, Scope};
 use orchard::tree::MerkleHashOrchard;
 use std::sync::Barrier;
-
-#[path = "../../tests/support/fixtures.rs"]
-mod fixtures;
 
 #[test]
 fn concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold() {

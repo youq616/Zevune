@@ -782,6 +782,9 @@ impl Record {
 #[path = "pool_tests.rs"]
 mod tests;
 
+#[cfg(test)]
+pub(crate) use tests::fixtures;
+
 #[path = "wallet_history.rs"]
 pub mod history;
 

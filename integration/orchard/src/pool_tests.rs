@@ -5,7 +5,7 @@ use rand::{rngs::OsRng, RngCore};
 use std::path::PathBuf;
 
 #[path = "../tests/support/fixtures.rs"]
-pub(super) mod fixtures;
+pub(crate) mod fixtures;
 use fixtures::{context, genesis_note, key, prove, witness};
 
 struct TestDir(PathBuf);
