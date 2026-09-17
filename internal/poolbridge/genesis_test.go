@@ -105,7 +105,7 @@ func TestGenesisFrameTruncationAndTrailingData(t *testing.T) {
 
 func TestGenesisFrameRejectsHeaderAndSupplyMutations(t *testing.T) {
 	tests := map[string]func([]byte){
-		"unknown profile": func(b []byte) { b[7] = '3' },
+		"unknown profile": func(b []byte) { b[7] = '4' },
 		"wrong network":   func(b []byte) { b[8] ^= 1 },
 		"wrong supply":    func(b []byte) { b[47] ^= 1 },
 		"zero count":      func(b []byte) { b[49] = 0 },
@@ -146,7 +146,8 @@ func TestPinnedMalformedGenesisIsRejectedBeforeWorkerStart(t *testing.T) {
 func FuzzTestGenesisFrame(f *testing.F) {
 	f.Add(genesisFrame(false, 1))
 	f.Add(genesisFrame(true, 16))
-	f.Add([]byte("ZVTGEN03"))
+	f.Add(activeGenesisFrame(1))
+	f.Add([]byte("ZVTGEN04"))
 	f.Fuzz(func(t *testing.T, b []byte) {
 		before := bytes.Clone(b)
 		err := ValidateTestGenesisFrame(b)
@@ -157,4 +158,84 @@ func FuzzTestGenesisFrame(f *testing.F) {
 			t.Fatal("accepted outside bounds")
 		}
 	})
+}
+
+func activeGenesisFrame(count int) []byte {
+	raw := genesisFrame(true, count)
+	copy(raw, "ZVTGEN03")
+	return raw
+}
+
+func TestActiveGenesisProfileAndPinnedHeader(t *testing.T) {
+	for count := 1; count <= testGenesisMaxAllocations; count++ {
+		raw := activeGenesisFrame(count)
+		before := bytes.Clone(raw)
+		profile, err := TestGenesisProfile(raw)
+		if err != nil || profile != ActiveSegmentsV1 || ValidateTestGenesisFrame(raw) != nil || !bytes.Equal(raw, before) {
+			t.Fatal("active public frame not recognized exactly", count, err)
+		}
+		for end := 0; end < len(raw); end++ {
+			if _, err := TestGenesisProfile(raw[:end]); err == nil {
+				t.Fatal("truncated active manifest accepted", count, end)
+			}
+		}
+		if _, err := TestGenesisProfile(append(bytes.Clone(raw), 0)); err == nil {
+			t.Fatal("active manifest accepted a suffix")
+		}
+		path := filepath.Join(t.TempDir(), "genesis.bin")
+		if err := os.WriteFile(path, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		o := Options{Journal: filepath.Join(t.TempDir(), "pool"), TestGenesis: path, TestGenesisSHA256: sha256.Sum256(raw)}
+		launch, err := o.workerLaunch("create")
+		if err != nil || launch.profile != ActiveSegmentsV1 || launch.headerBytes != uint64(76+32*count) ||
+			len(launch.args) != 4 || launch.args[0] != "create" || launch.args[1] != o.Journal || launch.args[2] != path {
+			t.Fatal("launch policy did not come from the exact pinned manifest", err)
+		}
+		// Replacing only the magic changes the pin, not merely an advertised
+		// profile. A failed pin check must not downgrade the launch to IPC3.
+		copy(raw, "ZVTGEN02")
+		if err := os.WriteFile(path, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := o.workerLaunch("open"); err == nil {
+			t.Fatal("relabelled manifest bypassed its pin")
+		}
+		o.TestGenesisSHA256 = sha256.Sum256(raw)
+		legacy, err := o.workerLaunch("open")
+		if err != nil || legacy.profile != LegacyJournal || legacy.headerBytes != uint64(76+32*count) {
+			t.Fatal("explicitly pinned old profile silently expanded", err)
+		}
+	}
+}
+
+func TestActiveGenesisRejectsInvalidFramingBeforePolicySelection(t *testing.T) {
+	changes := map[string]func([]byte){
+		"unknown":       func(b []byte) { b[7] = '4' },
+		"wrong network": func(b []byte) { b[8] ^= 1 },
+		"wrong supply":  func(b []byte) { b[47] ^= 1 },
+		"zero count":    func(b []byte) { b[49] = 0 },
+		"large count":   func(b []byte) { b[48], b[49] = 255, 255 },
+		"zero nonce":    func(b []byte) { clear(b[50:82]) },
+		"zero value":    func(b []byte) { clear(b[125:133]) },
+		"overflow":      func(b []byte) { binary.BigEndian.PutUint64(b[125:133], ^uint64(0)) },
+		"undersupply":   func(b []byte) { binary.BigEndian.PutUint64(b[125:133], testGenesisSupply-1) },
+	}
+	for name, change := range changes {
+		t.Run(name, func(t *testing.T) {
+			raw := activeGenesisFrame(1)
+			change(raw)
+			if profile, err := TestGenesisProfile(raw); err == nil || profile == ActiveSegmentsV1 {
+				t.Fatal("malformed bytes selected the active policy")
+			}
+		})
+	}
+	for _, raw := range [][]byte{genesisFrame(false, 1), genesisFrame(true, 16)} {
+		if profile, err := TestGenesisProfile(raw); err != nil || profile != LegacyJournal {
+			t.Fatal("legacy profile changed", err)
+		}
+	}
+	if _, err := (Options{}).workerLaunch("auto"); err == nil {
+		t.Fatal("unknown worker mode accepted")
+	}
 }

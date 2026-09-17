@@ -21,10 +21,23 @@ type StorageCheckpoint struct {
 }
 
 func (c StorageCheckpoint) Validate() error {
-	if c.Height > recordLimit || c.AppHash == (Hash{}) {
+	return c.validate(poolbridge.LegacyJournal)
+}
+
+func (c StorageCheckpoint) validate(profile poolbridge.StorageProfile) error {
+	if profile.MaxHeight() == 0 || c.Height > profile.MaxHeight() || c.AppHash == (Hash{}) {
 		return ErrBounds
 	}
 	return nil
+}
+
+// ValidateStorageCheckpoint uses the profile authenticated with this network's
+// public configuration. A checkpoint cannot select or upgrade that profile.
+func (n *Network) ValidateStorageCheckpoint(c StorageCheckpoint) error {
+	if n == nil {
+		return ErrBounds
+	}
+	return c.validate(n.profile)
 }
 
 // ParseStorageCheckpoint requires canonical unsigned decimal height (including
@@ -32,7 +45,20 @@ func (c StorageCheckpoint) Validate() error {
 // contact a node. CLI presence is handled separately; two empty strings are not
 // a checkpoint and cannot silently request an unpinned inspection here.
 func ParseStorageCheckpoint(height, appHash string) (StorageCheckpoint, error) {
-	if len(height) == 0 || len(height) > len(strconv.FormatUint(recordLimit, 10)) || len(appHash) != 64 {
+	return parseStorageCheckpoint(height, appHash, poolbridge.LegacyJournal)
+}
+
+// ParseStorageCheckpoint retains exact-tip semantics at this network's fixed
+// height bound. The package-level parser remains legacy-only for old callers.
+func (n *Network) ParseStorageCheckpoint(height, appHash string) (StorageCheckpoint, error) {
+	if n == nil {
+		return StorageCheckpoint{}, ErrBounds
+	}
+	return parseStorageCheckpoint(height, appHash, n.profile)
+}
+
+func parseStorageCheckpoint(height, appHash string, profile poolbridge.StorageProfile) (StorageCheckpoint, error) {
+	if len(height) == 0 || len(height) > len(strconv.FormatUint(profile.MaxHeight(), 10)) || len(appHash) != 64 {
 		return StorageCheckpoint{}, ErrBounds
 	}
 	h, err := strconv.ParseUint(height, 10, 64)
@@ -44,7 +70,7 @@ func ParseStorageCheckpoint(height, appHash string) (StorageCheckpoint, error) {
 		return StorageCheckpoint{}, ErrBounds
 	}
 	c := StorageCheckpoint{Height: h, AppHash: hash}
-	if err := c.Validate(); err != nil {
+	if err := c.validate(profile); err != nil {
 		return StorageCheckpoint{}, err
 	}
 	return c, nil

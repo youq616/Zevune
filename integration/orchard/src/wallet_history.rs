@@ -86,27 +86,55 @@ impl PoolStore {
     fn replay_history(
         &mut self,
         committed: &Summary,
-        mut visit: impl FnMut(replay::ReplayedBlock) -> Result<(), PoolError>,
+        visit: impl FnMut(replay::ReplayedBlock) -> Result<(), PoolError>,
     ) -> Result<HistoryOrigin, PoolError> {
+        if let Some(active) = &self.active {
+            if active.length() != self.length {
+                return Err(PoolError::Corrupt);
+            }
+            active.check(&self.file)?;
+            let reader = active.reader(&self.file)?;
+            let origin = self.replay_history_stream(reader, committed, visit)?;
+            active.check(&self.file)?;
+            return Ok(origin);
+        }
         if self.file.metadata().map_err(|_| PoolError::Storage)?.len() != self.length
             || self.length > MAX_JOURNAL_BYTES
         {
             return Err(PoolError::Corrupt);
         }
         self.file.rewind().map_err(|_| PoolError::Storage)?;
-        let header = replay::read_header(&mut self.file, self.length)?;
+        // The owning file and lock remain held. A clone only supplies the Read
+        // implementation without aliasing the mutable PoolStore borrow.
+        let reader = self.file.try_clone().map_err(|_| PoolError::Storage)?;
+        self.replay_history_stream(reader, committed, visit)
+    }
+
+    fn replay_history_stream(
+        &self,
+        mut reader: impl Read,
+        committed: &Summary,
+        mut visit: impl FnMut(replay::ReplayedBlock) -> Result<(), PoolError>,
+    ) -> Result<HistoryOrigin, PoolError> {
+        let header = replay::read_header_profile(&mut reader, self.length, self.state.profile)?;
         let signing_domain = header.signing_domain;
         if signing_domain != self.state.signing_domain {
             return Err(PoolError::Domain);
         }
         let initial = header.initial;
-        let state = State::from_policy(&initial, signing_domain)?;
+        let state = State::from_storage_policy(&initial, signing_domain, self.state.profile)?;
         if state.genesis != self.state.genesis {
             return Err(PoolError::Genesis);
         }
         let origin = state.summary();
-        let mut replay = replay::Replay::new(&mut self.file, self.length, header.length, state)?;
+        let mut replay = replay::Replay::new(reader, self.length, header.length, state)?;
+        let mut start = header.length;
         while let Some(block) = replay.next_block(&self.verifier)? {
+            let end = replay.byte_position()?;
+            if let Some(active) = &self.active {
+                active.validate_frame(start, end)?;
+            }
+            start = end;
             visit(block)?;
         }
         let (state, final_summary) = replay.finish()?;

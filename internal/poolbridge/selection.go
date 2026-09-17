@@ -13,7 +13,10 @@ const MaxProposalBytes = MaxTransactions * MaxTransactionBytes
 // selectionBytes owns all candidate bytes. This is a read-only selection request,
 // not the block encoding and not a signed block or commit token.
 func selectionBytes(height uint64, limit uint64, txs [][]byte) ([]byte, [][]byte, error) {
-	if height == 0 || height > 10000 || limit > MaxProposalBytes || len(txs) > MaxProposalCandidates {
+	return LegacyJournal.selectionBytes(height, limit, txs)
+}
+func (p StorageProfile) selectionBytes(height uint64, limit uint64, txs [][]byte) ([]byte, [][]byte, error) {
+	if !p.valid() || height == 0 || height > p.MaxHeight() || limit > MaxProposalBytes || len(txs) > MaxProposalCandidates {
 		return nil, nil, ErrBounds
 	}
 	size := 50
@@ -69,7 +72,7 @@ func selectedBytes(txs [][]byte, mask, limit uint64) ([][]byte, error) {
 // one bounded worker request. Invalid candidates do not poison later candidates.
 // No candidate state is persisted, nor is a successful selection a spend permit.
 func (c *Client) SelectProposal(ctx context.Context, height uint64, limit uint64, txs [][]byte) ([][]byte, error) {
-	b, owned, err := selectionBytes(height, limit, txs)
+	b, owned, err := c.profile.selectionBytes(height, limit, txs)
 	if err != nil {
 		return nil, err
 	}

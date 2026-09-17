@@ -4,11 +4,12 @@
 use sha2::{Digest, Sha256};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use zevune_orchard_lab::pool::{PoolError, PoolStore, PreparedBlock, Summary};
+use zevune_orchard_lab::pool::{PoolError, PoolStore, PreparedBlock, StorageProfile, Summary};
 use zevune_orchard_lab::wire::MAX_ENVELOPE_SIZE;
 // At most 64 bounded candidates for the read-only selector (under 2 MiB).
 const MAX_FRAME: usize = 2 * 1024 * 1024;
 const DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-3:zevune-orchard-lab-1:16:28134:selection-64";
+const ACTIVE_DOMAIN: &[u8] = b"ZEVUNE-POOL-IPC-4:zevune-orchard-lab-1:16:28134:selection-64:active-segments-1:1000000:1073741824";
 type Hash = [u8; 32];
 type Block = (u64, Hash, Vec<Vec<u8>>);
 fn bad() -> io::Error {
@@ -161,8 +162,9 @@ impl Session {
     }
 }
 fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Result<()> {
+    let active = session.store.storage_profile() == StorageProfile::ActiveSegmentsV1;
     let mut hello = b"ZVPLHEL1".to_vec();
-    hello.extend_from_slice(&Sha256::digest(DOMAIN));
+    hello.extend_from_slice(&Sha256::digest(if active { ACTIVE_DOMAIN } else { DOMAIN }));
     write_frame(w, &hello)?;
     let mut previous = 0u64;
     while let Some(b) = frame(r)? {
@@ -170,17 +172,32 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
             return Err(bad());
         }
         let id = u64::from_be_bytes(b[8..16].try_into().map_err(|_| bad())?);
-        if previous.checked_add(1) != Some(id) || b[16] > 5 {
+        if previous.checked_add(1) != Some(id) || b[16] > if active { 6 } else { 5 } {
             return Err(bad());
         }
         previous = id;
         let mut selected_mask = 0u64;
+        let mut capacity = [0; 16];
         let result = if b[16] == 5 {
             selection(&b[17..]).and_then(|((height, hash, txs), limit)| {
                 let selected = session.store.select_proposal(height, hash, limit, &txs)?;
                 selected_mask = selected.mask;
                 Ok(selected.result)
             })
+        } else if b[16] == 6 {
+            if b.len() != 17 {
+                Err(PoolError::Bounds)
+            } else {
+                session
+                    .store
+                    .active_capacity()
+                    .map(|(state, length, segments, tail)| {
+                        capacity[..8].copy_from_slice(&length.to_be_bytes());
+                        capacity[8..12].copy_from_slice(&segments.to_be_bytes());
+                        capacity[12..].copy_from_slice(&tail.to_be_bytes());
+                        state
+                    })
+            }
         } else {
             session.apply(b[16], &b[17..])
         };
@@ -205,6 +222,8 @@ fn serve(mut session: Session, r: &mut impl Read, w: &mut impl Write) -> io::Res
         response.extend_from_slice(&summary(&state));
         if b[16] == 5 {
             response.extend_from_slice(&selected_mask.to_be_bytes());
+        } else if b[16] == 6 {
+            response.extend_from_slice(&capacity);
         }
         write_frame(w, &response)?;
     }

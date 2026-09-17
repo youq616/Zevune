@@ -29,6 +29,24 @@ func TestStorageCheckpointFlagPair(t *testing.T) {
 	}
 }
 
+func TestCheckpointSyntaxDoesNotSelectAStorageProfile(t *testing.T) {
+	hash := labnet.HashText(labnet.Hash{1})
+	for _, height := range []string{"0", "10000", "10001", "1000000"} {
+		if err := checkpointFlagSyntax(height, hash, true); err != nil {
+			t.Fatal("bounded canonical checkpoint syntax rejected before network loading", height)
+		}
+	}
+	for _, height := range []string{"", "010001", "-1", "+1", "1000001", "18446744073709551616"} {
+		if err := checkpointFlagSyntax(height, hash, true); err == nil {
+			t.Fatal("invalid checkpoint syntax accepted before network loading")
+		}
+	}
+	// Allowing bounded syntax does not make a legacy parser accept active height.
+	if _, err := parseCheckpointFlags("10001", hash, true, labnet.ParseStorageCheckpoint); err == nil {
+		t.Fatal("syntax checking silently relaxed the selected profile")
+	}
+}
+
 func TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands(t *testing.T) {
 	hash := labnet.HashText(labnet.Hash{1})
 	// These invalid forms fail before configuration/file access. Real execution

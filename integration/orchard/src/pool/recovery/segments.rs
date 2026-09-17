@@ -4,7 +4,7 @@ use super::*;
 use crate::pool::replay::{read_header, require_eof, Replay};
 use std::io;
 
-mod namespace;
+pub(in crate::pool) mod namespace;
 
 /// Full-replay-derived historical record navigation; not a state import format.
 pub mod index;

@@ -73,6 +73,11 @@ impl PoolStore {
     /// history and checking the file bytes before AND after replay. Does not
     /// include uncommitted candidates or prove that a peer disclosed its tip.
     pub fn recovery_checkpoint(&mut self) -> Result<RecoveryCheckpoint, PoolError> {
+        // ZVPRCP01 describes only a legacy flat journal. Refusing an unsupported
+        // format is not an uncertain write and must not poison the active store.
+        if self.active.is_some() {
+            return Err(PoolError::Bounds);
+        }
         let summary = self.summary()?;
         let result = (|| {
             let before = fingerprint(&mut self.file, self.length)?;

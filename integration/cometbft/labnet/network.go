@@ -42,11 +42,24 @@ type Network struct {
 	validators *types.ValidatorSet
 	assetPin   Hash
 	configPin  Hash
+	profile    poolbridge.StorageProfile
 }
 
-func (n *Network) ConfigDigest() Hash { return n.configPin }
-func (n *Network) AssetDigest() Hash  { return n.assetPin }
-func (n *Network) AssetPath() string  { return filepath.Join(n.home, assetName) }
+func (n *Network) ConfigDigest() Hash                 { return n.configPin }
+func (n *Network) AssetDigest() Hash                  { return n.assetPin }
+func (n *Network) AssetPath() string                  { return filepath.Join(n.home, assetName) }
+func (n *Network) Profile() poolbridge.StorageProfile { return n.profile }
+
+func configVersion(profile poolbridge.StorageProfile) uint32 {
+	switch profile {
+	case poolbridge.LegacyJournal:
+		return 1
+	case poolbridge.ActiveSegmentsV1:
+		return 2
+	default:
+		return 0
+	}
+}
 
 func Load(configPath string, expected Hash) (*Network, error) {
 	raw, err := pinnedBytes(configPath, expected, 100, 16*1024)
@@ -54,7 +67,7 @@ func Load(configPath string, expected Hash) (*Network, error) {
 		return nil, err
 	}
 	var c publicConfig
-	if canonicalJSON(raw, &c) != nil || c.Version != 1 || c.ChainID != poolapp.ChainID || len(c.NodeIDs) != 4 {
+	if canonicalJSON(raw, &c) != nil || (c.Version != 1 && c.Version != 2) || c.ChainID != poolapp.ChainID || len(c.NodeIDs) != 4 {
 		return nil, ErrConfiguration
 	}
 	seen := make(map[string]bool)
@@ -78,7 +91,8 @@ func Load(configPath string, expected Hash) (*Network, error) {
 	if err != nil {
 		return nil, err
 	}
-	if poolbridge.ValidateTestGenesisFrame(assetBytes) != nil {
+	profile, err := poolbridge.TestGenesisProfile(assetBytes)
+	if err != nil || c.Version != configVersion(profile) {
 		return nil, ErrConfiguration
 	}
 	raw, err = pinnedBytes(filepath.Join(home, genesisName), consensus, 100, 64*1024)
@@ -86,7 +100,7 @@ func Load(configPath string, expected Hash) (*Network, error) {
 		return nil, err
 	}
 	g, err := types.GenesisDocFromJSON(raw)
-	if err != nil || g.ChainID != poolapp.ChainID || g.InitialHeight != 1 || len(g.Validators) != 4 || len(g.AppHash) != 32 || g.ConsensusParams == nil || g.ConsensusParams.Version.App != poolapp.AppVersion {
+	if err != nil || g.ChainID != poolapp.ChainID || g.InitialHeight != 1 || len(g.Validators) != 4 || len(g.AppHash) != 32 || g.ConsensusParams == nil || g.ConsensusParams.Version.App != poolapp.AppVersionForProfile(profile) {
 		return nil, ErrConfiguration
 	}
 	if g.ConsensusParams.Block.MaxBytes != 512*1024 || g.ConsensusParams.Evidence.MaxBytes > 64*1024 || g.ConsensusParams.ABCI.VoteExtensionsEnableHeight != 0 {
@@ -108,7 +122,7 @@ func Load(configPath string, expected Hash) (*Network, error) {
 		seen[string(val.PubKey.Bytes())] = true
 		vals = append(vals, types.NewValidator(val.PubKey, val.Power))
 	}
-	return &Network{home: home, config: c, genesis: g, validators: types.NewValidatorSet(vals), assetPin: asset, configPin: expected}, nil
+	return &Network{home: home, config: c, genesis: g, validators: types.NewValidatorSet(vals), assetPin: asset, configPin: expected, profile: profile}, nil
 }
 
 func (n *Network) workerOptions(worker string, workerPin Hash, journal string, create bool) poolbridge.Options {
@@ -138,7 +152,8 @@ func Initialize(ctx context.Context, o InitOptions) (pin Hash, err error) {
 	if err != nil {
 		return pin, err
 	}
-	if poolbridge.ValidateTestGenesisFrame(asset) != nil {
+	profile, err := poolbridge.TestGenesisProfile(asset)
+	if err != nil {
 		return pin, ErrConfiguration
 	}
 	if err = os.Mkdir(o.Home, 0700); err != nil {
@@ -155,10 +170,10 @@ func Initialize(ctx context.Context, o InitOptions) (pin Hash, err error) {
 	if err = writeNew(filepath.Join(o.Home, assetName), asset); err != nil {
 		return pin, err
 	}
-	n := &Network{home: o.Home, assetPin: o.AssetSHA256}
-	c := publicConfig{Version: 1, ChainID: poolapp.ChainID, AssetDigest: HashText(o.AssetSHA256), NodeIDs: make([]string, 0, 4)}
+	n := &Network{home: o.Home, assetPin: o.AssetSHA256, profile: profile}
+	c := publicConfig{Version: configVersion(profile), ChainID: poolapp.ChainID, AssetDigest: HashText(o.AssetSHA256), NodeIDs: make([]string, 0, 4)}
 	g := &types.GenesisDoc{GenesisTime: time.Now().UTC(), ChainID: poolapp.ChainID, InitialHeight: 1, ConsensusParams: types.DefaultConsensusParams()}
-	g.ConsensusParams.Version.App = poolapp.AppVersion
+	g.ConsensusParams.Version.App = poolapp.AppVersionForProfile(profile)
 	g.ConsensusParams.Block.MaxBytes = 512 * 1024
 	g.ConsensusParams.Evidence.MaxBytes = 64 * 1024
 	g.ConsensusParams.Validator.PubKeyTypes = []string{"ed25519"}

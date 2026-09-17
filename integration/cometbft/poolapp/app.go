@@ -15,6 +15,20 @@ import (
 const ChainID = poolbridge.Network
 const Version = "0.3.3-proposal-selection-lab"
 const AppVersion uint64 = 2
+const ActiveAppVersion uint64 = 3
+
+// AppVersionForProfile is fixed by the pinned test-genesis format. It is not a
+// caller-selected consensus parameter and unknown profiles have no version.
+func AppVersionForProfile(profile poolbridge.StorageProfile) uint64 {
+	switch profile {
+	case poolbridge.LegacyJournal:
+		return AppVersion
+	case poolbridge.ActiveSegmentsV1:
+		return ActiveAppVersion
+	default:
+		return 0
+	}
+}
 
 type Application struct {
 	abci.BaseApplication
@@ -71,7 +85,7 @@ func (a *Application) Info(ctx context.Context, _ *abci.RequestInfo) (*abci.Resp
 	if e != nil {
 		return nil, a.failure(e)
 	}
-	return &abci.ResponseInfo{Data: "Zevune NO-FUNDS Orchard consensus lab", Version: Version, AppVersion: AppVersion, LastBlockHeight: int64(s.Height), LastBlockAppHash: append([]byte(nil), s.AppHash[:]...)}, nil
+	return &abci.ResponseInfo{Data: "Zevune NO-FUNDS Orchard consensus lab", Version: Version, AppVersion: AppVersionForProfile(a.client.Profile()), LastBlockHeight: int64(s.Height), LastBlockAppHash: append([]byte(nil), s.AppHash[:]...)}, nil
 }
 func (a *Application) InitChain(ctx context.Context, r *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
 	a.mu.Lock()
@@ -79,7 +93,7 @@ func (a *Application) InitChain(ctx context.Context, r *abci.RequestInitChain) (
 	if e := a.ready(); e != nil {
 		return nil, e
 	}
-	if r == nil || r.ChainId != ChainID || r.InitialHeight != 1 || !validGenesisState(r.AppStateBytes, a.genesis) || len(r.Validators) != 4 || r.ConsensusParams == nil {
+	if r == nil || r.ChainId != ChainID || r.InitialHeight != 1 || !validGenesisState(r.AppStateBytes, a.genesis) || len(r.Validators) != 4 || r.ConsensusParams == nil || r.ConsensusParams.Version == nil || r.ConsensusParams.Version.App != AppVersionForProfile(a.client.Profile()) {
 		return nil, poolbridge.ErrRejected
 	}
 	if r.ConsensusParams.Abci != nil && r.ConsensusParams.Abci.VoteExtensionsEnableHeight != 0 {
@@ -192,7 +206,7 @@ func (a *Application) FinalizeBlock(ctx context.Context, r *abci.RequestFinalize
 	}
 	var hash poolbridge.Hash
 	copy(hash[:], r.Hash)
-	raw, e := poolbridge.BlockBytes(uint64(r.Height), hash, r.Txs)
+	raw, e := a.client.BlockBytes(uint64(r.Height), hash, r.Txs)
 	if e != nil {
 		return nil, e
 	}

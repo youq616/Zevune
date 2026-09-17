@@ -1,4 +1,5 @@
 use super::*;
+use crate::pool::root_cache_tests::{assert_candidate_sequence, assert_state};
 use crate::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use crate::wallet::{Wallet, WalletProver};
 use rand::{rngs::OsRng, RngCore};
@@ -82,6 +83,8 @@ fn genuine_selection_matches_prefix_reference_and_never_persists() {
         );
     }
     let before = pool.summary().unwrap();
+    assert_candidate_sequence(&pool, &txs[0], &txs[1]);
+    assert_eq!(assert_state(&pool.state), before);
     let original = journal(&mut pool);
     let mut bad_signature = txs[0].clone();
     *bad_signature.last_mut().unwrap() ^= 1;
@@ -151,11 +154,13 @@ fn genuine_selection_matches_prefix_reference_and_never_persists() {
         PoolError::FeeOverflow
     );
     assert_eq!(candidate.summary(), unchanged);
+    assert_eq!(assert_state(&candidate), unchanged);
 
     // Selection is not a reservation or reusable commit permission.
     let prepared = pool.prepare(1, [1; 32], &txs).unwrap();
     let committed = pool.commit(prepared).unwrap();
     assert_eq!(committed, actual.result);
+    assert_eq!(assert_state(&pool.state), committed);
     assert_eq!(
         pool.select_proposal(2, [2; 32], MAX_PROPOSAL_BYTES, &txs)
             .unwrap()
@@ -165,6 +170,7 @@ fn genuine_selection_matches_prefix_reference_and_never_persists() {
     drop(pool);
     let reopened = genesis.open_pool(&path).unwrap();
     assert_eq!(reopened.summary().unwrap(), committed);
+    assert_eq!(assert_state(&reopened.state), committed);
     assert_eq!(
         reopened
             .select_proposal(2, [2; 32], MAX_PROPOSAL_BYTES, &txs)

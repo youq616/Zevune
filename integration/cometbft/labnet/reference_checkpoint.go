@@ -7,13 +7,20 @@ import (
 )
 
 func validateReferenceCheckpoint(o SyncOptions, expected *StorageCheckpoint) error {
+	return (&Network{}).validateReferenceCheckpoint(o, expected)
+}
+
+func (n *Network) validateReferenceCheckpoint(o SyncOptions, expected *StorageCheckpoint) error {
+	if n == nil {
+		return ErrBounds
+	}
 	if expected == nil {
 		return nil
 	}
 	if o.Create {
 		return ErrBounds
 	}
-	return expected.Validate()
+	return n.ValidateStorageCheckpoint(*expected)
 }
 
 // This runs on the worker that will execute the sync, after genuine replay and

@@ -83,9 +83,29 @@ class NetworkIdentityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             wallet.genesis_identity(self.root, self.pin)
 
+    def test_active_manifest_keeps_lab2_payments_and_isolates_legacy_domain(self):
+        raw = b"ZVTGEN03" + self.raw[8:]
+        pin = hashlib.sha256(raw).hexdigest()
+        self.file.write_bytes(raw)
+        identity = wallet.genesis_identity(self.file, pin)
+        self.assertEqual(identity, {
+            "payment_profile": "LAB2", "signing_domain": pin, "genesis_sha256": pin})
+        self.assertNotEqual(pin, self.pin)
+        self.assertEqual(wallet.checked_recipient(address(pin), identity["signing_domain"]), address(pin))
+        for wrong in (address(self.pin), address()):
+            with self.assertRaises(wallet.NetworkMismatch):
+                wallet.checked_recipient(wrong, identity["signing_domain"])
+        self.assertEqual(self.file.read_bytes(), raw)
+        with self.assertRaises(ValueError):
+            wallet.genesis_identity(self.file, self.pin)
+        malformed = raw[:50] + bytes(32) + raw[82:]
+        self.file.write_bytes(malformed)
+        with self.assertRaises(ValueError):
+            wallet.genesis_identity(self.file, hashlib.sha256(malformed).hexdigest())
+
     def test_truncated_unknown_overlarge_and_wrong_network_frames_fail(self):
         samples = [self.raw[:end] for end in range(len(self.raw))]
-        samples += [self.raw + b"x", bytes(1923), b"ZVTGEN03" + self.raw[8:],
+        samples += [self.raw + b"x", bytes(1923), b"ZVTGEN04" + self.raw[8:],
                     self.raw[:8] + bytes(32) + self.raw[40:],
                     self.raw[:50] + bytes(32) + self.raw[82:]]
         for raw in samples:

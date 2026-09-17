@@ -1,7 +1,7 @@
 //! Opt-in, fixed-supply, NO-FUNDS local test genesis. Not a mainnet issuance rule.
 //! Initial allocations (addresses, amounts and note openings) are PUBLIC. Ordinary
 //! payments still use the unchanged real Orchard verifier; no later mint exists.
-use super::{history::WalletHistory, Hash, PoolError, PoolStore, State, Summary};
+use super::{history::WalletHistory, Hash, PoolError, PoolStore, State, StorageProfile, Summary};
 use orchard::note::{ExtractedNoteCommitment, RandomSeed, Rho};
 use orchard::value::NoteValue;
 use orchard::{Address, Note, NoteVersion};
@@ -14,6 +14,7 @@ use std::path::Path;
 
 const LEGACY_MAGIC: &[u8; 8] = b"ZVTGEN01";
 const MAGIC: &[u8; 8] = b"ZVTGEN02";
+const ACTIVE_MAGIC: &[u8; 8] = b"ZVTGEN03";
 const LEGACY_HEADER: usize = 50;
 const HEADER: usize = 82;
 const ENTRY: usize = 115;
@@ -29,6 +30,17 @@ pub struct TestGenesis {
 }
 impl TestGenesis {
     pub fn generate(allocations: &[(Address, u64)]) -> Result<Self, PoolError> {
+        Self::generate_profile(allocations, StorageProfile::LegacyJournal)
+    }
+    /// Create a NEW fixed-profile NO-FUNDS deployment. Does not upgrade or
+    /// reinterpret an existing manifest, payment domain, or journal.
+    pub fn generate_active(allocations: &[(Address, u64)]) -> Result<Self, PoolError> {
+        Self::generate_profile(allocations, StorageProfile::ActiveSegmentsV1)
+    }
+    fn generate_profile(
+        allocations: &[(Address, u64)],
+        profile: StorageProfile,
+    ) -> Result<Self, PoolError> {
         if allocations.is_empty() || allocations.len() > MAX_ALLOCATIONS {
             return Err(PoolError::Genesis);
         }
@@ -42,7 +54,10 @@ impl TestGenesis {
         if total != TEST_SUPPLY {
             return Err(PoolError::Genesis);
         }
-        let mut bytes = MAGIC.to_vec();
+        let mut bytes = match profile {
+            StorageProfile::LegacyJournal => MAGIC.to_vec(),
+            StorageProfile::ActiveSegmentsV1 => ACTIVE_MAGIC.to_vec(),
+        };
         bytes.extend_from_slice(&Sha256::digest(crate::NETWORK.as_bytes()));
         bytes.extend_from_slice(&TEST_SUPPLY.to_be_bytes());
         bytes.extend_from_slice(&(allocations.len() as u16).to_be_bytes());
@@ -95,16 +110,16 @@ impl TestGenesis {
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, PoolError> {
         if !(LEGACY_HEADER + ENTRY..=MAX_GENESIS_BYTES).contains(&bytes.len())
-            || (&bytes[..8] != MAGIC && &bytes[..8] != LEGACY_MAGIC)
+            || (&bytes[..8] != MAGIC && &bytes[..8] != LEGACY_MAGIC && &bytes[..8] != ACTIVE_MAGIC)
             || bytes[8..40] != Sha256::digest(crate::NETWORK.as_bytes())[..]
             || bytes[40..48] != TEST_SUPPLY.to_be_bytes()
         {
             return Err(PoolError::Genesis);
         }
-        let header = if &bytes[..8] == MAGIC {
-            HEADER
-        } else {
+        let header = if &bytes[..8] == LEGACY_MAGIC {
             LEGACY_HEADER
+        } else {
+            HEADER
         };
         let count =
             u16::from_be_bytes(bytes[48..50].try_into().map_err(|_| PoolError::Genesis)?) as usize;
@@ -173,10 +188,17 @@ impl TestGenesis {
     /// The deployment policy comes from an independently pinned manifest, not
     /// a transaction. Reusing an identical manifest deliberately reuses identity.
     pub fn signing_domain(&self) -> Option<Hash> {
-        if self.bytes.get(..8) == Some(MAGIC.as_slice()) {
+        if self.bytes.get(..8) != Some(LEGACY_MAGIC.as_slice()) {
             Some(self.digest())
         } else {
             None
+        }
+    }
+    pub fn storage_profile(&self) -> StorageProfile {
+        if self.bytes.get(..8) == Some(ACTIVE_MAGIC.as_slice()) {
+            StorageProfile::ActiveSegmentsV1
+        } else {
+            StorageProfile::LegacyJournal
         }
     }
     fn commitments(&self) -> Vec<Hash> {
@@ -186,19 +208,36 @@ impl TestGenesis {
             .collect()
     }
     pub fn initial_summary(&self) -> Result<Summary, PoolError> {
-        Ok(State::from_policy(&self.commitments(), self.signing_domain())?.summary())
+        Ok(State::from_storage_policy(
+            &self.commitments(),
+            self.signing_domain(),
+            self.storage_profile(),
+        )?
+        .summary())
     }
     pub fn create_pool(&self, path: &Path) -> Result<PoolStore, PoolError> {
-        PoolStore::create_with_policy(path, &self.commitments(), self.signing_domain())
+        PoolStore::create_with_profile(
+            path,
+            &self.commitments(),
+            self.signing_domain(),
+            self.storage_profile(),
+        )
     }
     pub fn open_pool(&self, path: &Path) -> Result<PoolStore, PoolError> {
-        PoolStore::open_with_policy(path, &self.commitments(), self.signing_domain())
+        PoolStore::open_with_profile(
+            path,
+            &self.commitments(),
+            self.signing_domain(),
+            self.storage_profile(),
+        )
     }
     /// Attach public genesis allocations ONLY after full journal authorization
     /// replay and exact commitment-order comparison. No remote peer is trusted.
     pub fn wallet_history(&self, pool: &mut PoolStore) -> Result<WalletHistory, PoolError> {
         let mut history = pool.wallet_history()?;
-        if history.initial != self.commitments() || history.signing_domain != self.signing_domain()
+        if pool.storage_profile() != self.storage_profile()
+            || history.initial != self.commitments()
+            || history.signing_domain != self.signing_domain()
         {
             return Err(PoolError::Genesis);
         }

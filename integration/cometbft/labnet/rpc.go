@@ -15,7 +15,6 @@ import (
 )
 
 const maxResponseBytes int64 = 2 * 1024 * 1024
-const maxHeight int64 = 10000
 const maxSyncBlocks uint64 = 128
 
 // Endpoint validation intentionally disallows DNS, proxies, user-info, redirects,

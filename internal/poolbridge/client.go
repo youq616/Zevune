@@ -71,6 +71,9 @@ type Client struct {
 	once    sync.Once
 	timeout time.Duration
 	id      uint64
+	profile StorageProfile
+	// Derived from the authenticated manifest, never from a capacity reply.
+	headerBytes uint64
 }
 
 func Start(ctx context.Context, o Options) (*Client, error) {
@@ -111,11 +114,11 @@ func Start(ctx context.Context, o Options) (*Client, error) {
 	if o.Create {
 		mode = "create"
 	}
-	args, err := o.workerArgs(mode)
+	launch, err := o.workerLaunch(mode)
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(o.Executable, args...)
+	cmd := exec.Command(o.Executable, launch.args...)
 	cmd.Dir = filepath.Dir(o.Executable)
 	cmd.Env = []string{"RAYON_NUM_THREADS=2"}
 	for _, entry := range os.Environ() {
@@ -124,9 +127,16 @@ func Start(ctx context.Context, o Options) (*Client, error) {
 			cmd.Env = append(cmd.Env, entry)
 		}
 	}
-	return start(ctx, cmd, o)
+	return startProfile(ctx, cmd, o, launch.profile, launch.headerBytes)
 }
 func start(ctx context.Context, cmd *exec.Cmd, o Options) (*Client, error) {
+	return startProfile(ctx, cmd, o, LegacyJournal, 44)
+}
+func startProfile(ctx context.Context, cmd *exec.Cmd, o Options, profile StorageProfile, headerBytes uint64) (*Client, error) {
+	if !profile.valid() || (profile == ActiveSegmentsV1 &&
+		(headerBytes < 108 || headerBytes > 76+32*testGenesisMaxAllocations || (headerBytes-76)%32 != 0)) {
+		return nil, ErrBounds
+	}
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, ErrUnavailable
@@ -142,13 +152,23 @@ func start(ctx context.Context, cmd *exec.Cmd, o Options) (*Client, error) {
 		_ = out.Close()
 		return nil, ErrUnavailable
 	}
-	c := &Client{cmd: cmd, in: in, out: out, done: make(chan struct{}), stopped: make(chan struct{}), gate: make(chan struct{}, 1), timeout: o.RequestTimeout}
+	c := &Client{
+		cmd:         cmd,
+		in:          in,
+		out:         out,
+		done:        make(chan struct{}),
+		stopped:     make(chan struct{}),
+		gate:        make(chan struct{}, 1),
+		timeout:     o.RequestTimeout,
+		profile:     profile,
+		headerBytes: headerBytes,
+	}
 	c.gate <- struct{}{}
 	go func() { _ = cmd.Wait(); close(c.done) }()
 	ready := make(chan error, 1)
 	go func() {
 		b, e := readFrame(out, 40)
-		fp := sha256.Sum256([]byte(domain))
+		fp := sha256.Sum256([]byte(profile.ipcDomain()))
 		if e == nil && (len(b) != 40 || string(b[:8]) != "ZVPLHEL1" || !bytes.Equal(b[8:], fp[:])) {
 			e = ErrProtocol
 		}
@@ -213,8 +233,11 @@ func writeFrame(w io.Writer, b []byte) error {
 	return writeAll(w, b)
 }
 func decodeSummary(b []byte) (Summary, error) {
+	return LegacyJournal.decodeSummary(b)
+}
+func (p StorageProfile) decodeSummary(b []byte) (Summary, error) {
 	var s Summary
-	if len(b) != 96 {
+	if len(b) != 96 || !p.valid() {
 		return s, ErrProtocol
 	}
 	s.Height = binary.BigEndian.Uint64(b[:8])
@@ -223,13 +246,22 @@ func decodeSummary(b []byte) (Summary, error) {
 	s.Commitments = binary.BigEndian.Uint64(b[72:80])
 	s.Nullifiers = binary.BigEndian.Uint64(b[80:88])
 	s.Fees = binary.BigEndian.Uint64(b[88:96])
-	if s.Height > 10000 || s.Commitments > 65536 || s.Nullifiers > 65536 {
+	if s.Height > p.MaxHeight() || s.Commitments > 65536 || s.Nullifiers > 65536 {
 		return Summary{}, ErrProtocol
 	}
 	return s, nil
 }
+
+// BlockBytes retains the legacy single-journal bounds. Use a pinned Client's
+// method when encoding an active-profile candidate for an ABCI commit tag.
 func BlockBytes(height uint64, hash Hash, txs [][]byte) ([]byte, error) {
-	if height == 0 || height > 10000 || hash == (Hash{}) || len(txs) > MaxTransactions {
+	return LegacyJournal.BlockBytes(height, hash, txs)
+}
+
+// BlockBytes preserves the existing wire layout while enforcing this fixed
+// profile's height limit. Encoding alone is not block or spend authorization.
+func (p StorageProfile) BlockBytes(height uint64, hash Hash, txs [][]byte) ([]byte, error) {
+	if !p.valid() || height == 0 || height > p.MaxHeight() || hash == (Hash{}) || len(txs) > MaxTransactions {
 		return nil, ErrBounds
 	}
 	b := make([]byte, 42)
@@ -248,17 +280,24 @@ func BlockBytes(height uint64, hash Hash, txs [][]byte) ([]byte, error) {
 	return b, nil
 }
 func (c *Client) exchange(ctx context.Context, op byte, payload []byte) (Summary, error) {
-	return c.exchangeMask(ctx, op, payload, nil)
+	return c.exchangeReply(ctx, op, payload, nil, nil)
 }
 func (c *Client) exchangeMask(ctx context.Context, op byte, payload []byte, mask *uint64) (Summary, error) {
-	if (op == 5) != (mask != nil) || op > 5 {
+	return c.exchangeReply(ctx, op, payload, mask, nil)
+}
+func (c *Client) exchangeReply(ctx context.Context, op byte, payload []byte, mask *uint64, capacity *ActiveStorage) (Summary, error) {
+	if (op == 5) != (mask != nil) || (op == 6) != (capacity != nil) || op > 6 || !c.profile.valid() ||
+		(op == 6 && (c.profile != ActiveSegmentsV1 || len(payload) != 0)) {
 		return Summary{}, ErrBounds
 	}
 	expectedSize := 145
 	if mask != nil {
 		expectedSize += 8
 	}
-	if ctx == nil || op > 5 || len(payload) > maxFrame-17 {
+	if capacity != nil {
+		expectedSize += 16
+	}
+	if ctx == nil || len(payload) > maxFrame-17 {
 		return Summary{}, ErrBounds
 	}
 	if e := ctx.Err(); e != nil {
@@ -327,7 +366,7 @@ func (c *Client) exchangeMask(ctx context.Context, op byte, payload []byte, mask
 		_ = c.Close()
 		return Summary{}, ErrProtocol
 	}
-	s, e := decodeSummary(b[49:145])
+	s, e := c.profile.decodeSummary(b[49:145])
 	if e != nil {
 		_ = c.Close()
 		return Summary{}, e
@@ -348,6 +387,21 @@ func (c *Client) exchangeMask(ctx context.Context, op byte, payload []byte, mask
 			return Summary{}, ErrProtocol
 		}
 	}
+	if capacity != nil {
+		if b[16] == 1 {
+			if !bytes.Equal(b[145:161], make([]byte, 16)) {
+				_ = c.Close()
+				return Summary{}, ErrProtocol
+			}
+		} else {
+			decoded, err := decodeActiveStorage(s, b[145:161], c.headerBytes)
+			if err != nil {
+				_ = c.Close()
+				return Summary{}, err
+			}
+			*capacity = decoded
+		}
+	}
 	if b[16] == 1 {
 		return Summary{}, ErrRejected
 	}
@@ -362,14 +416,14 @@ func (c *Client) Check(ctx context.Context, tx []byte) error {
 	return e
 }
 func (c *Client) Preview(ctx context.Context, height uint64, hash Hash, txs [][]byte) (Summary, error) {
-	b, e := BlockBytes(height, hash, txs)
+	b, e := c.BlockBytes(height, hash, txs)
 	if e != nil {
 		return Summary{}, e
 	}
 	return c.exchange(ctx, 1, b)
 }
 func (c *Client) Finalize(ctx context.Context, height uint64, hash Hash, txs [][]byte) (Summary, Hash, error) {
-	b, e := BlockBytes(height, hash, txs)
+	b, e := c.BlockBytes(height, hash, txs)
 	if e != nil {
 		return Summary{}, Hash{}, e
 	}

@@ -2,8 +2,8 @@
 //! is unpublished: a failure consumes it, and only exact EOF permits finish().
 //! Frame checksums detect damage; every record still executes real authorization.
 use super::{
-    Hash, PoolError, Record, State, Summary, BOUND_FILE_MAGIC, FILE_MAGIC, MAX_COMMITMENTS,
-    MAX_JOURNAL_BYTES, MAX_RECORDS, MAX_RECORD_BYTES, NETWORK,
+    Hash, PoolError, Record, State, StorageProfile, Summary, ACTIVE_FILE_MAGIC, BOUND_FILE_MAGIC,
+    FILE_MAGIC, MAX_COMMITMENTS, MAX_JOURNAL_BYTES, MAX_RECORDS, MAX_RECORD_BYTES, NETWORK,
 };
 use crate::wire::AuthorizationVerifier;
 use sha2::{Digest, Sha256};
@@ -18,7 +18,15 @@ pub(super) struct Header {
 }
 
 pub(super) fn read_header<R: Read>(reader: &mut R, length: u64) -> Result<Header, PoolError> {
-    if !(44..=MAX_JOURNAL_BYTES).contains(&length) {
+    read_header_profile(reader, length, StorageProfile::LegacyJournal)
+}
+
+pub(super) fn read_header_profile<R: Read>(
+    reader: &mut R,
+    length: u64,
+    profile: StorageProfile,
+) -> Result<Header, PoolError> {
+    if !(44..=profile.max_journal_bytes()).contains(&length) {
         return Err(PoolError::Bounds);
     }
     let mut fixed = [0; 40];
@@ -29,8 +37,11 @@ pub(super) fn read_header<R: Read>(reader: &mut R, length: u64) -> Result<Header
         return Err(PoolError::Genesis);
     }
     let signing_domain = match &fixed[..8] {
-        magic if magic == FILE_MAGIC => None,
-        magic if magic == BOUND_FILE_MAGIC => {
+        magic if magic == FILE_MAGIC && profile == StorageProfile::LegacyJournal => None,
+        magic
+            if (magic == BOUND_FILE_MAGIC && profile == StorageProfile::LegacyJournal)
+                || (magic == ACTIVE_FILE_MAGIC && profile == StorageProfile::ActiveSegmentsV1) =>
+        {
             if length < 76 {
                 return Err(PoolError::Bounds);
             }
@@ -99,12 +110,23 @@ struct Records<R> {
     length: u64,
     consumed: u64,
     count: u64,
+    max_records: u64,
     exhausted: bool,
     body: Vec<u8>,
 }
 impl<R: Read> Records<R> {
     fn new(reader: R, length: u64, consumed: u64) -> Result<Self, PoolError> {
-        if consumed > length || length > MAX_JOURNAL_BYTES {
+        Self::with_limits(reader, length, consumed, MAX_JOURNAL_BYTES, MAX_RECORDS)
+    }
+
+    fn with_limits(
+        reader: R,
+        length: u64,
+        consumed: u64,
+        max_bytes: u64,
+        max_records: u64,
+    ) -> Result<Self, PoolError> {
+        if consumed > length || length > max_bytes {
             return Err(PoolError::Bounds);
         }
         Ok(Self {
@@ -112,6 +134,7 @@ impl<R: Read> Records<R> {
             length,
             consumed,
             count: 0,
+            max_records,
             exhausted: false,
             body: Vec::new(),
         })
@@ -128,7 +151,7 @@ impl<R: Read> Records<R> {
             self.exhausted = true;
             return Ok(None);
         }
-        if self.count >= MAX_RECORDS {
+        if self.count >= self.max_records {
             return Err(PoolError::Bounds);
         }
         if self.length - self.consumed < 4 {
@@ -195,7 +218,16 @@ impl<R: Read> Replay<R> {
         header_size: u64,
         state: State,
     ) -> Result<Self, PoolError> {
-        let records = Records::new(reader, length, header_size)?;
+        let records = match state.profile {
+            StorageProfile::LegacyJournal => Records::new(reader, length, header_size)?,
+            StorageProfile::ActiveSegmentsV1 => Records::with_limits(
+                reader,
+                length,
+                header_size,
+                state.profile.max_journal_bytes(),
+                state.profile.max_records(),
+            )?,
+        };
         let summary = state.summary();
         Ok(Self {
             records,

@@ -1,6 +1,7 @@
 //! Interactive, bounded NO-FUNDS integration driver, not a general wallet CLI.
 //! Creates three ephemeral encrypted wallets. Secrets remain in this process;
 //! the Go test coordinator exchanges only public blocks, proofs and test results.
+//! The optional --active-segments-v1 argument creates a distinct new genesis.
 #![forbid(unsafe_code)]
 use rand::{rngs::OsRng, RngCore};
 use std::error::Error;
@@ -74,7 +75,7 @@ struct Scenario {
     backup_counter: u64,
 }
 impl Scenario {
-    fn new(root: &Path) -> Result<Self> {
+    fn new(root: &Path, active_segments: bool) -> Result<Self> {
         ensure(root.is_absolute() && fs::symlink_metadata(root)?.file_type().is_dir())?;
         ensure(fs::read_dir(root)?.next().is_none())?;
         let mut wallets = Vec::new();
@@ -87,10 +88,18 @@ impl Scenario {
             passwords.push(password);
         }
         let w = wallets[0].as_ref().ok_or_else(bad)?.view()?;
-        let genesis = TestGenesis::generate(&[
+        let allocations = [
             (w.receive_address(0)?, 50_000),
             (w.receive_address(1)?, 50_000),
-        ])?;
+        ];
+        // This is an explicit new laboratory genesis, never a migration or a
+        // capacity override for an existing deployment. Both modes keep the
+        // same genuine Orchard payments and fixed public test allocation.
+        let genesis = if active_segments {
+            TestGenesis::generate_active(&allocations)?
+        } else {
+            TestGenesis::generate(&allocations)?
+        };
         genesis.write_new(&root.join("test-genesis.bin"))?;
         let pool = genesis.create_pool(&root.join("replay.journal"))?;
         let mut s = Self {
@@ -248,8 +257,12 @@ impl Scenario {
 }
 fn run() -> Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
-    ensure(args.len() == 2)?;
-    let mut scenario = Scenario::new(Path::new(&args[1]))?;
+    let active_segments = match args.as_slice() {
+        [_, _] => false,
+        [_, _, flag] if flag == "--active-segments-v1" => true,
+        _ => return Err(bad().into()),
+    };
+    let mut scenario = Scenario::new(Path::new(&args[1]), active_segments)?;
     let mut ready = scenario.genesis.digest().to_vec();
     ready.extend_from_slice(&summary(&scenario.genesis.initial_summary()?));
     let stdin = io::stdin();

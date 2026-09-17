@@ -8,11 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/youq616/Zevune/internal/poolbridge"
 )
 
 // ErrCopyPublicationUncertain never authorizes deletion or automatic retry. A
 // complete destination may exist even though publication acknowledgement failed.
 var ErrCopyPublicationUncertain = errors.New("journal copy publication uncertain; inspect the destination at the retained checkpoint before retrying")
+
+// Active segments have no legacy single-file copy/recovery representation.
+var ErrStorageProfile = errors.New("operation is unsupported for this authenticated storage profile")
 
 type StorageCopyOptions struct {
 	Worker      string
@@ -45,6 +50,9 @@ type StorageCopyReport struct {
 // the exact staged copy must independently replay to Expected before publication.
 // This is not a hot backup, a state-only snapshot, pruning, or a capacity increase.
 func (n *Network) CopyStorageAtCheckpoint(ctx context.Context, o StorageCopyOptions) (StorageCopyReport, error) {
+	if n != nil && n.profile != poolbridge.LegacyJournal {
+		return StorageCopyReport{}, ErrStorageProfile
+	}
 	if ctx == nil || n == nil || ctx.Err() != nil || o.Expected.Validate() != nil ||
 		!filepath.IsAbs(o.Worker) || o.WorkerPin == (Hash{}) {
 		return StorageCopyReport{}, ErrBounds
