@@ -381,17 +381,19 @@ class EvidenceCollectorBoundaryTests(unittest.TestCase):
 
     def test_cleanup_does_not_restart_its_existing_deadline(self):
         # All operations are test doubles. No native process is signaled here.
+        # Supply both Linux-only attributes when this fixture runs on Windows.
         process = mock.Mock(pid=99, returncode=None)
         process.poll.return_value = None
         process._zevune_cleanup_deadline = 101.0
         process.wait.side_effect = [subprocess.TimeoutExpired("fixture", 1), 0]
         with mock.patch.object(resource.time, "monotonic", return_value=100.0), \
                 mock.patch.object(resource.sys, "platform", "linux"), \
-                mock.patch.object(resource.os, "killpg") as kill_group:
+                mock.patch.object(resource.os, "killpg", create=True) as kill_group, \
+                mock.patch.object(resource.signal, "SIGKILL", 9, create=True):
             resource.stop_test(process, None)
         self.assertEqual(process._zevune_cleanup_deadline, 101.0)
         self.assertEqual(process.wait.call_args_list, [mock.call(timeout=1.0), mock.call(timeout=1.0)])
-        kill_group.assert_called_once_with(99, resource.signal.SIGKILL)
+        kill_group.assert_called_once_with(99, 9)
         process.kill.assert_called_once_with()
 
 
