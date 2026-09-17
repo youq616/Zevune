@@ -115,6 +115,77 @@ fn archive_and_restore(
     restored_path
 }
 
+// The expected physical ranges come from the actual committed file lengths at
+// each payment boundary, independently of the implementation's range builder.
+// Rebuilding below is only a test of this read-only plan, not a recovery API.
+fn assert_incremental_plan(
+    dir: &Dir,
+    label: &str,
+    base_path: &Path,
+    base_pin: ActiveRecoveryCheckpoint,
+    later_path: &Path,
+    later_pin: ActiveRecoveryCheckpoint,
+    expected: &[(u32, u32, u32)],
+) {
+    let original_base = directory_bytes(base_path);
+    let original_later = directory_bytes(later_path);
+    let mut base = ActiveArchive::open(base_path, base_pin).unwrap();
+    let mut later = ActiveArchive::open(later_path, later_pin).unwrap();
+    let plan = base.incremental_plan(&mut later).unwrap();
+    assert_eq!(plan.base_checkpoint(), base_pin);
+    assert_eq!(plan.checkpoint(), later_pin);
+    assert_eq!(plan.reused_bytes(), base_pin.length());
+    assert_eq!(plan.appended_bytes(), later_pin.length() - base_pin.length());
+    assert_eq!(
+        plan.new_segment_count(),
+        later_pin.segment_count() - base_pin.segment_count()
+    );
+    let ranges: Vec<_> = plan
+        .ranges()
+        .iter()
+        .map(|range| (range.segment_index(), range.offset(), range.length()))
+        .collect();
+    assert_eq!(ranges, expected);
+    assert_eq!(
+        ranges.iter().map(|range| u64::from(range.2)).sum::<u64>(),
+        plan.appended_bytes()
+    );
+    let unchanged = (0..base_pin.segment_count())
+        .filter(|index| {
+            let name = format!("{index:08}.journal");
+            original_base[&name] == original_later[&name]
+        })
+        .count();
+    assert_eq!(
+        plan.unchanged_segment_count(),
+        u32::try_from(unchanged).unwrap()
+    );
+    let mut rebuilt = original_base.clone();
+    for &(index, offset, length) in &ranges {
+        assert!(length > 0);
+        let name = format!("{index:08}.journal");
+        let end = offset.checked_add(length).unwrap();
+        let suffix = &original_later[&name][offset as usize..end as usize];
+        let target = rebuilt.entry(name).or_default();
+        assert_eq!(target.len(), offset as usize);
+        target.extend_from_slice(suffix);
+    }
+    assert!(
+        rebuilt == original_later,
+        "plan did not rebuild the later bytes"
+    );
+    drop(later);
+    drop(base);
+    assert!(directory_bytes(base_path) == original_base);
+    assert!(directory_bytes(later_path) == original_later);
+    let reconstructed_path = dir.path(&format!("{label}-plan-rebuilt"));
+    write_directory(&reconstructed_path, &rebuilt);
+    let mut reconstructed = ActiveArchive::open(&reconstructed_path, later_pin).unwrap();
+    reconstructed.verify().unwrap();
+    drop(reconstructed);
+    assert!(directory_bytes(&reconstructed_path) == original_later);
+}
+
 // Test-only recomputation of EVERY ordinary archive checksum. This deliberately
 // models an attacker supplying both changed bytes and an untrusted matching pin;
 // only genuine authorization may reject a rehashed invalid binding signature.
@@ -216,6 +287,30 @@ fn assert_noncanonical_layouts_reject(
         ActiveArchive::open(&path, forged_pin),
         Err(PoolError::Authorization)
     ));
+    // The public planning chain cannot acquire an invalid archive: open must
+    // reject the rehashed bad signature before incremental_plan is reached.
+    // Check each role, with an authentic same-content plan as a positive control.
+    let mut valid_base = ActiveArchive::open(&archive_control, original_pin).unwrap();
+    let mut valid_later = ActiveArchive::open(&archive_control, original_pin).unwrap();
+    assert!(valid_base
+        .incremental_plan(&mut valid_later)
+        .unwrap()
+        .ranges()
+        .is_empty());
+    assert!(matches!(
+        ActiveArchive::open(&path, forged_pin)
+            .and_then(|mut bad_later| valid_base.incremental_plan(&mut bad_later)),
+        Err(PoolError::Authorization)
+    ));
+    assert!(matches!(
+        ActiveArchive::open(&path, forged_pin)
+            .and_then(|mut bad_base| bad_base.incremental_plan(&mut valid_later)),
+        Err(PoolError::Authorization)
+    ));
+    valid_base.verify().unwrap();
+    valid_later.verify().unwrap();
+    drop(valid_later);
+    drop(valid_base);
     assert_eq!(directory_bytes(&path), forged);
     assert_eq!(directory_bytes(&archive_control), *original);
 
@@ -467,6 +562,13 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(before_payment.1, 108 + (padding * EMPTY_FRAME_BYTES) as u64);
     assert_eq!(before_payment.2, 1);
     assert_eq!(before_payment.3 as usize, padding * EMPTY_FRAME_BYTES);
+    let before_payment_pin = pool.active_recovery_checkpoint().unwrap();
+    drop(pool);
+    let before_payment_path = dir.path("before-rotation");
+    let before_payment_bytes = directory_bytes(&path);
+    write_directory(&before_payment_path, &before_payment_bytes);
+    let mut pool = genesis.open_pool(&path).unwrap();
+    assert_eq!(pool.active_capacity().unwrap(), before_payment);
     alice
         .sync(&genesis.wallet_history(&mut pool).unwrap())
         .unwrap();
@@ -519,6 +621,17 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(rotated_pin.segment_count(), 2);
     assert_eq!(rotated_pin.length(), after_payment.1);
     drop(pool);
+    assert_incremental_plan(
+        &dir,
+        "payment-rotation",
+        &before_payment_path,
+        before_payment_pin,
+        &path,
+        rotated_pin,
+        &[(1, 0, u32::try_from(first_frame_bytes).unwrap())],
+    );
+    assert!(directory_bytes(&before_payment_path) == before_payment_bytes);
+    let rotated_source = path.clone();
     let path = archive_and_restore(&dir, &path, rotated_pin, "rotated-payment");
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.active_capacity().unwrap(), after_payment);
@@ -592,6 +705,19 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     );
     assert!(persisted["00000000.journal"].len() + first_frame_bytes > SEGMENT_LIMIT);
     assert!(persisted["00000001.journal"].len() <= SEGMENT_LIMIT);
+    assert_incremental_plan(
+        &dir,
+        "recovered-second-payment",
+        &rotated_source,
+        rotated_pin,
+        &path,
+        above_legacy_pin,
+        &[(
+            1,
+            u32::try_from(first_frame_bytes).unwrap(),
+            before_reopen.3 - u32::try_from(first_frame_bytes).unwrap(),
+        )],
+    );
 
     // Swap the two ACTUAL existing segments, retaining each complete record's
     // bytes and checksum. The old pin rejects the changed layout; even a newly
@@ -637,6 +763,7 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(directory_bytes(&path), persisted);
     assert_eq!(directory_bytes(&swapped_path), swapped);
 
+    let above_legacy_source = path.clone();
     let path = archive_and_restore(&dir, &path, above_legacy_pin, "above-legacy-limit");
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.summary().unwrap(), at_10001);
@@ -685,6 +812,17 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert_eq!(final_capacity.1, before_reopen.1 + EMPTY_FRAME_BYTES as u64);
     assert_eq!(final_capacity.2, 2);
     assert_eq!(final_capacity.3, before_reopen.3 + EMPTY_FRAME_BYTES as u32);
+    let final_pin = pool.active_recovery_checkpoint().unwrap();
+    drop(pool);
+    assert_incremental_plan(
+        &dir,
+        "recovered-next-block",
+        &above_legacy_source,
+        above_legacy_pin,
+        &path,
+        final_pin,
+        &[(1, before_reopen.3, EMPTY_FRAME_BYTES as u32)],
+    );
     println!(
         "active Rust growth: height={} logical_bytes={} segments={} archive_restore_heights={},10001 elapsed_ms={}",
         final_summary.height,

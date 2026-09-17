@@ -830,5 +830,7 @@ impl Read for ActiveReader {
     }
 }
 
+mod incremental;
+
 #[cfg(test)]
 mod tests;
