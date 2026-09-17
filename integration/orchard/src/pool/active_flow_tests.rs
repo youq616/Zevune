@@ -135,7 +135,10 @@ fn assert_incremental_plan(
     assert_eq!(plan.base_checkpoint(), base_pin);
     assert_eq!(plan.checkpoint(), later_pin);
     assert_eq!(plan.reused_bytes(), base_pin.length());
-    assert_eq!(plan.appended_bytes(), later_pin.length() - base_pin.length());
+    assert_eq!(
+        plan.appended_bytes(),
+        later_pin.length() - base_pin.length()
+    );
     assert_eq!(
         plan.new_segment_count(),
         later_pin.segment_count() - base_pin.segment_count()

@@ -24,7 +24,8 @@ impl Dir {
     fn new() -> Self {
         let mut nonce = [0; 16];
         OsRng.fill_bytes(&mut nonce);
-        let path = std::env::temp_dir().join(format!("zevune-active-incremental-cli-{}", hex(&nonce)));
+        let path =
+            std::env::temp_dir().join(format!("zevune-active-incremental-cli-{}", hex(&nonce)));
         fs::create_dir(&path).unwrap();
         Self(path)
     }
@@ -161,7 +162,10 @@ fn success(output: &Output, expected: &str) {
     );
     assert!(output.stderr.is_empty());
     assert!(output.stdout.is_ascii());
-    assert_eq!(output.stdout.iter().filter(|&&byte| byte == b'\n').count(), 1);
+    assert_eq!(
+        output.stdout.iter().filter(|&&byte| byte == b'\n').count(),
+        1
+    );
     assert_eq!(output.stdout, expected.as_bytes());
 }
 
@@ -304,7 +308,13 @@ fn active_incremental_cli_real_payments_restore_spend_and_rehashed_bad_signature
     assert!(alice.pending_id().is_none());
     drop(history);
     let second = bob
-        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)
+        .build_payment(
+            carol.receive_address(0).unwrap(),
+            40_000,
+            1_000,
+            100,
+            &prover,
+        )
         .unwrap()
         .bytes()
         .to_vec();
@@ -373,7 +383,10 @@ fn active_incremental_cli_real_payments_restore_spend_and_rehashed_bad_signature
         Err(PoolError::Authorization)
     ));
     failure(
-        &call_readonly(&plan_args(&source, base_pin, &forged_path, forged_pin), &dir),
+        &call_readonly(
+            &plan_args(&source, base_pin, &forged_path, forged_pin),
+            &dir,
+        ),
         &dir,
     );
     success(&call_readonly(&args, &dir), &expected);
@@ -526,7 +539,10 @@ fn active_incremental_cli_individually_valid_forks_rollback_and_networks_fail() 
         drop(right);
         drop(left);
         failure(
-            &call_readonly(&plan_args(&base.path, base.pin, &later.path, later.pin), &f.dir),
+            &call_readonly(
+                &plan_args(&base.path, base.pin, &later.path, later.pin),
+                &f.dir,
+            ),
             &f.dir,
         );
     }
@@ -543,7 +559,10 @@ fn active_incremental_cli_individually_valid_forks_rollback_and_networks_fail() 
 fn active_incremental_cli_wrong_pins_missing_and_damaged_bytes_fail_on_either_side() {
     let f = fixture(1, 3);
     let args = plan_args(&f.base.path, f.base.pin, &f.later.path, f.later.pin);
-    for (key, pin) in [("--base-checkpoint", f.later.pin), ("--checkpoint", f.base.pin)] {
+    for (key, pin) in [
+        ("--base-checkpoint", f.later.pin),
+        ("--checkpoint", f.base.pin),
+    ] {
         let mut wrong_pin = args.clone();
         set_option(&mut wrong_pin, key, hex(&pin.to_bytes()));
         failure(&call_readonly(&wrong_pin, &f.dir), &f.dir);

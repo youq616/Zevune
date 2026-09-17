@@ -154,9 +154,16 @@ impl ActiveJournal {
         }
         let mut appended = 0;
         if let Some(base) = self.segments.last() {
-            let index = self.segments.len().checked_sub(1).ok_or(PoolError::Bounds)?;
+            let index = self
+                .segments
+                .len()
+                .checked_sub(1)
+                .ok_or(PoolError::Bounds)?;
             let next = later.segments.get(index).ok_or(PoolError::Stale)?;
-            let length = next.length.checked_sub(base.length).ok_or(PoolError::Stale)?;
+            let length = next
+                .length
+                .checked_sub(base.length)
+                .ok_or(PoolError::Stale)?;
             if length != 0 {
                 emit_range(&mut consume, &mut appended, index, base.length, length)?;
             }

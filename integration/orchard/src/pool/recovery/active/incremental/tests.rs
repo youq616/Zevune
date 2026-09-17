@@ -311,7 +311,11 @@ fn every_call_rechecks_both_open_archives_after_successful_planning() {
             assert_eq!(directory_bytes(changed_path), changed);
             assert_eq!(
                 directory_bytes(if change_base { &later_path } else { &base_path }),
-                if change_base { original_later } else { original_base }
+                if change_base {
+                    original_later
+                } else {
+                    original_base
+                }
             );
         }
     }
@@ -425,7 +429,10 @@ fn retained_name_replacement_and_new_hard_link_reject_without_repair() {
             assert_eq!(base.incremental_plan(&mut later), Err(PoolError::Corrupt));
             assert_eq!(directory_bytes(&base_path), base_bytes);
             assert_eq!(directory_bytes(&later_path), later_bytes);
-            assert_eq!(fs::read(alias).unwrap(), fs::read(path.join(SEGMENT)).unwrap());
+            assert_eq!(
+                fs::read(alias).unwrap(),
+                fs::read(path.join(SEGMENT)).unwrap()
+            );
         }
     }
 }
