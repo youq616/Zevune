@@ -9,7 +9,7 @@
 use super::{regular, File, OpenOptions, Path, PoolError};
 use std::fs::{self, Metadata};
 
-pub(super) struct Directory {
+pub(in crate::pool) struct Directory {
     file: File,
 }
 
@@ -54,7 +54,7 @@ fn same_object(named: &Metadata, opened: &Metadata) -> Result<(), PoolError> {
 /// Read/write sharing preserves the existing lock tests and simultaneous readers;
 /// excluding DELETE sharing also denies rename on Windows. Reparse points are
 /// opened as such so the caller's metadata check can reject, not follow, them.
-pub(super) fn retain_name(options: &mut OpenOptions) {
+pub(in crate::pool) fn retain_name(options: &mut OpenOptions) {
     #[cfg(windows)]
     {
         use std::os::windows::fs::OpenOptionsExt;
@@ -69,7 +69,7 @@ pub(super) fn retain_name(options: &mut OpenOptions) {
 }
 
 impl Directory {
-    pub(super) fn open(path: &Path) -> Result<Self, PoolError> {
+    pub(in crate::pool) fn open(path: &Path) -> Result<Self, PoolError> {
         if !path.is_absolute() {
             return Err(PoolError::Bounds);
         }
@@ -99,7 +99,7 @@ impl Directory {
         Ok(retained)
     }
 
-    pub(super) fn check(&self, path: &Path) -> Result<(), PoolError> {
+    pub(in crate::pool) fn check(&self, path: &Path) -> Result<(), PoolError> {
         let named = fs::symlink_metadata(path).map_err(|_| PoolError::Storage)?;
         let opened = self.file.metadata().map_err(|_| PoolError::Storage)?;
         if !real_directory(&named) || !real_directory(&opened) {
@@ -107,9 +107,23 @@ impl Directory {
         }
         same_object(&named, &opened)
     }
+
+    pub(in crate::pool) fn try_clone(&self) -> Result<Self, PoolError> {
+        Ok(Self {
+            file: self.file.try_clone().map_err(|_| PoolError::Storage)?,
+        })
+    }
+
+    /// Persist directory entries on Unix. Stable std has no corresponding
+    /// portable Windows guarantee; process-failure tests are not power-loss tests.
+    pub(in crate::pool) fn sync(&self) -> Result<(), PoolError> {
+        #[cfg(unix)]
+        self.file.sync_all().map_err(|_| PoolError::Storage)?;
+        Ok(())
+    }
 }
 
-pub(super) fn check_file(path: &Path, file: &File, length: u64) -> Result<(), PoolError> {
+pub(in crate::pool) fn check_file(path: &Path, file: &File, length: u64) -> Result<(), PoolError> {
     let named = fs::symlink_metadata(path).map_err(|_| PoolError::Storage)?;
     let opened = file.metadata().map_err(|_| PoolError::Storage)?;
     if !regular(&named) || !regular(&opened) || named.len() != length || opened.len() != length {

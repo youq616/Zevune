@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -82,17 +83,40 @@ func strictFlags(f *flag.FlagSet, args []string) error {
 	return nil
 }
 func storageCheckpointFlags(height, appHash string, requested bool) (*labnet.StorageCheckpoint, error) {
+	return parseCheckpointFlags(height, appHash, requested, labnet.ParseStorageCheckpoint)
+}
+
+func parseCheckpointFlags(height, appHash string, requested bool, parse func(string, string) (labnet.StorageCheckpoint, error)) (*labnet.StorageCheckpoint, error) {
 	if !requested {
 		if height != "" || appHash != "" {
 			return nil, labnet.ErrBounds
 		}
 		return nil, nil
 	}
-	checkpoint, err := labnet.ParseStorageCheckpoint(height, appHash)
+	checkpoint, err := parse(height, appHash)
 	if err != nil {
 		return nil, err
 	}
 	return &checkpoint, nil
+}
+
+// This is syntax validation before file access, not selection of storage rules.
+// The authenticated Network parser below applies its own fixed height bound.
+func checkpointFlagSyntax(height, appHash string, requested bool) error {
+	if !requested {
+		if height != "" || appHash != "" {
+			return labnet.ErrBounds
+		}
+		return nil
+	}
+	h, err := strconv.ParseUint(height, 10, 64)
+	if err != nil || strconv.FormatUint(h, 10) != height || h > poolbridge.ActiveSegmentsV1.MaxHeight() {
+		return labnet.ErrBounds
+	}
+	if _, err := labnet.ParseHash(appHash); err != nil {
+		return labnet.ErrBounds
+	}
+	return nil
 }
 
 func execute(ctx context.Context, args []string, input io.Reader, output io.Writer) error {
@@ -161,9 +185,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	})
 	// Validate before configuration/file access. Explicit height 0 is a real
 	// genesis checkpoint, not the default/absent value.
-	expected, err := storageCheckpointFlags(expectedHeight, expectedAppHash, checkpointRequested)
-	if err != nil || (expected != nil && create) ||
-		(command == "storage-copy" && (expected == nil || !filepath.IsAbs(destination) || !filepath.IsAbs(journal))) {
+	if err := checkpointFlagSyntax(expectedHeight, expectedAppHash, checkpointRequested); err != nil || (checkpointRequested && create) ||
+		(command == "storage-copy" && (!checkpointRequested || !filepath.IsAbs(destination) || !filepath.IsAbs(journal))) {
 		return labnet.ErrBounds
 	}
 	pin, err := labnet.ParseHash(*workerDigest)
@@ -189,6 +212,10 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		return err
 	}
 	network, err := labnet.Load(config, configPin)
+	if err != nil {
+		return err
+	}
+	expected, err := parseCheckpointFlags(expectedHeight, expectedAppHash, checkpointRequested, network.ParseStorageCheckpoint)
 	if err != nil {
 		return err
 	}

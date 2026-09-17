@@ -1,0 +1,84 @@
+name: active-ledger-growth
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/active-ledger.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'internal/poolbridge/**', 'integration/cometbft/**', '.github/workflows/active-ledger.yml']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install fixed formatter
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+      - name: Check both source formats without rewriting the candidate
+        run: |
+          python - <<'PY'
+          import subprocess
+          paths = ['internal/poolbridge', 'integration/cometbft/poolapp',
+                   'integration/cometbft/labnet', 'integration/cometbft/cmd/zevune-network']
+          result = subprocess.run(['gofmt', '-l', *paths], check=True,
+                                  stdout=subprocess.PIPE, text=True)
+          if result.stdout.strip():
+              subprocess.run(['gofmt', '-d', *paths], check=True)
+          rust = subprocess.run(['cargo', '+1.98.1', 'fmt', '--manifest-path',
+                                 'integration/orchard/Cargo.toml', '--all', '--', '--check'])
+          raise SystemExit(bool(result.stdout.strip()) or rust.returncode != 0)
+          PY
+      - name: Compile both Go modules and preserve locks
+        run: |
+          go test -mod=readonly ./... -run '^$'
+          cd integration/cometbft
+          go test -mod=readonly -tags=pool_e2e,funded_e2e ./... -run '^$'
+          git diff --exit-code
+  growth:
+    needs: source
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install fixed Rust
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Build the real fixed-profile worker and wallet scenario
+        run: cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins
+      - name: Register executable paths only
+        run: |
+          python - <<'PY'
+          import os
+          suffix = '.exe' if os.name == 'nt' else ''
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              for key, binary in [('ZEVUNE_POOL_WORKER', 'zevune-pool-worker'),
+                                  ('ZEVUNE_FUNDED_SCENARIO', 'zevune-funded-scenario')]:
+                  output.write(key + '=' + os.path.abspath('integration/orchard/target/release/' + binary + suffix) + '\n')
+          PY
+      - name: Actual 100000-block commits, boundary payments and full restart
+        working-directory: integration/cometbft
+        run: go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart$' -count=1 -timeout=25m -v
+      - name: Assert exact committed source and dependency locks
+        run: git diff --exit-code

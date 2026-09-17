@@ -17,12 +17,35 @@ use crate::{MAX_ANCHORS, NETWORK};
 type Hash = [u8; 32];
 const FILE_MAGIC: &[u8; 8] = b"ZVOPOL01";
 const BOUND_FILE_MAGIC: &[u8; 8] = b"ZVOPOL02";
+const ACTIVE_FILE_MAGIC: &[u8; 8] = b"ZVOPOL03";
 const RECORD_MAGIC: &[u8; 8] = b"ZVOBLK01";
 pub const MAX_BLOCK_TRANSACTIONS: usize = 16;
 pub const MAX_COMMITMENTS: usize = 65_536;
 pub const MAX_RECORDS: u64 = 10_000;
 pub const MAX_JOURNAL_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_RECORD_BYTES: usize = 114 + MAX_BLOCK_TRANSACTIONS * (4 + MAX_ENVELOPE_SIZE);
+
+/// Fixed laboratory policies, selected only by an authenticated genesis format.
+/// These are not operator-adjustable consensus limits or migration settings.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StorageProfile {
+    LegacyJournal,
+    ActiveSegmentsV1,
+}
+impl StorageProfile {
+    pub fn max_records(self) -> u64 {
+        match self {
+            Self::LegacyJournal => MAX_RECORDS,
+            Self::ActiveSegmentsV1 => 1_000_000,
+        }
+    }
+    pub fn max_journal_bytes(self) -> u64 {
+        match self {
+            Self::LegacyJournal => MAX_JOURNAL_BYTES,
+            Self::ActiveSegmentsV1 => 1024 * 1024 * 1024,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PoolError {
@@ -61,6 +84,7 @@ pub struct Summary {
 
 #[derive(Clone)]
 struct State {
+    profile: StorageProfile,
     height: u64,
     head: Hash,
     genesis: Hash,
@@ -77,6 +101,13 @@ impl State {
         Self::from_policy(commitments, None)
     }
     fn from_policy(commitments: &[Hash], signing_domain: Option<Hash>) -> Result<Self, PoolError> {
+        Self::from_storage_policy(commitments, signing_domain, StorageProfile::LegacyJournal)
+    }
+    fn from_storage_policy(
+        commitments: &[Hash],
+        signing_domain: Option<Hash>,
+        profile: StorageProfile,
+    ) -> Result<Self, PoolError> {
         if commitments.len() > MAX_COMMITMENTS {
             return Err(PoolError::Bounds);
         }
@@ -91,8 +122,10 @@ impl State {
             }
         }
         let root = frontier.root().to_bytes();
-        let genesis = Sha256::digest(genesis_bytes_policy(commitments, signing_domain)?).into();
+        let genesis =
+            Sha256::digest(genesis_bytes_profile(commitments, signing_domain, profile)?).into();
         Ok(Self {
+            profile,
             height: 0,
             head: [0; 32],
             genesis,
@@ -156,7 +189,7 @@ impl State {
         transactions: &[Vec<u8>],
     ) -> Result<(), PoolError> {
         if height != self.height.checked_add(1).ok_or(PoolError::Height)?
-            || height > MAX_RECORDS
+            || height > self.profile.max_records()
             || block_id == [0; 32]
         {
             return Err(PoolError::Height);
@@ -280,6 +313,7 @@ impl PreparedBlock {
 /// No automatic truncation, reset, state repair or signer reset is performed.
 pub struct PoolStore {
     file: File,
+    active: Option<active::ActiveJournal>,
     state: State,
     verifier: AuthorizationVerifier,
     available: bool,
@@ -306,8 +340,31 @@ impl PoolStore {
         initial: &[Hash],
         signing_domain: Option<Hash>,
     ) -> Result<Self, PoolError> {
-        let state = State::from_policy(initial, signing_domain)?;
-        let header = genesis_bytes_policy(initial, signing_domain)?;
+        Self::create_with_profile(path, initial, signing_domain, StorageProfile::LegacyJournal)
+    }
+    fn create_with_profile(
+        path: &Path,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+        profile: StorageProfile,
+    ) -> Result<Self, PoolError> {
+        let state = State::from_storage_policy(initial, signing_domain, profile)?;
+        let header = genesis_bytes_profile(initial, signing_domain, profile)?;
+        if profile == StorageProfile::ActiveSegmentsV1 {
+            let (file, active) = active::ActiveJournal::create(path, &header)?;
+            return Ok(Self {
+                file,
+                active: Some(active),
+                state,
+                verifier: AuthorizationVerifier::new(),
+                available: true,
+                length: header.len() as u64,
+                #[cfg(test)]
+                fault: 0,
+                #[cfg(test)]
+                test_byte_limit: None,
+            });
+        }
         let mut options = OpenOptions::new();
         options.create_new(true).read(true).append(true);
         #[cfg(unix)]
@@ -323,6 +380,7 @@ impl PoolStore {
         // a promise of zero-loss recovery after every power failure.
         Ok(Self {
             file,
+            active: None,
             state,
             verifier: AuthorizationVerifier::new(),
             available: true,
@@ -341,6 +399,47 @@ impl PoolStore {
         initial: &[Hash],
         signing_domain: Option<Hash>,
     ) -> Result<Self, PoolError> {
+        Self::open_with_profile(path, initial, signing_domain, StorageProfile::LegacyJournal)
+    }
+    fn open_with_profile(
+        path: &Path,
+        initial: &[Hash],
+        signing_domain: Option<Hash>,
+        profile: StorageProfile,
+    ) -> Result<Self, PoolError> {
+        if profile == StorageProfile::ActiveSegmentsV1 {
+            let state = State::from_storage_policy(initial, signing_domain, profile)?;
+            let expected_header = genesis_bytes_profile(initial, signing_domain, profile)?;
+            let (file, active) = active::ActiveJournal::open(path, &expected_header)?;
+            let length = active.length();
+            let mut reader = active.reader(&file)?;
+            let header = replay::read_header_profile(&mut reader, length, profile)?;
+            if header.initial != initial || header.signing_domain != signing_domain {
+                return Err(PoolError::Genesis);
+            }
+            let verifier = AuthorizationVerifier::new();
+            let mut replay = replay::Replay::new(reader, length, header.length, state)?;
+            let mut start = header.length;
+            while replay.next_block(&verifier)?.is_some() {
+                let end = replay.byte_position()?;
+                active.validate_frame(start, end)?;
+                start = end;
+            }
+            let (state, _) = replay.finish()?;
+            active.check(&file)?;
+            return Ok(Self {
+                file,
+                active: Some(active),
+                state,
+                verifier,
+                available: true,
+                length,
+                #[cfg(test)]
+                fault: 0,
+                #[cfg(test)]
+                test_byte_limit: None,
+            });
+        }
         let info = fs::symlink_metadata(path).map_err(|_| PoolError::Storage)?;
         if !info.file_type().is_file() || info.len() > MAX_JOURNAL_BYTES {
             return Err(PoolError::Bounds);
@@ -376,6 +475,7 @@ impl PoolStore {
         let (state, _) = replay.finish()?;
         Ok(Self {
             file,
+            active: None,
             state,
             verifier,
             available: true,
@@ -391,6 +491,27 @@ impl PoolStore {
             return Err(PoolError::Unavailable);
         }
         Ok(self.state.summary())
+    }
+    pub fn storage_profile(&self) -> StorageProfile {
+        self.state.profile
+    }
+    /// Capacity of the same locked committed state, not a new authentication
+    /// of every sealed transaction or a free-disk/power-loss guarantee.
+    pub fn active_capacity(&mut self) -> Result<(Summary, u64, u32, u32), PoolError> {
+        let summary = self.summary()?;
+        let active = self.active.as_ref().ok_or(PoolError::Bounds)?;
+        let result = (|| {
+            active.check(&self.file)?;
+            let (length, segments, tail) = active.capacity();
+            if length != self.length {
+                return Err(PoolError::Corrupt);
+            }
+            Ok((summary, length, segments, tail))
+        })();
+        if result.is_err() {
+            self.available = false;
+        }
+        result
     }
     /// Compare against an independently trusted checkpoint. This does not make
     /// an untrusted hash authentic and is not a consensus light-client proof.
@@ -410,7 +531,7 @@ impl PoolStore {
         let base = self.summary()?;
         // Reject a known-unpersistable candidate before cryptographic work or
         // reporting a successful preview. Commit repeats this same accounting.
-        budget::record_end(self.length, self.journal_byte_limit(), transactions)?;
+        self.record_end(transactions)?;
         let next = self
             .state
             .execute(height, block_id, transactions, &self.verifier)?;
@@ -426,11 +547,7 @@ impl PoolStore {
         if base != prepared.base {
             return Err(PoolError::Stale);
         }
-        let new_length = budget::record_end(
-            self.length,
-            self.journal_byte_limit(),
-            &prepared.transactions,
-        )?;
+        let new_length = self.record_end(&prepared.transactions)?;
         let next = self.state.execute(
             prepared.result.height,
             prepared.block_id,
@@ -454,23 +571,30 @@ impl PoolStore {
         if self.length.checked_add(body.len() as u64 + 36) != Some(new_length) {
             return Err(PoolError::Corrupt);
         }
-        let file_length = match self.file.metadata() {
-            Ok(meta) => meta.len(),
-            Err(_) => {
+        if self.active.is_none() {
+            let file_length = match self.file.metadata() {
+                Ok(meta) => meta.len(),
+                Err(_) => {
+                    self.available = false;
+                    return Err(PoolError::Storage);
+                }
+            };
+            if file_length != self.length {
                 self.available = false;
-                return Err(PoolError::Storage);
+                return Err(PoolError::Corrupt);
             }
-        };
-        if file_length != self.length {
-            self.available = false;
-            return Err(PoolError::Corrupt);
         }
         let mut frame = (body.len() as u32).to_be_bytes().to_vec();
         frame.extend_from_slice(&body);
         frame.extend_from_slice(&Sha256::digest(&body));
-        if self.append(&frame).is_err() {
+        let written = if let Some(active) = self.active.as_mut() {
+            active.append(&self.file, &frame)
+        } else {
+            self.append(&frame).map_err(|_| PoolError::Storage)
+        };
+        if let Err(error) = written {
             self.available = false;
-            return Err(PoolError::Storage);
+            return Err(error);
         }
         self.state = next;
         self.length = new_length;
@@ -479,9 +603,16 @@ impl PoolStore {
     fn journal_byte_limit(&self) -> u64 {
         #[cfg(test)]
         if let Some(limit) = self.test_byte_limit {
-            return limit.min(MAX_JOURNAL_BYTES);
+            return limit.min(self.state.profile.max_journal_bytes());
         }
-        MAX_JOURNAL_BYTES
+        self.state.profile.max_journal_bytes()
+    }
+    fn record_end(&self, transactions: &[Vec<u8>]) -> Result<u64, PoolError> {
+        let end = budget::record_end(self.length, self.journal_byte_limit(), transactions)?;
+        if let Some(active) = &self.active {
+            active.check_frame(end - self.length)?;
+        }
+        Ok(end)
     }
     fn append(&mut self, frame: &[u8]) -> std::io::Result<()> {
         #[cfg(test)]
@@ -512,13 +643,24 @@ fn genesis_bytes_policy(
     initial: &[Hash],
     signing_domain: Option<Hash>,
 ) -> Result<Vec<u8>, PoolError> {
+    genesis_bytes_profile(initial, signing_domain, StorageProfile::LegacyJournal)
+}
+fn genesis_bytes_profile(
+    initial: &[Hash],
+    signing_domain: Option<Hash>,
+    profile: StorageProfile,
+) -> Result<Vec<u8>, PoolError> {
     if initial.len() > MAX_COMMITMENTS {
         return Err(PoolError::Bounds);
     }
-    if signing_domain == Some([0; 32]) {
+    if signing_domain == Some([0; 32])
+        || (profile == StorageProfile::ActiveSegmentsV1 && signing_domain.is_none())
+    {
         return Err(PoolError::Domain);
     }
-    let mut out = if signing_domain.is_some() {
+    let mut out = if profile == StorageProfile::ActiveSegmentsV1 {
+        ACTIVE_FILE_MAGIC.to_vec()
+    } else if signing_domain.is_some() {
         BOUND_FILE_MAGIC.to_vec()
     } else {
         FILE_MAGIC.to_vec()
@@ -630,3 +772,9 @@ mod budget;
 pub mod recovery;
 
 mod replay;
+
+mod active;
+
+#[cfg(all(test, feature = "local-funding-lab"))]
+#[path = "pool/active_flow_tests.rs"]
+mod active_flow_tests;

@@ -23,7 +23,7 @@ impl PoolStore {
     ) -> Result<Selection, PoolError> {
         let base = self.summary()?;
         if height != base.height.checked_add(1).ok_or(PoolError::Height)?
-            || height > MAX_RECORDS
+            || height > self.state.profile.max_records()
             || block_id == [0; 32]
         {
             return Err(PoolError::Height);
@@ -35,6 +35,7 @@ impl PoolStore {
             return Err(PoolError::Bounds);
         }
         let mut storage = budget::JournalBudget::new(self.length, self.journal_byte_limit())?;
+        let mut frame_length = self.record_end(&[])? - self.length;
         let mut next = self.state.clone();
         let mut remaining = max_bytes;
         let mut count = 0;
@@ -51,9 +52,18 @@ impl PoolStore {
             let Some(after_storage) = storage.after_transaction(raw.len()) else {
                 continue;
             };
+            let after_frame = frame_length + 4 + raw.len() as u64;
+            if let Some(active) = &self.active {
+                match active.check_frame(after_frame) {
+                    Ok(()) => {}
+                    Err(PoolError::Bounds) => continue,
+                    Err(error) => return Err(error),
+                }
+            }
             match next.apply_transaction(height, &self.state.anchors, raw, &self.verifier) {
                 Ok(()) => {
                     storage = after_storage;
+                    frame_length = after_frame;
                     remaining -= raw.len();
                     count += 1;
                     mask |= 1u64 << i;

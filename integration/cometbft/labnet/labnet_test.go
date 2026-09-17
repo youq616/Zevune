@@ -46,7 +46,7 @@ func signingNetwork(t *testing.T) (*Network, map[string]ed25519.PrivKey) {
 	return &Network{genesis: g, validators: types.NewValidatorSet(vals)}, keys
 }
 func headerTemplate(n *Network, h int64) *types.Header {
-	return &types.Header{Version: cmtversion.Consensus{Block: version.BlockProtocol, App: poolapp.AppVersion}, ChainID: poolapp.ChainID, Height: h, Time: time.Now().UTC().Add(-time.Second), ValidatorsHash: n.validators.Hash(), NextValidatorsHash: n.validators.Hash(), ConsensusHash: n.genesis.ConsensusParams.Hash(), AppHash: bytes.Clone(n.genesis.AppHash), ProposerAddress: n.validators.Validators[0].Address}
+	return &types.Header{Version: cmtversion.Consensus{Block: version.BlockProtocol, App: poolapp.AppVersionForProfile(n.profile)}, ChainID: poolapp.ChainID, Height: h, Time: time.Now().UTC().Add(-time.Second), ValidatorsHash: n.validators.Hash(), NextValidatorsHash: n.validators.Hash(), ConsensusHash: n.genesis.ConsensusParams.Hash(), AppHash: bytes.Clone(n.genesis.AppHash), ProposerAddress: n.validators.Validators[0].Address}
 }
 func signHeader(t *testing.T, n *Network, keys map[string]ed25519.PrivKey, h *types.Header, parts types.PartSetHeader, count int) *types.SignedHeader {
 	t.Helper()

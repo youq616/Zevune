@@ -120,9 +120,11 @@ def genesis_identity(file: Path, expected_sha: str) -> dict:
             or hashlib.sha256(raw).hexdigest() != expected_sha):
         raise ValueError("Genesis pin or file identity mismatch")
     magic = raw[:8]
-    if magic not in {b"ZVTGEN01", b"ZVTGEN02"}:
+    if magic not in {b"ZVTGEN01", b"ZVTGEN02", b"ZVTGEN03"}:
         raise ValueError("Unknown genesis profile")
-    bound = magic == b"ZVTGEN02"
+    # 03 selects fixed active storage while retaining the LAB2 payment format.
+    # Its complete pinned manifest gives it a different signing domain from 02.
+    bound = magic in {b"ZVTGEN02", b"ZVTGEN03"}
     count = int.from_bytes(raw[48:50], "big")
     header = 82 if bound else 50
     if (not 1 <= count <= 16 or len(raw) != header + 115 * count

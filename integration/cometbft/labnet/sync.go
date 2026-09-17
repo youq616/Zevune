@@ -15,10 +15,10 @@ import (
 // not a dynamic-set light client, an eclipse defense, or a long-range defense
 // after quorum key compromise. Genesis/config pins must come independently.
 func (n *Network) validateHeader(s *types.SignedHeader, height int64, now time.Time) error {
-	if s == nil || s.Header == nil || s.Commit == nil || height < 1 || height > maxHeight || s.Height != height || s.ValidateBasic(poolapp.ChainID) != nil {
+	if n == nil || s == nil || s.Header == nil || s.Commit == nil || height < 1 || uint64(height) > n.profile.MaxHeight() || s.Height != height || s.ValidateBasic(poolapp.ChainID) != nil {
 		return ErrCertificate
 	}
-	if len(s.Header.AppHash) != 32 || s.Header.Version.App != poolapp.AppVersion || !bytes.Equal(s.Header.Hash(), s.Commit.BlockID.Hash) || !bytes.Equal(s.Header.ValidatorsHash, n.validators.Hash()) || !bytes.Equal(s.Header.NextValidatorsHash, n.validators.Hash()) || !bytes.Equal(s.Header.ConsensusHash, n.genesis.ConsensusParams.Hash()) {
+	if len(s.Header.AppHash) != 32 || s.Header.Version.App != poolapp.AppVersionForProfile(n.profile) || !bytes.Equal(s.Header.Hash(), s.Commit.BlockID.Hash) || !bytes.Equal(s.Header.ValidatorsHash, n.validators.Hash()) || !bytes.Equal(s.Header.NextValidatorsHash, n.validators.Hash()) || !bytes.Equal(s.Header.ConsensusHash, n.genesis.ConsensusParams.Hash()) {
 		return ErrCertificate
 	}
 	if s.Header.Time.Before(n.genesis.GenesisTime) || s.Header.Time.After(now.Add(10*time.Second)) {
@@ -70,7 +70,7 @@ func resultFor(s poolbridge.Summary, initial, tip uint64) SyncResult {
 // each disk commit. Invalid data never contaminates the saved reference state.
 // A later error can leave earlier authenticated blocks saved; no rollback occurs.
 func (n *Network) synchronize(ctx context.Context, remote rpcSource, store *poolbridge.Client, limit uint64) (SyncResult, error) {
-	if limit == 0 || limit > maxSyncBlocks {
+	if n == nil || store == nil || store.Profile() != n.profile || limit == 0 || limit > maxSyncBlocks {
 		return SyncResult{}, ErrBounds
 	}
 	status, err := remote.Status(ctx)
@@ -78,7 +78,7 @@ func (n *Network) synchronize(ctx context.Context, remote rpcSource, store *pool
 		return SyncResult{}, ErrResponse
 	}
 	tip := status.SyncInfo.LatestBlockHeight
-	if status.NodeInfo.Network != poolapp.ChainID || tip < 2 || tip > maxHeight {
+	if status.NodeInfo.Network != poolapp.ChainID || tip < 2 || uint64(tip) > n.profile.MaxHeight() {
 		return SyncResult{}, ErrBehind
 	}
 	signedTip, err := n.header(ctx, remote, tip)
@@ -209,7 +209,7 @@ func (n *Network) SynchronizeAtCheckpoint(ctx context.Context, o SyncOptions, ex
 }
 
 func (n *Network) synchronizeReference(ctx context.Context, o SyncOptions, expected *StorageCheckpoint) (SyncResult, error) {
-	if err := validateReferenceCheckpoint(o, expected); err != nil {
+	if err := n.validateReferenceCheckpoint(o, expected); err != nil {
 		return SyncResult{}, err
 	}
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Limit == 0 || o.Limit > maxSyncBlocks {
@@ -260,7 +260,7 @@ func (n *Network) SubmitAtCheckpoint(ctx context.Context, o SyncOptions, raw []b
 func (n *Network) submitReference(ctx context.Context, o SyncOptions, raw []byte, expected *StorageCheckpoint) (Submission, error) {
 	txid := sha256.Sum256(raw)
 	out := Submission{Status: "not_submitted", TxID: HashText(txid)}
-	if err := validateReferenceCheckpoint(o, expected); err != nil {
+	if err := n.validateReferenceCheckpoint(o, expected); err != nil {
 		return out, err
 	}
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Create || len(raw) == 0 || len(raw) > poolbridge.MaxTransactionBytes || o.Limit == 0 || o.Limit > maxSyncBlocks {
