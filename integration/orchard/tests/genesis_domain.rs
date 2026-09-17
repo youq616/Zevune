@@ -71,10 +71,15 @@ fn identical_notes_different_deployment_have_different_signed_state() {
 fn zero_nonce_wrong_versions_truncation_and_extra_bytes_are_rejected() {
     let owner = Wallet::create().unwrap().receive_address(0).unwrap();
     let genesis = TestGenesis::generate(&[(owner, TEST_SUPPLY)]).unwrap();
-    let mut bytes = genesis.bytes().to_vec();
-    bytes[50..82].fill(0);
-    assert!(TestGenesis::decode(&bytes).is_err());
-    for magic in [b"ZVTGEN00", b"ZVTGEN03", b"ZVTGEN99"] {
+    let active = TestGenesis::generate_active(&[(owner, TEST_SUPPLY)]).unwrap();
+    assert_eq!(&active.bytes()[..8], b"ZVTGEN03");
+    // Only 02/03 contain a deployment nonce; 01 keeps its original layout.
+    for bound in [&genesis, &active] {
+        let mut bytes = bound.bytes().to_vec();
+        bytes[50..82].fill(0);
+        assert!(TestGenesis::decode(&bytes).is_err());
+    }
+    for magic in [b"ZVTGEN00", b"ZVTGEN04", b"ZVTGEN99"] {
         let mut raw = genesis.bytes().to_vec();
         raw[..8].copy_from_slice(magic);
         assert!(TestGenesis::decode(&raw).is_err());
@@ -82,7 +87,11 @@ fn zero_nonce_wrong_versions_truncation_and_extra_bytes_are_rejected() {
     for profile in [
         genesis,
         legacy_genesis(&TestGenesis::generate(&[(owner, TEST_SUPPLY)]).unwrap()),
+        active,
     ] {
+        let decoded = TestGenesis::decode(profile.bytes()).unwrap();
+        assert_eq!(decoded.bytes(), profile.bytes());
+        assert_eq!(decoded.digest(), profile.digest());
         for end in 0..profile.bytes().len() {
             assert!(TestGenesis::decode(&profile.bytes()[..end]).is_err());
         }
