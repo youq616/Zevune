@@ -1,0 +1,174 @@
+{
+  "base": "2b889d52c2e6c765f03ea683f42b8467d66e47f5",
+  "known_unoptimized_reference": {
+    "conclusion": "success",
+    "event": "push",
+    "head": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+    "job": 105045731549,
+    "job_elapsed_seconds": 1712,
+    "library": {
+      "cohort_complete": true,
+      "failed": 0,
+      "ignored": 0,
+      "passed": 139
+    },
+    "platform": "ubuntu-latest",
+    "run": 35172092627,
+    "url": "https://github.com/youq616/Zevune/actions/runs/35172092627/job/105045731549"
+  },
+  "native_format_failure": {
+    "fixed_by": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+    "head": "514c8632027de6f14173c7a51c6117d6a9a7fe73",
+    "jobs": [
+      {
+        "conclusion": "failure",
+        "issue": "Go formatting differs in four files; source diagnostics terminated before cargo fmt.",
+        "job": 105044156189,
+        "run": 35171570329,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35171570329/job/105044156189"
+      },
+      {
+        "conclusion": "failure",
+        "issue": "Native Rust formatter found 43 diff blocks in six files.",
+        "job": 105044156346,
+        "run": 35171570353,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35171570353/job/105044156346"
+      }
+    ],
+    "tree": "dc03b1ee32b2c0daca95a3bbb0d7294e6156adb8"
+  },
+  "observed_at": "2026-09-17T02:50:57.970Z",
+  "outdated_genesis_rejection_test": {
+    "conclusion": "failure",
+    "fixed_by": "951971f46e964d259275653063c2dc9c2dcfd104",
+    "head": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+    "issue": "Test still rejected active genesis ZVTGEN03; active03 is intentionally supported. Negative fixture changed to unsupported04 with active nonce and exact-length cases retained.",
+    "job": 105045731502,
+    "run": 35172092627,
+    "target": "genesis_domain",
+    "target_counts": {
+      "failed": 1,
+      "passed": 4
+    },
+    "tree": "7ed4b1a6ecd461c10ac469f4facdba718f671fed",
+    "url": "https://github.com/youq616/Zevune/actions/runs/35172092627/job/105045731502",
+    "verified_target_after_fix": {
+      "event": "push",
+      "failed": 0,
+      "head": "951971f46e964d259275653063c2dc9c2dcfd104",
+      "job": 105047862931,
+      "passed": 5,
+      "run": 35172799617
+    }
+  },
+  "performance": [
+    {
+      "complete_cohort": false,
+      "completed_at": "2026-09-17T02:20:42Z",
+      "conclusion": "cancelled",
+      "diagnosis": "Runner cancellation at configured 30-minute job limit; check-run annotations unavailable through plugin, so exact cancellation policy is inferred from timing and workflow.",
+      "elapsed_seconds": 1812,
+      "event": "push",
+      "head": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+      "individual_test_ok_before_cancellation": 46,
+      "job": 105045731447,
+      "last_completed_test": "pool::recovery::segments::tests::namespace_tests::failed_open_releases_directory_guard_and_all_acquired_file_locks",
+      "observed_at": "2026-09-17T02:23:38.626Z",
+      "run": 35172092627,
+      "significant_elapsed": {
+        "conclusion": "passed",
+        "seconds_since_prior_test_completed": 1195.953,
+        "test": "pool::active_flow_tests::real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002"
+      },
+      "started_at": "2026-09-17T01:50:30Z",
+      "unfinished_test": "pool::recovery::segments::tests::namespace_tests::unchanged_archives_retain_multiple_readers_and_release_handles_on_drop",
+      "url": "https://github.com/youq616/Zevune/actions/runs/35172092627/job/105045731447",
+      "workflow": "funded-wallet-consensus"
+    },
+    {
+      "boundary_or_result_reported": false,
+      "cause_scope": "fundedDriver.read single-response 90-second limit; neither the growth context's 20-minute deadline nor go test's 25-minute timeout elapsed",
+      "conclusion": "failure",
+      "error": "real funded scenario timeout",
+      "event": "push",
+      "head": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+      "job": 105045912725,
+      "location": "integration/cometbft/poolapp/active_growth_e2e_test.go:355",
+      "observed_at": "2026-09-17T02:23:38.626Z",
+      "operation": "driver.call(t, 4, []byte{sender}) exact boundary-payment encrypted-wallet recovery",
+      "run": 35172092527,
+      "test": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+      "test_elapsed_seconds": 907.53,
+      "url": "https://github.com/youq616/Zevune/actions/runs/35172092527/job/105045912725",
+      "workflow": "active-ledger-growth"
+    },
+    {
+      "boundary_or_result_reported": false,
+      "cause_scope": "fundedDriver.read single-response 90-second limit; neither the growth context's 20-minute deadline nor go test's 25-minute timeout elapsed",
+      "conclusion": "failure",
+      "error": "real funded scenario timeout",
+      "event": "push",
+      "head": "a11370b2f151bfef47fa85e9082723e2d9381bd5",
+      "job": 105045912679,
+      "location": "integration/cometbft/poolapp/active_growth_e2e_test.go:351",
+      "observed_at": "2026-09-17T02:26:10.651Z",
+      "operation": "driver.call(t, op, nil) real boundary-payment generation",
+      "run": 35172092527,
+      "test": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+      "test_elapsed_seconds": 1165.09,
+      "url": "https://github.com/youq616/Zevune/actions/runs/35172092527/job/105045912679",
+      "workflow": "active-ledger-growth"
+    },
+    {
+      "boundary_or_result_reported": false,
+      "cause_scope": "fundedDriver.read single-response 90-second limit",
+      "conclusion": "failure",
+      "error": "real funded scenario timeout",
+      "event": "push",
+      "head": "951971f46e964d259275653063c2dc9c2dcfd104",
+      "job": 105050237428,
+      "location": "integration/cometbft/poolapp/active_growth_e2e_test.go:351",
+      "observed_at": "2026-09-17T02:32:34.917Z",
+      "operation": "driver.call(t, op, nil) real boundary-payment generation",
+      "run": 35172799708,
+      "test": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+      "test_elapsed_seconds": 653.34,
+      "url": "https://github.com/youq616/Zevune/actions/runs/35172799708/job/105050237428",
+      "workflow": "active-ledger-growth"
+    },
+    {
+      "observed_at": "2026-09-17T02:50:57.969Z",
+      "head": "951971f46e964d259275653063c2dc9c2dcfd104",
+      "event": "pull_request",
+      "workflow": "active-ledger-growth",
+      "run": 35172802611,
+      "job": 105052952029,
+      "url": "https://github.com/youq616/Zevune/actions/runs/35172802611/job/105052952029",
+      "conclusion": "failure",
+      "test": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+      "test_elapsed_seconds": 1119.13,
+      "location": "integration/cometbft/poolapp/active_growth_e2e_test.go:351",
+      "operation": "driver.call(t, op, nil) real boundary-payment generation",
+      "error": "real funded scenario timeout",
+      "cause_scope": "fundedDriver.read single-response 90-second limit",
+      "boundary_or_result_reported": false,
+      "duplicate_push": {
+        "run": 35172799708,
+        "job": 105050237369,
+        "url": "https://github.com/youq616/Zevune/actions/runs/35172799708/job/105050237369",
+        "test_elapsed_seconds": 1078.7,
+        "same_location_and_error": true
+      }
+    }
+  ],
+  "pr": 9,
+  "purpose": "Historical diagnostic observations; none of these candidates is accepted.",
+  "repository": "youq616/Zevune",
+  "superseded_candidate": {
+    "failure_job": 105050237428,
+    "head": "951971f46e964d259275653063c2dc9c2dcfd104",
+    "replaced_by": "825407cffd26884bd212cea0780dfb8d02de55bf",
+    "status": "Superseded after its own Ubuntu growth failed at the 90-second single-response limit; no acceptance claim.",
+    "tree": "386d33907d86ac7b9ac4bfd6481c2298dd95686d"
+  }
+}
