@@ -68,8 +68,8 @@ fn real_authorization_reuse_rejects_changed_bytes_and_restarts_cold() {
     let mut extended = raw.clone();
     extended.push(0);
     assert!(verifier.verify(&extended).is_err());
-    // A new verifier has a new fixed key and empty cache. Nothing persisted is
-    // accepted as a previously verified cache entry.
+    // A new verifier shares only the fixed public key and starts with an empty
+    // authorization cache. No persisted or other instance's entry is imported.
     drop(verifier);
     assert_eq!(AuthorizationVerifier::new().verify(&raw).unwrap(), expected);
     println!(
