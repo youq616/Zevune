@@ -274,5 +274,8 @@ fn fault_entry(path: &Path, name: &str) -> Result<(), PoolError> {
         .map_err(|_| PoolError::Storage)
 }
 
+/// Read-only exact-prefix plans between two independently pinned archives.
+pub mod incremental;
+
 #[cfg(test)]
 mod tests;

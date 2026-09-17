@@ -10,6 +10,8 @@ use zevune_orchard_lab::pool::recovery::{RecoveryArchive, RecoveryCheckpoint, CH
 use zevune_orchard_lab::pool::testnet::TestGenesis;
 use zevune_orchard_lab::pool::StorageProfile;
 
+#[path = "../recovery_incremental_output.rs"]
+mod incremental_output;
 #[path = "../recovery_index_output.rs"]
 mod index_output;
 
@@ -25,6 +27,7 @@ locate-height --no-real-funds --source <absolute archive directory> --checkpoint
 checkpoint-active --no-real-funds --source <absolute active directory> --genesis <absolute ZVTGEN03 manifest> --genesis-sha256 <64 hex> --height <trusted height> --app-hash <trusted hash>\n\
 backup-active|restore-active --no-real-funds --source <absolute active/archive directory> --output <NEW absolute directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
 verify-active --no-real-funds --source <absolute active/archive directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
+plan-active-incremental --no-real-funds --base <absolute earlier archive> --base-checkpoint <256 hex pin> --source <absolute later archive> --checkpoint <256 hex pin> (read-only JSON; no incremental backup is written)\n\
 Stop the owning writer before use. No consensus database or signer state is copied.\n\
 A failed copy may leave a partial or complete target. No automatic retry or repair.\n";
 
@@ -123,6 +126,24 @@ fn run_active(mode: &str, source: &Path, options: &BTreeMap<&str, &str>) -> Resu
     write_active_receipt(report.as_bytes())
 }
 
+fn run_incremental(source: &Path, options: &BTreeMap<&str, &str>) -> Result<(), ()> {
+    // Parse both independently retained pins before opening either directory.
+    let base_pin = ActiveRecoveryCheckpoint::from_bytes(&unhex::<ACTIVE_CHECKPOINT_BYTES>(
+        options["--base-checkpoint"],
+    )?)
+    .map_err(|_| ())?;
+    let later_pin = ActiveRecoveryCheckpoint::from_bytes(&unhex::<ACTIVE_CHECKPOINT_BYTES>(
+        options["--checkpoint"],
+    )?)
+    .map_err(|_| ())?;
+    let mut base = ActiveArchive::open(Path::new(options["--base"]), base_pin).map_err(|_| ())?;
+    let mut later = ActiveArchive::open(source, later_pin).map_err(|_| ())?;
+    // Each open replays once; the method independently replays both again.
+    // Its result is historical metadata, never authority to apply an update.
+    let plan = base.incremental_plan(&mut later).map_err(|_| ())?;
+    incremental_output::emit(&plan)
+}
+
 fn run(args: &[String]) -> Result<(), ()> {
     if args == ["--help"] || args == ["help"] {
         print!("{HELP}");
@@ -143,6 +164,7 @@ fn run(args: &[String]) -> Result<(), ()> {
         "backup-active",
         "verify-active",
         "restore-active",
+        "plan-active-incremental",
     ]
     .contains(&mode.as_str())
         || rest.len() > 13
@@ -178,13 +200,14 @@ fn run(args: &[String]) -> Result<(), ()> {
             "--app-hash",
         ],
         "locate-height" => &["--source", "--checkpoint", "--height"],
+        "plan-active-incremental" => &["--base", "--base-checkpoint", "--source", "--checkpoint"],
         "verify" | "verify-segments" | "index" | "verify-active" => &["--source", "--checkpoint"],
         _ => &["--source", "--output", "--checkpoint"],
     };
     if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {
         return Err(());
     }
-    for key in ["--source", "--output", "--genesis"] {
+    for key in ["--source", "--output", "--genesis", "--base"] {
         if let Some(path) = options.get(key) {
             if !Path::new(path).is_absolute() {
                 return Err(());
@@ -192,6 +215,9 @@ fn run(args: &[String]) -> Result<(), ()> {
         }
     }
     let source = Path::new(options["--source"]);
+    if mode == "plan-active-incremental" {
+        return run_incremental(source, &options);
+    }
     if matches!(
         mode.as_str(),
         "checkpoint-active" | "backup-active" | "verify-active" | "restore-active"
