@@ -7,7 +7,8 @@
 当前活动账本分段的实现、双平台增长与付款恢复、独立复审和准确源码证据，见
 [P2活动账本验收记录](reports/p2-active-ledger-validation.md)。固定32+1笔真实付款、恢复及进程资源观测另见
 [P2付款资源基线验收](reports/p2-payment-resource-validation.md)。活动目录归档的冻结合同、已验收实现及证据另见
-[P2活动归档与完整恢复](reports/p2-active-archive-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
+[P2活动归档与完整恢复](reports/p2-active-archive-validation.md)。双检查点活动归档的只读追加核验与范围计划见
+[P2活动归档追加计划](reports/p2-active-incremental-plan-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
 [2026-09-16接手记录](reports/project-handoff-2026-09-16.md)。
 统一开发入口仍是 `dev/m12-genesis-domain`；整体交付范围见
 [八工作包计划](docs/DELIVERY_PLAN.zh-CN.md)。
@@ -177,3 +178,24 @@ Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-l
 创建后失败可能留下部分或完整目标，不能自动清除或覆盖；完整副本可以按原pin另行验证。归档不含钱包、密钥、共识数据库/WAL或最后签名状态，成功也明确 `validator_ready:false`，不能直接当成可启动的完整验证者备份。Windows目录持久化、真实断电、磁盘满、快照、增量备份和长期全容量仍需后续验收；本阶段没有新增归档资源测量。
 
 [冻结合同](docs/ACTIVE_ARCHIVE_V1.zh-CN.md) · [实现、原生CI与独立审核记录](reports/p2-active-archive-validation.md)。P2保持开发中。
+
+## P2 活动归档追加关系与只读增量计划
+
+`zevune-pool-recovery plan-active-incremental` 比较两份分别由独立可信 `ZVARCP01` 检查点固定的活动归档，完整验证后确认较后归档是否沿原物理字节追加，并输出所需的新字节范围。只接受 LAB2／ZVTGEN03／ActiveSegmentsV1；旧段及分段位置必须保持，旧尾段可以增长或保持不变后新增连续段。同内容、同高度返回空计划；回退、不同网络及改写旧历史的分叉均拒绝。
+
+使用前停止两端对应的写入进程，并分别准备独立可信保存的 128 字节检查点（各为 256 个小写 hex 字符）。两个随不可信目录一起收到的未认证 pin 不能互相证明来源。下列 Bash 示例在仓库根目录执行；先将两个变量设置为实际可信 pin，并替换两个绝对目录：
+
+```bash
+cargo +1.98.1 run --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-pool-recovery -- \
+  plan-active-incremental --no-real-funds \
+  --base /srv/zevune/archive-earlier --base-checkpoint "${BASE_CHECKPOINT:?请先设置较早归档的可信检查点}" \
+  --source /srv/zevune/archive-later --checkpoint "${LATER_CHECKPOINT:?请先设置较后归档的可信检查点}"
+```
+
+成功返回单行 ASCII JSON，格式为 `zevune-active-incremental-plan-1`。`ranges` 按段索引列出 `segment_index`、`offset`、`length`，长度之和等于 `appended_bytes`；`reused_bytes` 包含 genesis 和旧尾段前缀，`unchanged_segment_count` 只计整个文件不变的旧 journal 段。空计划沿用同一格式，追加字节为 0、范围为空。命令不接受 `--output`，不改写归档、不创建增量包或导入状态；JSON 明确保留 `incremental_backup_written:false`、`snapshot_imported:false`、`finality_verified:false`、`validator_ready:false` 和 `real_funds_allowed:false`。stdout 写入失败会非零退出，但可能已写出部分 JSON，必须同时检查退出状态。
+
+库接口为 `base.incremental_plan(&mut later)`，返回字段私有的 `ActiveIncrementalPlan` 和只读范围。两份归档保持共享锁；成功 CLI 的两次打开与方法内两次核验合计四次完整真实重放，每次使用独立空授权缓存。对两个已打开实例单独调用方法则新增两次重放。全部复用字节比较后还会再次核对两端完整字节、布局和目录身份。计划只描述本次已核验的历史，不能认证以后路径中的文件，也不证明最新状态或共识最终性。
+
+本运行阶段已通过两路非作者完整代码审核和独立原生审核，并经 [PR #15](https://github.com/youq616/Zevune/pull/15) 合入。准确 C2 的 10 个 PR 工作流／23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致，最终文档复核与合入记录见 PR #15 所链接的文档 PR。持久增量包、应用增量的恢复入口、快照导入和生产存储仍待开发，P2 保持开发中。
+
+[冻结设计](docs/ACTIVE_INCREMENTAL_PLAN.zh-CN.md) · [准确源码、原生结果与独立审核](reports/p2-active-incremental-plan-validation.md)。

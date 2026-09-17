@@ -1,0 +1,2080 @@
+{
+  "Python_Rust_interop": {
+    "both_actual_passed": true,
+    "broadcast_or_finality_measurement": false,
+    "jobs": [
+      105235853237,
+      105235852975
+    ],
+    "native_local_prepare_sample_total_microseconds": {
+      "ubuntu": 8908158,
+      "windows": 10368539
+    },
+    "samples_per_platform": 1,
+    "source_path": "scripts/check_wallet_backend.py"
+  },
+  "Python_repeated_suite_totals": {
+    "discovered": 672,
+    "distinct_test_count_claimed": false,
+    "passed": 660,
+    "skipped": 12
+  },
+  "active_growth": {
+    "four_node_consensus_at_100000_claimed": false,
+    "full_storage_or_commitment_capacity_tested": false,
+    "independent_scenario_replay_through_height": 10002,
+    "native_results": [
+      {
+        "job_id": 105237131101,
+        "platform": "growth (ubuntu-latest)",
+        "progress": [
+          {
+            "committed_blocks": 25000,
+            "elapsed_ms": 28662,
+            "logical_bytes": 3768544,
+            "paid_blocks": 2,
+            "segments": 4
+          },
+          {
+            "committed_blocks": 50000,
+            "elapsed_ms": 37036,
+            "logical_bytes": 7518544,
+            "paid_blocks": 2,
+            "segments": 8
+          },
+          {
+            "committed_blocks": 75000,
+            "elapsed_ms": 45401,
+            "logical_bytes": 11268544,
+            "paid_blocks": 2,
+            "segments": 11
+          },
+          {
+            "committed_blocks": 100000,
+            "elapsed_ms": 53658,
+            "logical_bytes": 15018544,
+            "paid_blocks": 2,
+            "segments": 15
+          }
+        ],
+        "result": {
+          "committed_blocks": 100000,
+          "continued_height": 100001,
+          "empty_blocks": 99998,
+          "growth_elapsed_ms": 53658,
+          "logical_bytes": 15018544,
+          "paid_blocks": 2,
+          "replay_elapsed_ms": 2692,
+          "segment_limit_bytes": 1048576,
+          "segments": 15
+        },
+        "test": {
+          "duration": "64.85s",
+          "job_id": 105237131101,
+          "name": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+          "nested": false,
+          "status": "PASS"
+        }
+      },
+      {
+        "job_id": 105237130510,
+        "platform": "growth (windows-latest)",
+        "progress": [
+          {
+            "committed_blocks": 25000,
+            "elapsed_ms": 226601,
+            "logical_bytes": 3768544,
+            "paid_blocks": 2,
+            "segments": 4
+          },
+          {
+            "committed_blocks": 50000,
+            "elapsed_ms": 347510,
+            "logical_bytes": 7518544,
+            "paid_blocks": 2,
+            "segments": 8
+          },
+          {
+            "committed_blocks": 75000,
+            "elapsed_ms": 475890,
+            "logical_bytes": 11268544,
+            "paid_blocks": 2,
+            "segments": 11
+          },
+          {
+            "committed_blocks": 100000,
+            "elapsed_ms": 593575,
+            "logical_bytes": 15018544,
+            "paid_blocks": 2,
+            "segments": 15
+          }
+        ],
+        "result": {
+          "committed_blocks": 100000,
+          "continued_height": 100001,
+          "empty_blocks": 99998,
+          "growth_elapsed_ms": 593575,
+          "logical_bytes": 15018544,
+          "paid_blocks": 2,
+          "replay_elapsed_ms": 1909,
+          "segment_limit_bytes": 1048576,
+          "segments": 15
+        },
+        "test": {
+          "duration": "601.59s",
+          "job_id": 105237130510,
+          "name": "TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart",
+          "nested": false,
+          "status": "PASS"
+        }
+      }
+    ],
+    "paid_heights": [
+      9999,
+      10001
+    ],
+    "physical_frame_recheck_after_height": [
+      100000,
+      100001
+    ],
+    "worker_replay_through_height": 100000
+  },
+  "actual_fuzz_engine_runs": [
+    {
+      "command": "go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzCanonicalPublicConfiguration$' -fuzztime=3s -parallel=2",
+      "engine_entered": true,
+      "execs": 10838,
+      "job_id": 105235852383,
+      "new_interesting": 62,
+      "pass": true,
+      "total_corpus": 64,
+      "workflow": "local-network-operator"
+    },
+    {
+      "command": "go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2",
+      "engine_entered": true,
+      "execs": 12820,
+      "job_id": 105235852383,
+      "new_interesting": 43,
+      "pass": true,
+      "total_corpus": 45,
+      "workflow": "local-network-operator"
+    },
+    {
+      "command": "go test -mod=readonly ./internal/poolbridge -run '^$' -fuzz '^FuzzTestGenesisFrame$' -fuzztime=3s -parallel=2",
+      "engine_entered": true,
+      "execs": 148521,
+      "job_id": 105235852383,
+      "new_interesting": 4,
+      "pass": true,
+      "total_corpus": 8,
+      "workflow": "local-network-operator"
+    },
+    {
+      "command": "go test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2",
+      "engine_entered": true,
+      "execs": 653501,
+      "job_id": 105235852428,
+      "new_interesting": 4,
+      "pass": true,
+      "total_corpus": 5,
+      "workflow": "orchard-consensus-integration"
+    },
+    {
+      "command": "go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2",
+      "engine_entered": true,
+      "execs": 21701,
+      "job_id": 105235852600,
+      "new_interesting": 3,
+      "pass": true,
+      "total_corpus": 6,
+      "workflow": "scaffold-tests"
+    },
+    {
+      "command": "go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2",
+      "engine_entered": true,
+      "execs": 98045,
+      "job_id": 105235852600,
+      "new_interesting": 8,
+      "pass": true,
+      "total_corpus": 11,
+      "workflow": "scaffold-tests"
+    },
+    {
+      "command": "GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzDecodeEnvelope$' -fuzztime=10s -parallel=2",
+      "engine_entered": true,
+      "execs": 493509,
+      "job_id": 105235853864,
+      "new_interesting": 2,
+      "pass": true,
+      "total_corpus": 5,
+      "workflow": "orchard-bridge"
+    },
+    {
+      "command": "GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzReadFrame$' -fuzztime=10s -parallel=2",
+      "engine_entered": true,
+      "execs": 393987,
+      "job_id": 105235853864,
+      "new_interesting": 2,
+      "pass": true,
+      "total_corpus": 4,
+      "workflow": "orchard-bridge"
+    }
+  ],
+  "base": "0927af157a3cc35abde14b036bc50a99a793a32b",
+  "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+  "counting_rules": [
+    "Nonverbose Go package successes are executed tests, not zero cases.",
+    "Compile-only package lines do not count as executed tests.",
+    "Named results include helper cases, nested subtests and fuzz seed cases.",
+    "Repeated platform/workflow executions are not distinct test names.",
+    "Windows workflow skips and platform-specific Python skips are not passes."
+  ],
+  "date_utc": "2026-09-17",
+  "findings": [],
+  "four_node_scenarios": [
+    {
+      "native_results": [
+        {
+          "duration": "60.75s",
+          "job_id": 105235852383,
+          "name": "TestActiveFundedFourNodePaymentRestart",
+          "nested": false,
+          "status": "PASS"
+        },
+        {
+          "duration": "72.20s",
+          "job_id": 105235852011,
+          "name": "TestActiveFundedFourNodePaymentRestart",
+          "nested": false,
+          "status": "PASS"
+        }
+      ],
+      "scope": "real shipped operator, active ledgers, funded Orchard four processes",
+      "source_verified_order": [
+        "A_to_B_commit_and_independent_replay",
+        "stop_all_four",
+        "inspect_all_active_ledgers",
+        "restart_all_four_and_advance",
+        "B_to_C_created_and_committed_after_full_restart",
+        "wallet_reopen_balance_and_signed_header_agreement",
+        "both_duplicate_rejections"
+      ],
+      "test": "TestActiveFundedFourNodePaymentRestart"
+    },
+    {
+      "native_results": [
+        {
+          "duration": "72.93s",
+          "job_id": 105235852383,
+          "name": "TestRealOperatorNonzeroPaymentsAndRestart",
+          "nested": false,
+          "status": "PASS"
+        },
+        {
+          "duration": "96.16s",
+          "job_id": 105235852011,
+          "name": "TestRealOperatorNonzeroPaymentsAndRestart",
+          "nested": false,
+          "status": "PASS"
+        }
+      ],
+      "scope": "real operator legacy-compatible funded end-to-end regression",
+      "source_verified_order": [
+        "A_to_B",
+        "one_validator_stopped",
+        "B_to_C",
+        "validator_returns",
+        "then_all_four_restart",
+        "wallet_reopen_signed_agreement_and_duplicates"
+      ],
+      "test": "TestRealOperatorNonzeroPaymentsAndRestart"
+    },
+    {
+      "native_results": [
+        {
+          "duration": "64.95s",
+          "job_id": 105235853237,
+          "name": "TestFundedWalletFourNodesAndRecovery",
+          "nested": false,
+          "status": "PASS"
+        },
+        {
+          "duration": "83.51s",
+          "job_id": 105235852975,
+          "name": "TestFundedWalletFourNodesAndRecovery",
+          "nested": false,
+          "status": "PASS"
+        }
+      ],
+      "scope": "real Rust wallet and worker behind four native consensus processes",
+      "source_verified_order": [
+        "A_to_B",
+        "one_validator_stopped",
+        "B_to_C_with_exact_encrypted_outbox_restore",
+        "validator_returns",
+        "then_all_four_restart",
+        "wallet_reopen_signed_agreement_and_duplicates"
+      ],
+      "test": "TestFundedWalletFourNodesAndRecovery"
+    }
+  ],
+  "frozen_separate_code_review": {
+    "bytes": 16960,
+    "path": "c2-adversarial-review.md",
+    "sha256": "94d07ad75732ccf8e8894d37d609883766e2d29d8b0c1babf7942e65c61b1252"
+  },
+  "funded_local_timing_samples_ms": {
+    "scope": "two samples per native run including backup/rescan, signed checks and replay; no p95/TPS/WAN claim",
+    "ubuntu": [
+      6109,
+      7811
+    ],
+    "windows": [
+      8482,
+      9557
+    ]
+  },
+  "kind": "independent_C2_nonrust_native_evidence_review",
+  "limitations": [
+    "This is an independent retained-evidence review; no local native workload or live OS probe was rerun.",
+    "Rust target execution, all new append-plan test names, dynamic funded partition completeness and full native acceptance are assigned to a separate reviewer.",
+    "CI and independent agent review are not an external specialist cryptography or security audit.",
+    "All genuine payments use ephemeral NO-FUNDS local laboratory funding; no real-value transfer or deployment occurred.",
+    "Health, preflight, AppHash and local ApplyBlock are not finality.",
+    "Growth covers real local worker disk/replay, not 100000-block four-node consensus or physical power loss.",
+    "Fixed 32+1 resources are retained OS lifetime resident/working-set samples per process generation; not phase peaks, private heap, all-process totals or enforced allocation caps.",
+    "Python supervisor and Go coordinator are outside measured roles; scenario includes prover, cache, history, both wallets and Argon2.",
+    "Resource run remains one segment and does not measure archive/append-plan cost, 64-entry cache boundary, full storage capacity or maximum commitment count.",
+    "The setup artifact remains not_started; workload credit comes from final resource JSON plus matching completed native log and metadata.",
+    "precheckpoint_child_tree_cleanup_confirmed remains false; ordinary registered-role cleanup does not prove a process sandbox.",
+    "ZIP and manifest hashes prove retained member integrity and native source association, not independent binary reproducibility or a publisher signature.",
+    "The C2 stage remains a read-only append plan; persistent incremental backup and snapshot state import are not implemented; P2 remains in progress."
+  ],
+  "metadata_runs": [
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852011,
+        105235852383
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320198,
+      "workflow": "local-network-operator",
+      "workflow_path": ".github/workflows/network-operator.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852428,
+        105235852619
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320202,
+      "workflow": "orchard-consensus-integration",
+      "workflow_path": ".github/workflows/orchard-consensus.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852236,
+        105235852600
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320231,
+      "workflow": "scaffold-tests",
+      "workflow_path": ".github/workflows/ci.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235853115,
+        105235853346
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320272,
+      "workflow": "orchard-cryptography-laboratory",
+      "workflow_path": ".github/workflows/orchard-lab.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852975,
+        105235853237,
+        105235853245,
+        105235853314
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320287,
+      "workflow": "funded-wallet-consensus",
+      "workflow_path": ".github/workflows/funded-wallet.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852466,
+        105235853110
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320296,
+      "workflow": "payment-resource-baseline",
+      "workflow_path": ".github/workflows/payment-resources.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235853864,
+        105235854234
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320339,
+      "workflow": "orchard-bridge",
+      "workflow_path": ".github/workflows/orchard-bridge.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235852703,
+        105235853178
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320342,
+      "workflow": "consensus-laboratory",
+      "workflow_path": ".github/workflows/consensus-lab.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235853053,
+        105237130510,
+        105237131101
+      ],
+      "run_attempt": 1,
+      "run_id": 35231320368,
+      "workflow": "active-ledger-growth",
+      "workflow_path": ".github/workflows/active-ledger.yml"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "2020c7314a996769b33706754405c0976ce7c50a",
+      "job_ids": [
+        105235862028,
+        105235862497
+      ],
+      "run_attempt": 1,
+      "run_id": 35231322405,
+      "workflow": "wallet-laboratory",
+      "workflow_path": ".github/workflows/wallet-lab.yml"
+    }
+  ],
+  "native_scope_blockers": 0,
+  "nonrust_jobs": [
+    {
+      "bytes": 95790,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v",
+        "go vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network"
+      ],
+      "go_named_pass_count_including_nested": 102,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t336.764s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.045s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 55,
+      "job_id": 105235852011,
+      "name": "operator (windows-latest)",
+      "path": "c2-native/job-105235852011.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 135,
+          "ending": "OK (skipped=1)",
+          "passed": 134,
+          "seconds": 6.301,
+          "skipped": 1
+        }
+      ],
+      "run_id": 35231320198,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "fc79848327c0d2193cce9bbf45014ff057ec0fcd5febf091a398fa23b356f8f0",
+      "skipped_workflow_steps": [
+        "Race and bounded fuzz checks"
+      ],
+      "workflow": "local-network-operator"
+    },
+    {
+      "bytes": 19227,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1",
+        "go vet ./..."
+      ],
+      "go_named_pass_count_including_nested": 0,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.133s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.039s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t6.319s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.059s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.570s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t1.043s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.025s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 0,
+      "job_id": 105235852236,
+      "name": "tests (windows-latest)",
+      "path": "c2-native/job-105235852236.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320231,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "eef0a4a1319a6ef1566df5fe113566881cd3f1b25a8f8a0e922b941430d52fbf",
+      "skipped_workflow_steps": [
+        "Race detector",
+        "Bounded decoder fuzz smoke test",
+        "Bounded journal decoder fuzz smoke test"
+      ],
+      "workflow": "scaffold-tests"
+    },
+    {
+      "bytes": 97563,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v",
+        "go vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network",
+        "go test -mod=readonly -race ./labnet ./cmd/zevune-network -count=1",
+        "go test -mod=readonly -race -tags=operator_e2e ./labnet -run '^TestQuorumSignedWrongPostStateNeverPersists$' -count=1",
+        "go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzCanonicalPublicConfiguration$' -fuzztime=3s -parallel=2",
+        "go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2",
+        "go test -mod=readonly ./internal/poolbridge -run '^$' -fuzz '^FuzzTestGenesisFrame$' -fuzztime=3s -parallel=2"
+      ],
+      "go_named_pass_count_including_nested": 102,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t292.412s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.016s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t1.179s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t1.063s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t4.233s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t3.032s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t4.018s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.007s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 55,
+      "job_id": 105235852383,
+      "name": "operator (ubuntu-latest)",
+      "path": "c2-native/job-105235852383.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 135,
+          "ending": "OK (skipped=3)",
+          "passed": 132,
+          "seconds": 3.479,
+          "skipped": 3
+        }
+      ],
+      "run_id": 35231320198,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "56c0ec4ab513f5157a9a72afb8497296210781b6870303b08c029c1dc4e758aa",
+      "skipped_workflow_steps": [],
+      "workflow": "local-network-operator"
+    },
+    {
+      "bytes": 79425,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1",
+        "go vet ./...",
+        "go test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v",
+        "go test -mod=readonly ./... -count=1 -timeout=8m",
+        "go vet -mod=readonly -tags=pool_e2e ./...",
+        "go test -mod=readonly -race -tags=pool_e2e ./poolapp -run '^TestReal(FinalizationCommitAndRestart|ProposalSelectionAndAtomicRejection)$' -count=1 -timeout=3m",
+        "go test -race ./internal/poolbridge -count=1 -timeout=2m",
+        "go test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2"
+      ],
+      "go_named_pass_count_including_nested": 6,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.283s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.003s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t1.714s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.004s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.204s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.805s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.002s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t40.943s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.045s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.022s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t44.403s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.270s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.007s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t6.894s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.280s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t10.045s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 6,
+      "job_id": 105235852428,
+      "name": "integrated (ubuntu-latest)",
+      "path": "c2-native/job-105235852428.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320202,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "a7446b853be3c802526d8ad84122874fafc884432dc2c6549e1f796d5cb65938",
+      "skipped_workflow_steps": [],
+      "workflow": "orchard-consensus-integration"
+    },
+    {
+      "bytes": 56165,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105235852466,
+      "name": "resources (windows-latest)",
+      "path": "c2-native/job-105235852466.log",
+      "python_declared_go_compilation_and_vet": [
+        "subprocess.run(['go', 'test', '-c', '-mod=readonly', '-tags=payment_resource_e2e',",
+        "subprocess.run(['go', 'vet', '-mod=readonly', '-tags=payment_resource_e2e',"
+      ],
+      "python_skip_lines": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 53,
+          "ending": "OK (skipped=1)",
+          "passed": 52,
+          "seconds": 5.818,
+          "skipped": 1
+        }
+      ],
+      "run_id": 35231320296,
+      "scope": "Python tests and compiled Go resource test executable supervised on native OS",
+      "sha256": "df8f629f8962faf871c002f53c043f3960bbb99263723d89891b18267bc4e92d",
+      "skipped_workflow_steps": [],
+      "workflow": "payment-resource-baseline"
+    },
+    {
+      "bytes": 21317,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1",
+        "go vet ./...",
+        "go test -race ./... -count=1",
+        "go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2",
+        "go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2"
+      ],
+      "go_named_pass_count_including_nested": 0,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.026s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.005s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.117s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.003s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.224s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.561s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.006s",
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t1.044s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t1.015s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.305s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t1.015s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t1.397s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.069s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t1.021s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t4.006s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.070s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 0,
+      "job_id": 105235852600,
+      "name": "tests (ubuntu-latest)",
+      "path": "c2-native/job-105235852600.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320231,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "1f9194b9e144d8c5ded70acbcc395a0d95ec6116adc22a2078e0aaaac80f359e",
+      "skipped_workflow_steps": [],
+      "workflow": "scaffold-tests"
+    },
+    {
+      "bytes": 77240,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1",
+        "go vet ./...",
+        "go test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v",
+        "go test -mod=readonly ./... -count=1 -timeout=8m",
+        "go vet -mod=readonly -tags=pool_e2e ./..."
+      ],
+      "go_named_pass_count_including_nested": 6,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.193s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.091s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.111s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.053s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.552s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t1.087s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.037s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t73.542s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.410s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.195s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t56.062s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t11.974s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.083s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 6,
+      "job_id": 105235852619,
+      "name": "integrated (windows-latest)",
+      "path": "c2-native/job-105235852619.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320202,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "097634db86a34fbf5ab0d4ff7f56eb92bf7fcdb27063deff812dd585852c6bc7",
+      "skipped_workflow_steps": [
+        "Real adapter race checks",
+        "Local IPC race and bounded fuzz"
+      ],
+      "workflow": "orchard-consensus-integration"
+    },
+    {
+      "bytes": 43396,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly ./... -count=1 -timeout=8m -v",
+        "go vet -mod=readonly ./...",
+        "go build -mod=readonly ./cmd/zevune-devnet"
+      ],
+      "go_named_pass_count_including_nested": 106,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.410s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.057s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t53.076s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t1.146s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.050s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 63,
+      "job_id": 105235852703,
+      "name": "integration (windows-latest)",
+      "path": "c2-native/job-105235852703.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320342,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "7ff57a22fa2fb1fb059dbd073a8777f3dab8d2a51d4e5bb961e4954dd1b15db3",
+      "skipped_workflow_steps": [
+        "Adapter race checks"
+      ],
+      "workflow": "consensus-laboratory"
+    },
+    {
+      "bytes": 93783,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.285s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.018s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.279s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.049s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.028s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.021s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.023s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.062s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.049s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.066s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.046s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.036s [no tests to run]"
+      ],
+      "go_commands": [
+        "go test -mod=readonly ./... -run '^$'",
+        "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch)$' -count=1 -timeout=15m -v",
+        "go vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp"
+      ],
+      "go_named_pass_count_including_nested": 3,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t83.559s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 3,
+      "job_id": 105235852975,
+      "name": "funded (windows-latest)",
+      "path": "c2-native/job-105235852975.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 135,
+          "ending": "OK (skipped=1)",
+          "passed": 134,
+          "seconds": 7.848,
+          "skipped": 1
+        }
+      ],
+      "run_id": 35231320287,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "04e48810f1690c3c78a3854b0fbc36649c3fa25443cf5f80f96e0f155b5053a7",
+      "skipped_workflow_steps": [],
+      "workflow": "funded-wallet-consensus"
+    },
+    {
+      "bytes": 22777,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.005s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.004s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.004s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.012s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.019s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.021s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.013s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.013s [no tests to run]"
+      ],
+      "go_commands": [
+        "go test -mod=readonly ./... -run '^$'",
+        "go test -mod=readonly -tags=pool_e2e,funded_e2e ./... -run '^$'"
+      ],
+      "go_named_pass_count_including_nested": 0,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 0,
+      "job_id": 105235853053,
+      "name": "source",
+      "path": "c2-native/job-105235853053.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320368,
+      "scope": "source formats and two Go module compilation only; no executed Go test credit",
+      "sha256": "787b7515ed776c2490056193f41c9aa4c6afeb92e02c1daa7cdce6a3f91d5b8d",
+      "skipped_workflow_steps": [],
+      "workflow": "active-ledger-growth"
+    },
+    {
+      "bytes": 54923,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105235853110,
+      "name": "resources (ubuntu-latest)",
+      "path": "c2-native/job-105235853110.log",
+      "python_declared_go_compilation_and_vet": [
+        "subprocess.run(['go', 'test', '-c', '-mod=readonly', '-tags=payment_resource_e2e',",
+        "subprocess.run(['go', 'vet', '-mod=readonly', '-tags=payment_resource_e2e',"
+      ],
+      "python_skip_lines": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 53,
+          "ending": "OK (skipped=3)",
+          "passed": 50,
+          "seconds": 2.43,
+          "skipped": 3
+        }
+      ],
+      "run_id": 35231320296,
+      "scope": "Python tests and compiled Go resource test executable supervised on native OS",
+      "sha256": "5685eef2f174ca52d162dca4696fd87c425730e9a5469431cfda23255938610c",
+      "skipped_workflow_steps": [],
+      "workflow": "payment-resource-baseline"
+    },
+    {
+      "bytes": 42351,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly ./... -count=1 -timeout=8m -v",
+        "go vet -mod=readonly ./...",
+        "go test -mod=readonly -race ./app -count=1 -timeout=3m",
+        "go build -mod=readonly ./cmd/zevune-devnet"
+      ],
+      "go_named_pass_count_including_nested": 106,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.064s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.020s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t44.912s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.059s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.009s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t1.059s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 63,
+      "job_id": 105235853178,
+      "name": "integration (ubuntu-latest)",
+      "path": "c2-native/job-105235853178.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320342,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "d3b142d8ad3984492dd1e1d6a04db8e00deafc661c75ea7d2bd716232a56cc47",
+      "skipped_workflow_steps": [],
+      "workflow": "consensus-laboratory"
+    },
+    {
+      "bytes": 91863,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.008s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.009s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.007s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.005s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.015s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.014s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.015s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.012s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.008s [no tests to run]"
+      ],
+      "go_commands": [
+        "go test -mod=readonly ./... -run '^$'",
+        "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch)$' -count=1 -timeout=15m -v",
+        "go vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp"
+      ],
+      "go_named_pass_count_including_nested": 3,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t64.960s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 3,
+      "job_id": 105235853237,
+      "name": "funded (ubuntu-latest)",
+      "path": "c2-native/job-105235853237.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "python_suites": [
+        {
+          "discovered": 135,
+          "ending": "OK (skipped=3)",
+          "passed": 132,
+          "seconds": 3.06,
+          "skipped": 3
+        }
+      ],
+      "run_id": 35231320287,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "da1ca976377db55d40c51f0920977000452745ae694cd4cda9822d00272dcc18",
+      "skipped_workflow_steps": [],
+      "workflow": "funded-wallet-consensus"
+    },
+    {
+      "bytes": 53956,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [],
+      "go_named_pass_count_including_nested": 0,
+      "go_package_result_lines": [],
+      "go_skips": [],
+      "go_top_level_pass_count": 0,
+      "job_id": 105235853245,
+      "name": "funded-library (ubuntu-latest)",
+      "path": "c2-native/job-105235853245.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [
+        {
+          "discovered": 13,
+          "ending": "OK",
+          "passed": 13,
+          "seconds": 0.004,
+          "skipped": 0
+        }
+      ],
+      "run_id": 35231320287,
+      "scope": "Python funded-target scheduler only; Rust suite reviewed separately",
+      "sha256": "69846a81211ca2eba44510d2d59f9012e8f7a1e9a79d36c837fcec7f96d601e5",
+      "skipped_workflow_steps": [],
+      "workflow": "funded-wallet-consensus"
+    },
+    {
+      "bytes": 53068,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [],
+      "go_named_pass_count_including_nested": 0,
+      "go_package_result_lines": [],
+      "go_skips": [],
+      "go_top_level_pass_count": 0,
+      "job_id": 105235853314,
+      "name": "funded-library (windows-latest)",
+      "path": "c2-native/job-105235853314.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [
+        {
+          "discovered": 13,
+          "ending": "OK",
+          "passed": 13,
+          "seconds": 0.05,
+          "skipped": 0
+        }
+      ],
+      "run_id": 35231320287,
+      "scope": "Python funded-target scheduler only; Rust suite reviewed separately",
+      "sha256": "ac39c0e78c8d86c8037c342492b9a399525cb86af8ef5027b5f271518bf68c6c",
+      "skipped_workflow_steps": [],
+      "workflow": "funded-wallet-consensus"
+    },
+    {
+      "bytes": 78206,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1 -timeout=4m",
+        "go vet ./...",
+        "go test -tags=orchard_e2e ./internal/orchardbridge -run '^TestGenuineRustWorkerAuthorization$' -count=1 -timeout=2m -v",
+        "go test -race ./internal/orchardbridge -count=1 -timeout=2m",
+        "GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzDecodeEnvelope$' -fuzztime=10s -parallel=2",
+        "GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzReadFrame$' -fuzztime=10s -parallel=2"
+      ],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.012s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.004s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.109s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.003s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.212s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.553s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.007s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t2.111s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t1.331s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t10.098s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t10.056s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105235853864,
+      "name": "boundary (ubuntu-latest)",
+      "path": "c2-native/job-105235853864.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320339,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "ba87353b2048c56c45a4ea96559654728bb5da83bf603e4c4e02b98124fccbb6",
+      "skipped_workflow_steps": [],
+      "workflow": "orchard-bridge"
+    },
+    {
+      "bytes": 74981,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test ./... -count=1 -timeout=4m",
+        "go vet ./...",
+        "go test -tags=orchard_e2e ./internal/orchardbridge -run '^TestGenuineRustWorkerAuthorization$' -count=1 -timeout=2m -v"
+      ],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.093s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.042s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.895s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.049s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.518s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t1.052s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.036s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t2.953s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105235854234,
+      "name": "boundary (windows-latest)",
+      "path": "c2-native/job-105235854234.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320339,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "cf36aa70e519ba3431da519c5df615a7891d3b801bab43383cb046424c1fd735",
+      "skipped_workflow_steps": [
+        "Boundary race checks",
+        "Bounded decoder fuzz checks"
+      ],
+      "workflow": "orchard-bridge"
+    },
+    {
+      "bytes": 39868,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart$' -count=1 -timeout=25m -v"
+      ],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t601.619s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105237130510,
+      "name": "growth (windows-latest)",
+      "path": "c2-native/job-105237130510.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320368,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "35ddfef904be2315a95e0d7d6bef61fbcd9dfc6fcc778622a215c66ecccbe745",
+      "skipped_workflow_steps": [],
+      "workflow": "active-ledger-growth"
+    },
+    {
+      "bytes": 38550,
+      "carrier_utf8_bytes_matched": true,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "cleanup_marker_present": true,
+      "compile_only_package_lines": [],
+      "go_commands": [
+        "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart$' -count=1 -timeout=25m -v"
+      ],
+      "go_named_pass_count_including_nested": 1,
+      "go_package_result_lines": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t64.864s"
+      ],
+      "go_skips": [],
+      "go_top_level_pass_count": 1,
+      "job_id": 105237131101,
+      "name": "growth (ubuntu-latest)",
+      "path": "c2-native/job-105237131101.log",
+      "python_declared_go_compilation_and_vet": [],
+      "python_skip_lines": [],
+      "python_suites": [],
+      "run_id": 35231320368,
+      "scope": "native Go test/vet behavior and applicable Python/race/fuzz steps",
+      "sha256": "b8a14cdd34b9fc3fee83cdf08adbb9cf90c81298257fb49be15fdfba94b827cc",
+      "skipped_workflow_steps": [],
+      "workflow": "active-ledger-growth"
+    }
+  ],
+  "offline_helpers": [
+    {
+      "bytes": 11019,
+      "path": "nonrust_resource_recheck.py",
+      "sha256": "18c574fa8d49685ab96fdd7ee84173bbe5ef4e9279f756b4cc5a56ad9a2f45a9"
+    },
+    {
+      "bytes": 8399,
+      "path": "nonrust_native_extract.py",
+      "sha256": "ae2ad5f0db073ea501f8f170368f73b5b5fa2d43481b04a7650c8415429c1479"
+    }
+  ],
+  "operator_bundles": [
+    {
+      "api_digest_matched": true,
+      "artifact_id": 10501053828,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "executed_downloaded_binaries": false,
+      "job_id": 105235852011,
+      "kind": "operator_artifact_all_member_byte_verification",
+      "manifest_bytes": 1302,
+      "manifest_sha256": "7866d5d741be3e54b5e777c2dc0afbac012420857452b199ad1ce27371bb8798",
+      "member_count": 6,
+      "members": [
+        {
+          "byte_equal_to_source_path": "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md",
+          "name": "LOCAL_NETWORK_OPERATOR.zh-CN.md",
+          "sha256": "87b936c3c922ce9e5a7a29e3de6852ef9a76e2fa2bc43cd5013e394f4318f4c5",
+          "size": 7125
+        },
+        {
+          "name": "zevune-network.exe",
+          "sha256": "cf4aacfd007d4e65ce82204d3df8bd0e7eb5affc3c788dcd80a55750ef8051c3",
+          "size": 37539840
+        },
+        {
+          "name": "zevune-pool-worker.exe",
+          "sha256": "0498acc113fad28f10296c2847b7098735861d6f7956b24ab1f22a1b9afef69d",
+          "size": 2696704
+        },
+        {
+          "name": "zevune-wallet-local.exe",
+          "sha256": "ff8b6f2ff69b090db7161c172b1c342ffed9d4f95a345e77640f82d3368c8db1",
+          "size": 4308992
+        },
+        {
+          "byte_equal_to_source_path": "scripts/zevune_wallet.py",
+          "name": "zevune_wallet.py",
+          "sha256": "af9406dbf7be5b578a544b3bd23c5374ad75b7152530c9036e0f03a9d860d790",
+          "size": 18968
+        }
+      ],
+      "metadata_sha256": "15fb8ce3bd906e7bd4eff8d1feeea1ac7300d29cf337e1e44612bec009ce7dbd",
+      "offline_review": {
+        "bytes": 1986,
+        "path": "c2-operator-members-10501053828.json",
+        "sha256": "9f37da1c615d561d088721ce40cf12fbc7b80d9702948ba5be50c273676d9853"
+      },
+      "payload_count": 5,
+      "reviewer": "/root/p2_plan_adversarial_review",
+      "source": "2020c7314a996769b33706754405c0976ce7c50a",
+      "source_binding_scope": "All five payload hashes match native manifest; text payloads also byte-equal to exact C2 Git blobs. Binary source build and execution depend on matching native operator log, not local rebuild.",
+      "status": "PASS_RETAINED_BUNDLE_MEMBERS",
+      "tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+      "workflow_run_id": 35231320198,
+      "zip_bytes": 22388417,
+      "zip_sha256": "4d52f7f0e2bddd70df090b1856d7c14965808b24951311bd7b7732a446ac6276"
+    },
+    {
+      "api_digest_matched": true,
+      "artifact_id": 10502192163,
+      "checkout": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "executed_downloaded_binaries": false,
+      "job_id": 105235852383,
+      "kind": "operator_artifact_all_member_byte_verification",
+      "manifest_bytes": 1288,
+      "manifest_sha256": "7fa94608e90d6fe523a27a69203cc92fcd2ea2514956f33e2a93560b4a6beb0f",
+      "member_count": 6,
+      "members": [
+        {
+          "byte_equal_to_source_path": "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md",
+          "name": "LOCAL_NETWORK_OPERATOR.zh-CN.md",
+          "sha256": "87b936c3c922ce9e5a7a29e3de6852ef9a76e2fa2bc43cd5013e394f4318f4c5",
+          "size": 7125
+        },
+        {
+          "name": "zevune-network",
+          "sha256": "2a23072282e80aa863d0f7a284f7dad33c2985f801416b3efe146aac9d1e8e65",
+          "size": 37296758
+        },
+        {
+          "name": "zevune-pool-worker",
+          "sha256": "2668b4a5eafd71b355509b32295574cb5926959316397df7a993efb4d419efef",
+          "size": 4033288
+        },
+        {
+          "name": "zevune-wallet-local",
+          "sha256": "6b5e3e20745092dfabb74127380691f99c79e9ace86369be92e47b1103722763",
+          "size": 6518440
+        },
+        {
+          "byte_equal_to_source_path": "scripts/zevune_wallet.py",
+          "name": "zevune_wallet.py",
+          "sha256": "af9406dbf7be5b578a544b3bd23c5374ad75b7152530c9036e0f03a9d860d790",
+          "size": 18968
+        }
+      ],
+      "metadata_sha256": "5da494387aac3173d1066f57e6fe61f4ba1cdb72e260c95d9dc814d76b3573a4",
+      "offline_review": {
+        "bytes": 1974,
+        "path": "c2-operator-members-10502192163.json",
+        "sha256": "44b1451fbf5c0215a2f874f93787c701020a599b8af70a38b927eb55f169ef29"
+      },
+      "payload_count": 5,
+      "reviewer": "/root/p2_plan_adversarial_review",
+      "source": "2020c7314a996769b33706754405c0976ce7c50a",
+      "source_binding_scope": "All five payload hashes match native manifest; text payloads also byte-equal to exact C2 Git blobs. Binary source build and execution depend on matching native operator log, not local rebuild.",
+      "status": "PASS_RETAINED_BUNDLE_MEMBERS",
+      "tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+      "workflow_run_id": 35231320198,
+      "zip_bytes": 22850002,
+      "zip_sha256": "5aee49045120adff565416ac9a60831f41cb796b8de2780e6a1eb28826adcbce"
+    }
+  ],
+  "original_inventory": {
+    "all_44_entries_independently_rehashed": true,
+    "all_checkout_log_heads_equal_synthetic": true,
+    "all_logs_carrier_utf8_bytes_equal": true,
+    "complete_job_logs": 23,
+    "expected_Windows_conditional_skipped_steps": 9,
+    "files": [
+      {
+        "bytes": 95790,
+        "path": "c2-native/job-105235852011.log",
+        "sha256": "fc79848327c0d2193cce9bbf45014ff057ec0fcd5febf091a398fa23b356f8f0"
+      },
+      {
+        "bytes": 19227,
+        "path": "c2-native/job-105235852236.log",
+        "sha256": "eef0a4a1319a6ef1566df5fe113566881cd3f1b25a8f8a0e922b941430d52fbf"
+      },
+      {
+        "bytes": 97563,
+        "path": "c2-native/job-105235852383.log",
+        "sha256": "56c0ec4ab513f5157a9a72afb8497296210781b6870303b08c029c1dc4e758aa"
+      },
+      {
+        "bytes": 79425,
+        "path": "c2-native/job-105235852428.log",
+        "sha256": "a7446b853be3c802526d8ad84122874fafc884432dc2c6549e1f796d5cb65938"
+      },
+      {
+        "bytes": 56165,
+        "path": "c2-native/job-105235852466.log",
+        "sha256": "df8f629f8962faf871c002f53c043f3960bbb99263723d89891b18267bc4e92d"
+      },
+      {
+        "bytes": 21317,
+        "path": "c2-native/job-105235852600.log",
+        "sha256": "1f9194b9e144d8c5ded70acbcc395a0d95ec6116adc22a2078e0aaaac80f359e"
+      },
+      {
+        "bytes": 77240,
+        "path": "c2-native/job-105235852619.log",
+        "sha256": "097634db86a34fbf5ab0d4ff7f56eb92bf7fcdb27063deff812dd585852c6bc7"
+      },
+      {
+        "bytes": 43396,
+        "path": "c2-native/job-105235852703.log",
+        "sha256": "7ff57a22fa2fb1fb059dbd073a8777f3dab8d2a51d4e5bb961e4954dd1b15db3"
+      },
+      {
+        "bytes": 93783,
+        "path": "c2-native/job-105235852975.log",
+        "sha256": "04e48810f1690c3c78a3854b0fbc36649c3fa25443cf5f80f96e0f155b5053a7"
+      },
+      {
+        "bytes": 22777,
+        "path": "c2-native/job-105235853053.log",
+        "sha256": "787b7515ed776c2490056193f41c9aa4c6afeb92e02c1daa7cdce6a3f91d5b8d"
+      },
+      {
+        "bytes": 54923,
+        "path": "c2-native/job-105235853110.log",
+        "sha256": "5685eef2f174ca52d162dca4696fd87c425730e9a5469431cfda23255938610c"
+      },
+      {
+        "bytes": 63241,
+        "path": "c2-native/job-105235853115.log",
+        "sha256": "4cf2dbdd1d9b253a916eda610ab64485d09e6b5985688a105d561c9b303f2c89"
+      },
+      {
+        "bytes": 42351,
+        "path": "c2-native/job-105235853178.log",
+        "sha256": "d3b142d8ad3984492dd1e1d6a04db8e00deafc661c75ea7d2bd716232a56cc47"
+      },
+      {
+        "bytes": 91863,
+        "path": "c2-native/job-105235853237.log",
+        "sha256": "da1ca976377db55d40c51f0920977000452745ae694cd4cda9822d00272dcc18"
+      },
+      {
+        "bytes": 53956,
+        "path": "c2-native/job-105235853245.log",
+        "sha256": "69846a81211ca2eba44510d2d59f9012e8f7a1e9a79d36c837fcec7f96d601e5"
+      },
+      {
+        "bytes": 53068,
+        "path": "c2-native/job-105235853314.log",
+        "sha256": "ac39c0e78c8d86c8037c342492b9a399525cb86af8ef5027b5f271518bf68c6c"
+      },
+      {
+        "bytes": 62538,
+        "path": "c2-native/job-105235853346.log",
+        "sha256": "c93e48322ed2bde6fa7e261c8cfe3a6c6a57bebee2175b22c6cc9e88de1d1895"
+      },
+      {
+        "bytes": 78206,
+        "path": "c2-native/job-105235853864.log",
+        "sha256": "ba87353b2048c56c45a4ea96559654728bb5da83bf603e4c4e02b98124fccbb6"
+      },
+      {
+        "bytes": 74981,
+        "path": "c2-native/job-105235854234.log",
+        "sha256": "cf36aa70e519ba3431da519c5df615a7891d3b801bab43383cb046424c1fd735"
+      },
+      {
+        "bytes": 63207,
+        "path": "c2-native/job-105235862028.log",
+        "sha256": "3655ea56effd2cda0e933aeb5d9a6594dcc56afd3bfeeb8c2c11ab845d7a582e"
+      },
+      {
+        "bytes": 62502,
+        "path": "c2-native/job-105235862497.log",
+        "sha256": "db78e7758e324df4731db178be4399a5378661a4052a818e652032a9a0e13549"
+      },
+      {
+        "bytes": 39868,
+        "path": "c2-native/job-105237130510.log",
+        "sha256": "35ddfef904be2315a95e0d7d6bef61fbcd9dfc6fcc778622a215c66ecccbe745"
+      },
+      {
+        "bytes": 38550,
+        "path": "c2-native/job-105237131101.log",
+        "sha256": "b8a14cdd34b9fc3fee83cdf08adbb9cf90c81298257fb49be15fdfba94b827cc"
+      },
+      {
+        "bytes": 7092,
+        "path": "c2-native/jobs-35231320198.json",
+        "sha256": "1ab1fa1f3db287a26af4c32e2463da850dc8a1e7b8ecfde9b2379d9bf3d51681"
+      },
+      {
+        "bytes": 7314,
+        "path": "c2-native/jobs-35231320202.json",
+        "sha256": "3caf31b29802e1ccb7acda8c6edb3125e6198f3421c24e261900d5eaf22457a8"
+      },
+      {
+        "bytes": 6030,
+        "path": "c2-native/jobs-35231320231.json",
+        "sha256": "0274812aca329a1a91f403b88fb63c4d153ecfcd4ae1a370f46771d81792e3f1"
+      },
+      {
+        "bytes": 5102,
+        "path": "c2-native/jobs-35231320272.json",
+        "sha256": "bc023458b507b4d23e870d342206d9878c5073e7ae8c8f77d5c88521fa3283f3"
+      },
+      {
+        "bytes": 12598,
+        "path": "c2-native/jobs-35231320287.json",
+        "sha256": "573b65243a8164c93b511e3eea5d36264ec6c4fadb532ca99aa9392bce63e89a"
+      },
+      {
+        "bytes": 7652,
+        "path": "c2-native/jobs-35231320296.json",
+        "sha256": "c1f7a160ddf2e8daeae584bdd8c90848b8b1cafa8560876f1a1bc4bcbd4d5cde"
+      },
+      {
+        "bytes": 7616,
+        "path": "c2-native/jobs-35231320339.json",
+        "sha256": "e95a550975c84601acd52f5b7f902439e0f4a3f8a1e0d7450390040a79049560"
+      },
+      {
+        "bytes": 6186,
+        "path": "c2-native/jobs-35231320342.json",
+        "sha256": "83a92d7ec50db0e2bf2d23592cb6eae92b042de2a260fb7b6f0913fca130f7fd"
+      },
+      {
+        "bytes": 8492,
+        "path": "c2-native/jobs-35231320368.json",
+        "sha256": "08115af8a14d97b2d6338be08ce7255005ec7f0c888cc97be43a4a59eb4790de"
+      },
+      {
+        "bytes": 5064,
+        "path": "c2-native/jobs-35231322405.json",
+        "sha256": "3ad6ef4bf1f0b217149893392589d9a4cdb4cde0ccafb615de5036944633f1e4"
+      },
+      {
+        "bytes": 11969,
+        "path": "c2-native/run-35231320198.json",
+        "sha256": "99dc2a9b7f079257ef59e3ace6774619901994bd56b2db3ba3f8a3ae02efabc5"
+      },
+      {
+        "bytes": 11978,
+        "path": "c2-native/run-35231320202.json",
+        "sha256": "5d852d193c72b9e9445d1c6ccbc39e8530e8a9f48e06c4a6cb1cdbe378e9a2f6"
+      },
+      {
+        "bytes": 11948,
+        "path": "c2-native/run-35231320231.json",
+        "sha256": "27685b1413f8712cd214c9a5054e6af359961d46f7e270e6ea3519607adcf7b1"
+      },
+      {
+        "bytes": 11973,
+        "path": "c2-native/run-35231320272.json",
+        "sha256": "5f10d4c47b828bec0e2fae6cf78cb5c05ed04334b4e134e733d242c005b15780"
+      },
+      {
+        "bytes": 11968,
+        "path": "c2-native/run-35231320287.json",
+        "sha256": "e087b1cfa2f0bea22f75e3c54f5a0be92aa40a7e61d83f68ea2d1718794b5672"
+      },
+      {
+        "bytes": 11973,
+        "path": "c2-native/run-35231320296.json",
+        "sha256": "423f0a59eacb521cb1ba6e09e6cbecb1a53a2355ed5792d4f9e5a170c97fcc4b"
+      },
+      {
+        "bytes": 11960,
+        "path": "c2-native/run-35231320339.json",
+        "sha256": "55d50dae5fac02ef02ba533f9d7a9382379b31b321c4493acc66314a00d7d8d8"
+      },
+      {
+        "bytes": 11965,
+        "path": "c2-native/run-35231320342.json",
+        "sha256": "8955773dbc975113b325002fe012cf2ddcd1bd915e152ffd8eb0de9c471fb320"
+      },
+      {
+        "bytes": 11964,
+        "path": "c2-native/run-35231320368.json",
+        "sha256": "ecec3d23c262ccbaf15ecb6d592466fae4da2e839eb79aa58618e59719dd6989"
+      },
+      {
+        "bytes": 11958,
+        "path": "c2-native/run-35231322405.json",
+        "sha256": "bf05ab8f2790e18ddd8c31aeba80cd27ce571fc665acc92890af871d9e5bd0e8"
+      },
+      {
+        "bytes": 119702,
+        "path": "c2-native/workflow-run-list.json",
+        "sha256": "bbbbaf3695f51d83868cce913a058ffa4d0b5f9752d0c5adf61c15ef041ed97e"
+      }
+    ],
+    "job_log_bytes": 1385937,
+    "jobs": 23,
+    "manifest": {
+      "bytes": 7136,
+      "path": "c2-native/manifest.json",
+      "sha256": "c4887a55df538021d840ea048f5ebbe7977e0987d0055ea52abf9afd17500295"
+    },
+    "original_bytes": 1698441,
+    "original_files": 44,
+    "successful_steps": 274,
+    "workflow_runs": 10
+  },
+  "pull_request": 15,
+  "repository": "youq616/Zevune",
+  "resources": [
+    {
+      "artifact_id": 10501028029,
+      "cleanup": {
+        "initial_roles_registered": true,
+        "precheckpoint_child_tree_cleanup_confirmed": false,
+        "registered_children_exit_confirmed": true,
+        "registered_processes": 3,
+        "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+      },
+      "completed_operations": 181,
+      "event_count": 9,
+      "files": [
+        {
+          "bytes": 779,
+          "path": "c2-artifacts/10501028029/metadata.json",
+          "sha256": "8e96c2f9ca5d546482190d226e173d78b7bc8889c7e043c23a4a849acc7ae1e0"
+        },
+        {
+          "bytes": 9412,
+          "path": "c2-artifacts/10501028029/artifact.zip",
+          "sha256": "fedafe1c05d0698e456c54564b5032dddecb7524a1244757d6452eae27109d01"
+        },
+        {
+          "bytes": 466,
+          "path": "c2-artifacts/10501028029/payment-resource-setup.json",
+          "sha256": "dd59b43ddc8666632c53a52d860753bc7dc75f2cab6cddc2768208b3337397bf"
+        },
+        {
+          "bytes": 131244,
+          "path": "c2-artifacts/10501028029/payment-resources.json",
+          "sha256": "9765b1edb30abf234de649f75a4e97b4230b26038543effeb33521a85d4a2de5"
+        }
+      ],
+      "job_id": 105235852466,
+      "max_observed_OS_lifetime_peak_bytes_by_process_generation": {
+        "scenario_1": 117653504,
+        "worker_1": 13197312,
+        "worker_2": 12668928
+      },
+      "metadata": {
+        "checkout_commit": "2d208360ab665fbe82b57d205cf07e789f06164b",
+        "checkout_tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+        "source_head": "2020c7314a996769b33706754405c0976ce7c50a",
+        "source_tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+        "toolchains": {
+          "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+          "go": "go version go1.27.1 windows/amd64",
+          "python": "3.12.10",
+          "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+        }
+      },
+      "native_test": {
+        "duration": "212.88s",
+        "job_id": 105235852466,
+        "name": "TestActivePaymentResources32AndRecovery",
+        "nested": false,
+        "status": "PASS"
+      },
+      "offline_review": {
+        "bytes": 10729,
+        "path": "c2-resource-offline-10501028029.json",
+        "sha256": "29b103c714facd4b3af322a615d3b828398f8be6bb4244a5f2ea95842f99aeca"
+      },
+      "platform": "win32",
+      "process_identities": {
+        "scenario_1": {
+          "creation_identity": "134341277832577913",
+          "creation_identity_kind": "windows_creation_filetime_100ns",
+          "parent_pid": 7408,
+          "pid": 2736
+        },
+        "worker_1": {
+          "creation_identity": "134341277903255457",
+          "creation_identity_kind": "windows_creation_filetime_100ns",
+          "parent_pid": 7408,
+          "pid": 6272
+        },
+        "worker_2": {
+          "creation_identity": "134341279773171324",
+          "creation_identity_kind": "windows_creation_filetime_100ns",
+          "parent_pid": 7408,
+          "pid": 6460
+        }
+      },
+      "progress_records": 362,
+      "result": {
+        "actions_per_payment": 2,
+        "checks": {
+          "capacity_accounting": true,
+          "exact_outbox_recovery": true,
+          "genuine_payments": true,
+          "pending_cleared": true,
+          "pending_commit_preserved": true,
+          "physical_frames": true,
+          "post_recovery_payment": true,
+          "rejection_nonmutation": true,
+          "scenario_full_replay": true,
+          "summary_agreement": true,
+          "wallet_backup_recovery": true,
+          "wallet_file_bytes": true,
+          "wallet_records": true,
+          "worker_full_replay": true
+        },
+        "commitments": 68,
+        "complete": true,
+        "fees": 33000,
+        "height": 33,
+        "logical_bytes": 308756,
+        "nullifiers": 66,
+        "paid_blocks": 33,
+        "schema_version": 1,
+        "segments": 1,
+        "tail_bytes": 308616,
+        "wallet_bytes": [
+          1713368,
+          1680420
+        ],
+        "wallet_records": [
+          52,
+          51
+        ]
+      },
+      "result_json_go_encoding_sha256_matched": "46eb1ca52148d5b5db3b5d5c4ace5c72494617cc5ac2e400dc4850a590b9b7b9",
+      "supervised_process_elapsed_ms": 213234,
+      "supervisor_elapsed_ms": 214077,
+      "total_ms": 212866,
+      "workflow_run_id": 35231320296
+    },
+    {
+      "artifact_id": 10501693314,
+      "cleanup": {
+        "initial_roles_registered": true,
+        "precheckpoint_child_tree_cleanup_confirmed": false,
+        "registered_children_exit_confirmed": true,
+        "registered_processes": 3,
+        "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+      },
+      "completed_operations": 181,
+      "event_count": 9,
+      "files": [
+        {
+          "bytes": 778,
+          "path": "c2-artifacts/10501693314/metadata.json",
+          "sha256": "3db5877efc842f10b19799379e589f6e287998a67770ec4963ae7ffc961971fc"
+        },
+        {
+          "bytes": 9278,
+          "path": "c2-artifacts/10501693314/artifact.zip",
+          "sha256": "ae7c5d7b8978d68a1ce5f465c2127725f52e703b61ee7fec670fb2ae926d4148"
+        },
+        {
+          "bytes": 456,
+          "path": "c2-artifacts/10501693314/payment-resource-setup.json",
+          "sha256": "b8f5d7da78081736ea1a33c79d2cfc4b01b55484f8f07451f494210fcafeedb3"
+        },
+        {
+          "bytes": 130206,
+          "path": "c2-artifacts/10501693314/payment-resources.json",
+          "sha256": "e030d300f387500e94c5e8f7ce3795993b5b2f2cf2718a9ffe4ae8b04a94e334"
+        }
+      ],
+      "job_id": 105235853110,
+      "max_observed_OS_lifetime_peak_bytes_by_process_generation": {
+        "scenario_1": 176222208,
+        "worker_1": 11522048,
+        "worker_2": 11653120
+      },
+      "metadata": {
+        "checkout_commit": "2d208360ab665fbe82b57d205cf07e789f06164b",
+        "checkout_tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+        "source_head": "2020c7314a996769b33706754405c0976ce7c50a",
+        "source_tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d",
+        "toolchains": {
+          "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+          "go": "go version go1.27.1 linux/amd64",
+          "python": "3.12.3",
+          "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+        }
+      },
+      "native_test": {
+        "duration": "161.82s",
+        "job_id": 105235853110,
+        "name": "TestActivePaymentResources32AndRecovery",
+        "nested": false,
+        "status": "PASS"
+      },
+      "offline_review": {
+        "bytes": 10688,
+        "path": "c2-resource-offline-10501693314.json",
+        "sha256": "c2fd3d96dd5f9189fd9191ad15c01c7a766e29c88fabdbad6898044601f0ecae"
+      },
+      "platform": "linux",
+      "process_identities": {
+        "scenario_1": {
+          "creation_identity": "18807",
+          "creation_identity_kind": "linux_proc_starttime_ticks",
+          "parent_pid": 6471,
+          "pid": 6477
+        },
+        "worker_1": {
+          "creation_identity": "19352",
+          "creation_identity_kind": "linux_proc_starttime_ticks",
+          "parent_pid": 6471,
+          "pid": 6482
+        },
+        "worker_2": {
+          "creation_identity": "33601",
+          "creation_identity_kind": "linux_proc_starttime_ticks",
+          "parent_pid": 6471,
+          "pid": 6540
+        }
+      },
+      "progress_records": 362,
+      "result": {
+        "actions_per_payment": 2,
+        "checks": {
+          "capacity_accounting": true,
+          "exact_outbox_recovery": true,
+          "genuine_payments": true,
+          "pending_cleared": true,
+          "pending_commit_preserved": true,
+          "physical_frames": true,
+          "post_recovery_payment": true,
+          "rejection_nonmutation": true,
+          "scenario_full_replay": true,
+          "summary_agreement": true,
+          "wallet_backup_recovery": true,
+          "wallet_file_bytes": true,
+          "wallet_records": true,
+          "worker_full_replay": true
+        },
+        "commitments": 68,
+        "complete": true,
+        "fees": 33000,
+        "height": 33,
+        "logical_bytes": 308756,
+        "nullifiers": 66,
+        "paid_blocks": 33,
+        "schema_version": 1,
+        "segments": 1,
+        "tail_bytes": 308616,
+        "wallet_bytes": [
+          1713368,
+          1680420
+        ],
+        "wallet_records": [
+          52,
+          51
+        ]
+      },
+      "result_json_go_encoding_sha256_matched": "722227e20da6cdd3ebf1daf94e9d0d3dd5e6ee0916e9aa16353a8ebef3dc0b26",
+      "supervised_process_elapsed_ms": 161891,
+      "supervisor_elapsed_ms": 162013,
+      "total_ms": 161816,
+      "workflow_run_id": 35231320296
+    }
+  ],
+  "reviewer": "/root/p2_plan_adversarial_review",
+  "schema_version": 1,
+  "scope": {
+    "Go_related_jobs": 17,
+    "Go_workload_execution_jobs": 16,
+    "Python_only_funded_scheduler_jobs": 2,
+    "Rust_only_jobs_excluded_from_behavior_acceptance": [
+      105235853115,
+      105235853346,
+      105235862028,
+      105235862497
+    ],
+    "all_Rust_harness_review_owner": "/root/p2_plan_native_audit",
+    "downloaded_binaries_executed": false,
+    "full_matrix_final_acceptance_replaced": false,
+    "locally_executed_Go_or_Rust_tests": false,
+    "merge_approval": false,
+    "nonrust_jobs_reviewed": 19,
+    "source_Go_compile_only_jobs": 1
+  },
+  "source": "2020c7314a996769b33706754405c0976ce7c50a",
+  "source_behavior_bindings": [
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 1207,
+      "path": ".github/workflows/ci.yml",
+      "sha256": "429eb85ef77e55fd1a3bc664329fa92d417f33f4b2abd76141108c4f30c3219d",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 1444,
+      "path": ".github/workflows/consensus-lab.yml",
+      "sha256": "354b9e9e7e2c1a3a1a63f3ccd79d495d10d9e8cb40124f6db7f2e9d899670908",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 3290,
+      "path": ".github/workflows/orchard-consensus.yml",
+      "sha256": "642161027b9f5e0a6da8f83e3829f28a5d728314103fa909774656005563d9ca",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 3198,
+      "path": ".github/workflows/orchard-bridge.yml",
+      "sha256": "bf190dd56d44b0aa1f464a0784022429fb8aa2cb0a263333e30eadfecf702398",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 5263,
+      "path": ".github/workflows/funded-wallet.yml",
+      "sha256": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 3853,
+      "path": ".github/workflows/active-ledger.yml",
+      "sha256": "d6a23f40525f6dca01d3b03fd48649c180e63c65f145d67d5a12bfe7615c90c3",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 5225,
+      "path": ".github/workflows/payment-resources.yml",
+      "sha256": "d83634ff4aebac9befeec9c9dbaa554b75d8e2b3ba8368d39c3cb2fcc9a7b2eb",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 3903,
+      "path": ".github/workflows/network-operator.yml",
+      "sha256": "25ffb6fe7489d14e5e3a58e0710bb67f38bb15fbfb5492874d63f72665f94696",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 9788,
+      "path": "integration/cometbft/labnet/active_funded_e2e_test.go",
+      "sha256": "fadf85be0f92c73646ed58bb38419d5557e8595226d8c4f6449b65a615f53f4f",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 16463,
+      "path": "integration/cometbft/labnet/operator_e2e_test.go",
+      "sha256": "9d46df7e60c2c5c46c51b17cc8f07a14a2742a68e3a19a49f2c509a4ea1fc85a",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 12660,
+      "path": "integration/cometbft/poolapp/funded_e2e_test.go",
+      "sha256": "68f0b6aa6d14616e1a312bf0b6a45e4f2d914114b2546e50a780f4ef6a5a37d4",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 18089,
+      "path": "integration/cometbft/poolapp/active_growth_e2e_test.go",
+      "sha256": "291218dd23be3acbe856df2f2df1b46fed267d36f5e188629f044f13b91ce248",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 31671,
+      "path": "internal/poolbridge/payment_resource_e2e_test.go",
+      "sha256": "502688e6c43df3521f0d364391b1cfd0bddf35d4bffaa152db73352c76826da7",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 55719,
+      "path": "scripts/check_payment_resources.py",
+      "sha256": "e6eef3b5e194220bc72e2569bf9d12a6236cbbf3a4396b9a8e7e7c7bfd53e192",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 9845,
+      "path": "scripts/check_wallet_backend.py",
+      "sha256": "94b053f129386083e379ee415d4eb7e8e57a56908ca8e533cde29ec31575dc20",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 5619,
+      "path": "scripts/build_local_lab.py",
+      "sha256": "49780d11ebd45cea90d2c276dc14ec3f38b0e30be469d3746fc4f2fb236f397e",
+      "unchanged_since_base": true
+    },
+    {
+      "byte_equal_to_C2_git_blob": true,
+      "bytes": 7408,
+      "path": "scripts/verify_local_lab.py",
+      "sha256": "29b9bacd41b092a8bcd1a575eda2bd1bb37e0f517beb7bf90b89ec5b91b8d979",
+      "unchanged_since_base": true
+    }
+  ],
+  "source_originals": [
+    {
+      "bytes": 2707,
+      "commit": "0927af157a3cc35abde14b036bc50a99a793a32b",
+      "parents": [
+        "4f337cda77827e4000097cd64a3a1b2a37d2aa20",
+        "b417becc7982d55e60f7650418b2e0daa32225de"
+      ],
+      "path": "source-identities/base-git-commit.json",
+      "sha256": "fd88860d3293af672f9a13a11e981f3d0f5146d9258f1361d6ad3175c3cbb460",
+      "tree": "e04479cf7723588885573be2112635efa30e27cc"
+    },
+    {
+      "bytes": 1101,
+      "commit": "2020c7314a996769b33706754405c0976ce7c50a",
+      "parents": [
+        "99ec771c57207167f473d23ffd07b54f15a36abc"
+      ],
+      "path": "source-identities/c2-git-commit.json",
+      "sha256": "720cbf9779cfe74032b14c854a91136b4da219f53d5dd58c1c6a94326e1f7cc0",
+      "tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d"
+    },
+    {
+      "bytes": 2569,
+      "commit": "2d208360ab665fbe82b57d205cf07e789f06164b",
+      "parents": [
+        "0927af157a3cc35abde14b036bc50a99a793a32b",
+        "2020c7314a996769b33706754405c0976ce7c50a"
+      ],
+      "path": "source-identities/c2-synthetic-git-commit.json",
+      "sha256": "f40fb9be296f1bc0bf0053118f9d2efedabf840206b2c90d897a7753db98c378",
+      "tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d"
+    }
+  ],
+  "status": "PASS_NONRUST_NATIVE",
+  "tree": "a25d4752d49f366f9aff047116eeffd9b1f6ae1d"
+}

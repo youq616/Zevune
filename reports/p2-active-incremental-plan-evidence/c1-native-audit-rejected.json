@@ -1,0 +1,3430 @@
+{
+  "schema_version": 1,
+  "reviewer_task": "/root/p2_plan_native_audit",
+  "conclusion": "REJECTED_NATIVE_C1",
+  "candidate": "99ec771c57207167f473d23ffd07b54f15a36abc",
+  "base": "0927af157a3cc35abde14b036bc50a99a793a32b",
+  "tree": "510693b0fd8ec085ab06de4140d6f7fd80f48c7e",
+  "synthetic": "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5",
+  "native_acceptance": false,
+  "original_manifest_files_verified": 41,
+  "original_manifest_bytes_verified": 918751,
+  "raw_log_count_read_in_full": 21,
+  "raw_log_bytes_read_in_full": 730967,
+  "decoded_log_lines_scanned": 8325,
+  "required_successful_job_count": 23,
+  "returned_job_count": 22,
+  "run_conclusions": {
+    "failure": 8,
+    "success": 2
+  },
+  "job_conclusions": {
+    "failure": 17,
+    "success": 4,
+    "skipped": 1
+  },
+  "step_conclusions": {
+    "success": 152,
+    "failure": 17,
+    "skipped": 92
+  },
+  "format_error": {
+    "files": 4,
+    "hunks": 10,
+    "identical_across_failed_logs": 17,
+    "normalization": "remove timestamp/ANSI; replace only absolute Diff-header root with relative repository path; do not rewrite preserved logs",
+    "canonical_blocks": {
+      "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c": "Diff in integration/orchard/src/pool/active/incremental.rs:154:\n         }\n         let mut appended = 0;\n         if let Some(base) = self.segments.last() {\n-            let index = self.segments.len().checked_sub(1).ok_or(PoolError::Bounds)?;\n+            let index = self\n+                .segments\n+                .len()\n+                .checked_sub(1)\n+                .ok_or(PoolError::Bounds)?;\n             let next = later.segments.get(index).ok_or(PoolError::Stale)?;\n-            let length = next.length.checked_sub(base.length).ok_or(PoolError::Stale)?;\n+            let length = next\n+                .length\n+                .checked_sub(base.length)\n+                .ok_or(PoolError::Stale)?;\n             if length != 0 {\n                 emit_range(&mut consume, &mut appended, index, base.length, length)?;\n             }\nDiff in integration/orchard/src/pool/active_flow_tests.rs:135:\n     assert_eq!(plan.base_checkpoint(), base_pin);\n     assert_eq!(plan.checkpoint(), later_pin);\n     assert_eq!(plan.reused_bytes(), base_pin.length());\n-    assert_eq!(plan.appended_bytes(), later_pin.length() - base_pin.length());\n+    assert_eq!(\n+        plan.appended_bytes(),\n+        later_pin.length() - base_pin.length()\n+    );\n     assert_eq!(\n         plan.new_segment_count(),\n         later_pin.segment_count() - base_pin.segment_count()\nDiff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:\n             assert_eq!(directory_bytes(changed_path), changed);\n             assert_eq!(\n                 directory_bytes(if change_base { &later_path } else { &base_path }),\n-                if change_base { original_later } else { original_base }\n+                if change_base {\n+                    original_later\n+                } else {\n+                    original_base\n+                }\n             );\n         }\n     }\nDiff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:\n             assert_eq!(base.incremental_plan(&mut later), Err(PoolError::Corrupt));\n             assert_eq!(directory_bytes(&base_path), base_bytes);\n             assert_eq!(directory_bytes(&later_path), later_bytes);\n-            assert_eq!(fs::read(alias).unwrap(), fs::read(path.join(SEGMENT)).unwrap());\n+            assert_eq!(\n+                fs::read(alias).unwrap(),\n+                fs::read(path.join(SEGMENT)).unwrap()\n+            );\n         }\n     }\n }\nDiff in integration/orchard/tests/active_incremental_cli.rs:24:\n     fn new() -> Self {\n         let mut nonce = [0; 16];\n         OsRng.fill_bytes(&mut nonce);\n-        let path = std::env::temp_dir().join(format!(\"zevune-active-incremental-cli-{}\", hex(&nonce)));\n+        let path =\n+            std::env::temp_dir().join(format!(\"zevune-active-incremental-cli-{}\", hex(&nonce)));\n         fs::create_dir(&path).unwrap();\n         Self(path)\n     }\nDiff in integration/orchard/tests/active_incremental_cli.rs:161:\n     );\n     assert!(output.stderr.is_empty());\n     assert!(output.stdout.is_ascii());\n-    assert_eq!(output.stdout.iter().filter(|&&byte| byte == b'\\n').count(), 1);\n+    assert_eq!(\n+        output.stdout.iter().filter(|&&byte| byte == b'\\n').count(),\n+        1\n+    );\n     assert_eq!(output.stdout, expected.as_bytes());\n }\n \nDiff in integration/orchard/tests/active_incremental_cli.rs:304:\n     assert!(alice.pending_id().is_none());\n     drop(history);\n     let second = bob\n-        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)\n+        .build_payment(\n+            carol.receive_address(0).unwrap(),\n+            40_000,\n+            1_000,\n+            100,\n+            &prover,\n+        )\n         .unwrap()\n         .bytes()\n         .to_vec();\nDiff in integration/orchard/tests/active_incremental_cli.rs:373:\n         Err(PoolError::Authorization)\n     ));\n     failure(\n-        &call_readonly(&plan_args(&source, base_pin, &forged_path, forged_pin), &dir),\n+        &call_readonly(\n+            &plan_args(&source, base_pin, &forged_path, forged_pin),\n+            &dir,\n+        ),\n         &dir,\n     );\n     success(&call_readonly(&args, &dir), &expected);\nDiff in integration/orchard/tests/active_incremental_cli.rs:526:\n         drop(right);\n         drop(left);\n         failure(\n-            &call_readonly(&plan_args(&base.path, base.pin, &later.path, later.pin), &f.dir),\n+            &call_readonly(\n+                &plan_args(&base.path, base.pin, &later.path, later.pin),\n+                &f.dir,\n+            ),\n             &f.dir,\n         );\n     }\nDiff in integration/orchard/tests/active_incremental_cli.rs:543:\n fn active_incremental_cli_wrong_pins_missing_and_damaged_bytes_fail_on_either_side() {\n     let f = fixture(1, 3);\n     let args = plan_args(&f.base.path, f.base.pin, &f.later.path, f.later.pin);\n-    for (key, pin) in [(\"--base-checkpoint\", f.later.pin), (\"--checkpoint\", f.base.pin)] {\n+    for (key, pin) in [\n+        (\"--base-checkpoint\", f.later.pin),\n+        (\"--checkpoint\", f.base.pin),\n+    ] {\n         let mut wrong_pin = args.clone();\n         set_option(&mut wrong_pin, key, hex(&pin.to_bytes()));\n         failure(&call_readonly(&wrong_pin, &f.dir), &f.dir);\n"
+    }
+  },
+  "source_creation_response": {
+    "path": "c1-source-commit-response.json",
+    "bytes": 196,
+    "sha256": "d4c7ab87398fa229b02d35cd2221158e62de2c3341dc3cece381ae5343d22931"
+  },
+  "synthetic_commit_response": {
+    "path": "c1-synthetic-commit.json",
+    "bytes": 6165,
+    "sha256": "af6cf2fc9952089da6af157eefc54560f1943a0ab87271ffb20e62cddf95c57e"
+  },
+  "synthetic_parents_verified": [
+    "0927af157a3cc35abde14b036bc50a99a793a32b",
+    "99ec771c57207167f473d23ffd07b54f15a36abc"
+  ],
+  "resource_artifacts": [
+    {
+      "id": 10501366180,
+      "platform": "ubuntu-latest",
+      "metadata_original": {
+        "path": "c1-artifacts/10501366180/metadata.json",
+        "bytes": 777,
+        "sha256": "3c7a520d15d1ce2d2638fbdee588bc456c239f89675bf36831ae52e9c9ea1923"
+      },
+      "zip_original": {
+        "path": "c1-artifacts/10501366180/artifact.zip",
+        "bytes": 460,
+        "sha256": "2e708b68417e7ff42018c51af8f0fa6f050322b4cfd1d7517936e76d5cb0ab3a"
+      },
+      "setup_original": {
+        "path": "c1-artifacts/10501366180/payment-resource-setup.json",
+        "bytes": 456,
+        "sha256": "59a426f4f6321eb49b492fdfe2d7518980893208685ec7caff70cb363560a775"
+      },
+      "setup": {
+        "schema_version": 1,
+        "kind": "workflow_setup_observation",
+        "observed_at": "2026-09-17T14:03:07.527654+00:00",
+        "source_head": "99ec771c57207167f473d23ffd07b54f15a36abc",
+        "checkout_commit": "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5",
+        "checkout_tree": "510693b0fd8ec085ab06de4140d6f7fd80f48c7e",
+        "observed_execution_status": "not_started",
+        "scope": "initial observation only; final workflow steps and resource result determine completion"
+      },
+      "zip_members": [
+        "payment-resource-setup.json"
+      ],
+      "actual_payment_resource_execution_credit": false
+    },
+    {
+      "id": 10500499765,
+      "platform": "windows-latest",
+      "metadata_original": {
+        "path": "c1-artifacts/10500499765/metadata.json",
+        "bytes": 778,
+        "sha256": "a0f22ec32204e39b268e52c1f70777eb8cac6d852b3faef14ebdec7b3f60a46f"
+      },
+      "zip_original": {
+        "path": "c1-artifacts/10500499765/artifact.zip",
+        "bytes": 464,
+        "sha256": "2221e103aca41e19b796e20af94d57c27bb46ed5dccd13680a390317f4ca06cf"
+      },
+      "setup_original": {
+        "path": "c1-artifacts/10500499765/payment-resource-setup.json",
+        "bytes": 466,
+        "sha256": "44e90d79378f1b3b9809288cfa88cee2f94550406fe28c6b22efd817bd242510"
+      },
+      "setup": {
+        "schema_version": 1,
+        "kind": "workflow_setup_observation",
+        "observed_at": "2026-09-17T14:03:26.095581+00:00",
+        "source_head": "99ec771c57207167f473d23ffd07b54f15a36abc",
+        "checkout_commit": "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5",
+        "checkout_tree": "510693b0fd8ec085ab06de4140d6f7fd80f48c7e",
+        "observed_execution_status": "not_started",
+        "scope": "initial observation only; final workflow steps and resource result determine completion"
+      },
+      "zip_members": [
+        "payment-resource-setup.json"
+      ],
+      "actual_payment_resource_execution_credit": false
+    }
+  ],
+  "runs": [
+    {
+      "id": 35230914450,
+      "name": "orchard-consensus-integration",
+      "path": ".github/workflows/orchard-consensus.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914450",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914450.json",
+        "bytes": 11983,
+        "sha256": "507d3426ec7793b457ad7a13ab00ae9411fc330bc8e35e31fc42f3d03b4b82e9"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914450.json",
+        "bytes": 7314,
+        "sha256": "cbbfda5a730734dd313d90ba6667fee4fc9dd0aee06dfeaee902144e1643ae9d"
+      }
+    },
+    {
+      "id": 35230914451,
+      "name": "orchard-cryptography-laboratory",
+      "path": ".github/workflows/orchard-lab.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914451",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914451.json",
+        "bytes": 11978,
+        "sha256": "1adb75b3ad5f3bfa5cfe691791545acfca1c80cf4679044ee9850a712ebdfa44"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914451.json",
+        "bytes": 5102,
+        "sha256": "f3a08012973c6e045f71998586873d2a530afc721126c138cd9ea852c942677b"
+      }
+    },
+    {
+      "id": 35230914460,
+      "name": "wallet-laboratory",
+      "path": ".github/workflows/wallet-lab.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914460",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914460.json",
+        "bytes": 11963,
+        "sha256": "5d0f4edcaba18a4ea732d31503c999f3fe977a18ecc77dc473966b550af37c06"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914460.json",
+        "bytes": 5064,
+        "sha256": "4ac766c7c0e6b0c44145e7966712ecdb34ee0fdb5145195a046f0b41ef8b1b11"
+      }
+    },
+    {
+      "id": 35230914464,
+      "name": "consensus-laboratory",
+      "path": ".github/workflows/consensus-lab.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914464",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914464.json",
+        "bytes": 11970,
+        "sha256": "f667bbcb6aca02aab617e1dcc303484ad6deff4f80cc4ca460c58a12b481b652"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914464.json",
+        "bytes": 6186,
+        "sha256": "07cd79ada075f42e946902fa86fa9aa6d5d45ab001d051df2b6c34833d701ad3"
+      }
+    },
+    {
+      "id": 35230914478,
+      "name": "local-network-operator",
+      "path": ".github/workflows/network-operator.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914478",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914478.json",
+        "bytes": 11974,
+        "sha256": "ffe2a3083af23a3751fefb11ba4c038aa17cedf7292e5d7652e878f57978ed37"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914478.json",
+        "bytes": 7092,
+        "sha256": "78af114dda0b204ec7825a5c520e0baccbda99dda326e17e133703a96e59a6ed"
+      }
+    },
+    {
+      "id": 35230914481,
+      "name": "payment-resource-baseline",
+      "path": ".github/workflows/payment-resources.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914481",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914481.json",
+        "bytes": 11978,
+        "sha256": "5457bfc139a599129d35c3882f090d1493b1d2c52b579245a6c5b3f34c5c0c33"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914481.json",
+        "bytes": 7652,
+        "sha256": "3cb04ce7dc004845fa3c0f1065571ca20d56f60b0c81043ee0bff22773776c65"
+      }
+    },
+    {
+      "id": 35230914482,
+      "name": "scaffold-tests",
+      "path": ".github/workflows/ci.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914482",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914482.json",
+        "bytes": 11953,
+        "sha256": "fd57046a9b8e85d7accdbaa087be97606697894affae4d6cb3081c2971f92791"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914482.json",
+        "bytes": 6030,
+        "sha256": "2fd9031bd02ff8fd5b6971d5c5bfef5b28ec28457e95f66eab44fc33cefbaaf2"
+      }
+    },
+    {
+      "id": 35230914499,
+      "name": "active-ledger-growth",
+      "path": ".github/workflows/active-ledger.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914499",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914499.json",
+        "bytes": 11969,
+        "sha256": "fabdccb639e3218f4b1cef0767f27ae88d16a823e3f49278d6f52d0dd80ea0de"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914499.json",
+        "bytes": 3424,
+        "sha256": "80b3cff81b34fc42e7dacbf11a65bef0af4e6b9c9137e8d96186d87e66947348"
+      }
+    },
+    {
+      "id": 35230914503,
+      "name": "orchard-bridge",
+      "path": ".github/workflows/orchard-bridge.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914503",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914503.json",
+        "bytes": 11965,
+        "sha256": "348711f6fa2a827e67fef9a734fee36227dc4fd44fe2ccffc0fa1e4bb5b5d716"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914503.json",
+        "bytes": 7616,
+        "sha256": "c6a370f73a75a1191f6131d8c6f8e94dc6436cddd01fe08280694f933f610bab"
+      }
+    },
+    {
+      "id": 35230914556,
+      "name": "funded-wallet-consensus",
+      "path": ".github/workflows/funded-wallet.yml",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914556",
+      "current_nested_pr_head": "2020c7314a996769b33706754405c0976ce7c50a",
+      "run_original": {
+        "path": "c1-native/run-35230914556.json",
+        "bytes": 11973,
+        "sha256": "0fe86b00c4c1961b82ae7460e2b136adcfe8454ec5cbb649205f03ac19d98160"
+      },
+      "jobs_original": {
+        "path": "c1-native/jobs-35230914556.json",
+        "bytes": 12598,
+        "sha256": "7d8ffa879f2e1b1a4a9b3befa683db1b4cfd32af7a453b0127b1964700af6cb8"
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "id": 105234456777,
+      "run_id": 35230914450,
+      "workflow_name": "orchard-consensus-integration",
+      "name": "integrated (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914450/job/105234456777",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install pinned Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check committed source and unchanged dependency locks",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Prepare only public zero-value fixture path",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Real cryptography, pool replay and worker codec tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Root Go regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Four-process Orchard consensus and restart",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Real adapter race checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Local IPC race and bounded fuzz",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456777.log",
+        "bytes": 29034,
+        "sha256": "a421f7363d0bedf195dd57cc2f5473d4b7e19a525e093428dfdb7afea1688b48"
+      },
+      "decoded_line_count": 389,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\""
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457087,
+      "run_id": 35230914450,
+      "workflow_name": "orchard-consensus-integration",
+      "name": "integrated (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914450/job/105234457087",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install pinned Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check committed source and unchanged dependency locks",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Prepare only public zero-value fixture path",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Real cryptography, pool replay and worker codec tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Root Go regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Four-process Orchard consensus and restart",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Real adapter race checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Local IPC race and bounded fuzz",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457087.log",
+        "bytes": 30471,
+        "sha256": "53a228e46b3436f79a4b60722ade9c0383ba1566d58394d4289a20ac0c183c29"
+      },
+      "decoded_line_count": 377,
+      "utf8_bom": true,
+      "crlf_count": 377,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\""
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456663,
+      "run_id": 35230914451,
+      "workflow_name": "orchard-cryptography-laboratory",
+      "name": "tests (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914451/job/105234456663",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install pinned Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Check committed formatting and dependency lock",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 5,
+          "name": "Real proofs, pool replay, durable worker codec and zero-value fixture",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 6,
+          "name": "Static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456663.log",
+        "bytes": 22184,
+        "sha256": "6a7b25ea0ab7d0988e29c9260354148aaab99208356ce366d8d51fcb19165bb4"
+      },
+      "decoded_line_count": 280,
+      "utf8_bom": true,
+      "crlf_count": 280,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456854,
+      "run_id": 35230914451,
+      "workflow_name": "orchard-cryptography-laboratory",
+      "name": "tests (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914451/job/105234456854",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install pinned Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Check committed formatting and dependency lock",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 5,
+          "name": "Real proofs, pool replay, durable worker codec and zero-value fixture",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 6,
+          "name": "Static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456854.log",
+        "bytes": 21827,
+        "sha256": "eb63703046d7a4c8acb37bf584a2e355145159650d3bc917f573bcf720e2d05b"
+      },
+      "decoded_line_count": 293,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456944,
+      "run_id": 35230914460,
+      "workflow_name": "wallet-laboratory",
+      "name": "wallet (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914460/job/105234456944",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Check exact committed source and dependency lock",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 5,
+          "name": "Genuine wallet payments, encrypted recovery and crypto regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 6,
+          "name": "Strict static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456944.log",
+        "bytes": 22149,
+        "sha256": "edf5bd4f03bc7d50b648a08e38c2e46fe76bfc7a8e4176788aed454833d5df5e"
+      },
+      "decoded_line_count": 280,
+      "utf8_bom": true,
+      "crlf_count": 280,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457480,
+      "run_id": 35230914460,
+      "workflow_name": "wallet-laboratory",
+      "name": "wallet (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914460/job/105234457480",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Check exact committed source and dependency lock",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 5,
+          "name": "Genuine wallet payments, encrypted recovery and crypto regression",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 6,
+          "name": "Strict static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457480.log",
+        "bytes": 21798,
+        "sha256": "76d06a146b85788504c0ed37fc31daed0a872250b6c28813c3a39cb24c589eb1"
+      },
+      "decoded_line_count": 293,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457063,
+      "run_id": 35230914464,
+      "workflow_name": "consensus-laboratory",
+      "name": "integration (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914464/job/105234457063",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Verify locked dependencies and canonical source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Adapter and four independent process integration tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Static analysis",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Adapter race checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Build local launcher",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Assert checks did not modify tracked files",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 17,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 18,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 19,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457063.log",
+        "bytes": 42504,
+        "sha256": "66308062d7db4b8048921f2510e1b2e662dee6f69374abd9fbe114310a384aaa"
+      },
+      "decoded_line_count": 510,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [],
+      "format_hunks": [],
+      "normalized_format_block_sha256": null,
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [
+        "--- PASS: TestGenesisValidation (0.02s)",
+        "--- PASS: TestFinalizeIsNotDurableAndCommitIs (0.00s)",
+        "--- PASS: TestProposalChecksNeverWrite (0.00s)",
+        "--- PASS: TestEveryTransactionEntryRemainsClosed (0.00s)",
+        "--- PASS: TestRepeatedFinalizeCopiesAndBindsHash (0.01s)",
+        "--- PASS: TestQueryOnlyCommittedStateAndNoProofClaims (0.00s)",
+        "--- PASS: TestSnapshotsAndExtensionsFailClosed (0.00s)",
+        "--- PASS: TestConcurrentInfoAndFinalize (0.00s)",
+        "--- PASS: TestClosedApplicationFails (0.00s)",
+        "--- PASS: TestMalformedCommandsNeverCreateOrOverwrite (0.00s)",
+        "--- PASS: TestBoundedPublicTransactionFiles (0.00s)",
+        "--- PASS: TestStorageCommandRejectsNetworkAndMutationFlags (0.00s)",
+        "--- PASS: TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput (0.00s)",
+        "--- PASS: TestStorageCheckpointFlagPair (0.00s)",
+        "--- PASS: TestCheckpointSyntaxDoesNotSelectAStorageProfile (0.00s)",
+        "--- PASS: TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands (0.00s)",
+        "--- PASS: TestExplicitEmptyStorageCheckpointDoesNotDisableCheck (0.00s)",
+        "--- PASS: TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths (0.00s)",
+        "--- PASS: TestNodeProcessHelper (0.00s)",
+        "--- PASS: TestFourProcessConsensusAndRecovery (30.61s)",
+        "--- PASS: TestInitAndManifestFailClosed (0.01s)",
+        "--- PASS: TestFullRestartAdvancesBeyondDurableHeight (6.22s)",
+        "--- PASS: TestMissingSigningStateIsNotRecreated (0.01s)",
+        "--- PASS: TestQuorumAndAllHeaderBindings (0.00s)",
+        "--- PASS: TestPinnedPublicConfigurationAndCompanionFiles (0.00s)",
+        "--- PASS: TestCanonicalDecodingAndFileBounds (0.00s)",
+        "--- PASS: TestLoopbackEndpointAndStreamingLimits (0.00s)",
+        "--- PASS: TestRPCRejectsRedirectCompressionAndOversize (0.01s)",
+        "--- PASS: TestMalformedGenesisInitDoesNotCreatePrivateDirectory (0.00s)",
+        "--- PASS: TestUnexpectedEngineExitIsNotSuccessfulShutdown (0.00s)",
+        "--- PASS: TestRequestedShutdownDoesNotNeedEngineExit (0.00s)",
+        "--- PASS: TestConcurrentCancellationAndEngineExitRemainRequested (0.00s)",
+        "--- PASS: TestEngineExitReleasesWaitingSupervisor (0.00s)",
+        "--- PASS: TestLifecycleRejectsMissingContext (0.00s)",
+        "--- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion (0.02s)",
+        "--- PASS: TestSignedHeadersUseAuthenticatedProfileHeightAndVersion (0.00s)",
+        "--- PASS: TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds (0.00s)",
+        "--- PASS: TestActiveCapacityReportsLogicalBytesAndExactCheckpoint (0.00s)",
+        "--- PASS: TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath (0.00s)",
+        "--- PASS: TestReferenceCheckpointRequestBoundsBeforeAccess (0.00s)",
+        "--- PASS: TestReferenceCheckpointMissingContextAndNetwork (0.00s)",
+        "--- PASS: TestUnpinnedResultsNeverClaimRetainedCheckpoint (0.00s)",
+        "--- PASS: TestStorageCheckpointCanonicalInputs (0.00s)",
+        "--- PASS: TestStorageCheckpointExactTipNotMinimumHeightOrFinality (0.00s)",
+        "--- PASS: TestInvalidStorageCheckpointFailsBeforeFileAccess (0.00s)",
+        "--- PASS: TestBoundedCopyRejectsShortLongAndCancelledInput (0.00s)",
+        "--- PASS: TestCopyIOFailureAndMidstreamCancelNeverYieldDigest (0.00s)",
+        "--- PASS: TestCopyPathsAndPublicEntryRejectBeforeWorker (0.00s)",
+        "--- PASS: TestPublishCopyIsCreateOnlyAndDoesNotLinkSource (0.00s)",
+        "--- PASS: TestPublicationFailureAfterLinkIsExplicitlyUncertain (0.00s)",
+        "--- PASS: TestPublicationCancellationAndExistingSymlinkDoNotOverwrite (0.00s)",
+        "--- PASS: TestCopyReportDoesNotClaimConsensusOrFunds (0.00s)",
+        "--- PASS: TestJournalDigestDetectsChangedAndReplacedFile (0.00s)",
+        "--- PASS: TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult (0.00s)",
+        "--- PASS: TestStorageReportBoundariesAndNoFinalityClaims (0.00s)",
+        "--- PASS: TestStorageReportRejectsContradictoryCounts (0.00s)",
+        "--- PASS: TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges (0.00s)",
+        "--- PASS: TestStorageMissingInvalidPathsNeverCreateData (0.00s)",
+        "--- PASS: FuzzCanonicalPublicConfiguration (0.00s)",
+        "--- PASS: FuzzNumericLoopbackEndpoint (0.00s)",
+        "--- PASS: FuzzStorageCheckpointInputs (0.00s)",
+        "--- PASS: FuzzStorageAccounting (0.00s)",
+        "--- PASS: TestGenesisBindingRejectsAmbiguityAndMismatch (0.00s)"
+      ],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.048s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.021s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t36.863s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.061s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.009s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t1.058s"
+      ],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run go version",
+        "##[group]Run go test -mod=readonly ./... -count=1 -timeout=8m -v",
+        "##[group]Run go vet -mod=readonly ./...",
+        "##[group]Run go test -mod=readonly -race ./app -count=1 -timeout=3m",
+        "##[group]Run go build -mod=readonly ./cmd/zevune-devnet",
+        "##[group]Run git diff --exit-code"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457332,
+      "run_id": 35230914464,
+      "workflow_name": "consensus-laboratory",
+      "name": "integration (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914464/job/105234457332",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Verify locked dependencies and canonical source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Adapter and four independent process integration tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Static analysis",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Adapter race checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Build local launcher",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Assert checks did not modify tracked files",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 17,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 18,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 19,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457332.log",
+        "bytes": 43310,
+        "sha256": "9af228410e560d58b5ecd60b8217924bdb94c14b7a21e4cc6702a543d7920869"
+      },
+      "decoded_line_count": 492,
+      "utf8_bom": true,
+      "crlf_count": 492,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [],
+      "format_hunks": [],
+      "normalized_format_block_sha256": null,
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [
+        "--- PASS: TestGenesisValidation (0.01s)",
+        "--- PASS: TestFinalizeIsNotDurableAndCommitIs (0.01s)",
+        "--- PASS: TestProposalChecksNeverWrite (0.01s)",
+        "--- PASS: TestEveryTransactionEntryRemainsClosed (0.01s)",
+        "--- PASS: TestRepeatedFinalizeCopiesAndBindsHash (0.01s)",
+        "--- PASS: TestQueryOnlyCommittedStateAndNoProofClaims (0.01s)",
+        "--- PASS: TestSnapshotsAndExtensionsFailClosed (0.01s)",
+        "--- PASS: TestConcurrentInfoAndFinalize (0.07s)",
+        "--- PASS: TestClosedApplicationFails (0.01s)",
+        "--- PASS: TestMalformedCommandsNeverCreateOrOverwrite (0.00s)",
+        "--- PASS: TestBoundedPublicTransactionFiles (0.00s)",
+        "--- PASS: TestStorageCommandRejectsNetworkAndMutationFlags (0.00s)",
+        "--- PASS: TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput (0.01s)",
+        "--- PASS: TestStorageCheckpointFlagPair (0.00s)",
+        "--- PASS: TestCheckpointSyntaxDoesNotSelectAStorageProfile (0.00s)",
+        "--- PASS: TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands (0.00s)",
+        "--- PASS: TestExplicitEmptyStorageCheckpointDoesNotDisableCheck (0.00s)",
+        "--- PASS: TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths (0.00s)",
+        "--- PASS: TestNodeProcessHelper (0.00s)",
+        "--- PASS: TestFourProcessConsensusAndRecovery (39.01s)",
+        "--- PASS: TestInitAndManifestFailClosed (0.10s)",
+        "--- PASS: TestFullRestartAdvancesBeyondDurableHeight (8.54s)",
+        "--- PASS: TestMissingSigningStateIsNotRecreated (0.10s)",
+        "--- PASS: TestQuorumAndAllHeaderBindings (0.00s)",
+        "--- PASS: TestPinnedPublicConfigurationAndCompanionFiles (0.04s)",
+        "--- PASS: TestCanonicalDecodingAndFileBounds (0.02s)",
+        "--- PASS: TestLoopbackEndpointAndStreamingLimits (0.00s)",
+        "--- PASS: TestRPCRejectsRedirectCompressionAndOversize (0.01s)",
+        "--- PASS: TestMalformedGenesisInitDoesNotCreatePrivateDirectory (0.00s)",
+        "--- PASS: TestUnexpectedEngineExitIsNotSuccessfulShutdown (0.00s)",
+        "--- PASS: TestRequestedShutdownDoesNotNeedEngineExit (0.00s)",
+        "--- PASS: TestConcurrentCancellationAndEngineExitRemainRequested (0.00s)",
+        "--- PASS: TestEngineExitReleasesWaitingSupervisor (0.00s)",
+        "--- PASS: TestLifecycleRejectsMissingContext (0.00s)",
+        "--- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion (1.04s)",
+        "--- PASS: TestSignedHeadersUseAuthenticatedProfileHeightAndVersion (0.00s)",
+        "--- PASS: TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds (0.02s)",
+        "--- PASS: TestActiveCapacityReportsLogicalBytesAndExactCheckpoint (0.00s)",
+        "--- PASS: TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath (0.00s)",
+        "--- PASS: TestReferenceCheckpointRequestBoundsBeforeAccess (0.00s)",
+        "--- PASS: TestReferenceCheckpointMissingContextAndNetwork (0.00s)",
+        "--- PASS: TestUnpinnedResultsNeverClaimRetainedCheckpoint (0.00s)",
+        "--- PASS: TestStorageCheckpointCanonicalInputs (0.00s)",
+        "--- PASS: TestStorageCheckpointExactTipNotMinimumHeightOrFinality (0.00s)",
+        "--- PASS: TestInvalidStorageCheckpointFailsBeforeFileAccess (0.00s)",
+        "--- PASS: TestBoundedCopyRejectsShortLongAndCancelledInput (0.00s)",
+        "--- PASS: TestCopyIOFailureAndMidstreamCancelNeverYieldDigest (0.00s)",
+        "--- PASS: TestCopyPathsAndPublicEntryRejectBeforeWorker (0.00s)",
+        "--- PASS: TestPublishCopyIsCreateOnlyAndDoesNotLinkSource (0.01s)",
+        "--- PASS: TestPublicationFailureAfterLinkIsExplicitlyUncertain (0.00s)",
+        "--- PASS: TestPublicationCancellationAndExistingSymlinkDoNotOverwrite (0.00s)",
+        "--- PASS: TestCopyReportDoesNotClaimConsensusOrFunds (0.00s)",
+        "--- PASS: TestJournalDigestDetectsChangedAndReplacedFile (0.00s)",
+        "--- PASS: TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult (0.00s)",
+        "--- PASS: TestStorageReportBoundariesAndNoFinalityClaims (0.00s)",
+        "--- PASS: TestStorageReportRejectsContradictoryCounts (0.00s)",
+        "--- PASS: TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges (0.00s)",
+        "--- PASS: TestStorageMissingInvalidPathsNeverCreateData (0.00s)",
+        "--- PASS: FuzzCanonicalPublicConfiguration (0.00s)",
+        "--- PASS: FuzzNumericLoopbackEndpoint (0.00s)",
+        "--- PASS: FuzzStorageCheckpointInputs (0.00s)",
+        "--- PASS: FuzzStorageAccounting (0.00s)",
+        "--- PASS: TestGenesisBindingRejectsAmbiguityAndMismatch (0.00s)"
+      ],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.292s",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.523s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t48.260s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t1.224s",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.064s"
+      ],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run go version",
+        "##[group]Run go test -mod=readonly ./... -count=1 -timeout=8m -v",
+        "##[group]Run go vet -mod=readonly ./...",
+        "##[group]Run go build -mod=readonly ./cmd/zevune-devnet",
+        "##[group]Run git diff --exit-code"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457036,
+      "run_id": 35230914478,
+      "workflow_name": "local-network-operator",
+      "name": "operator (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914478/job/105234457036",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check exact source and build real workers",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Build from isolated Git objects and verify create-only bundle",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Register executable paths only",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Actual operator processes, real payments and rejected false post-state",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Race and bounded fuzz checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Check source and dependency locks were not modified",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 21,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 22,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 23,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457036.log",
+        "bytes": 55563,
+        "sha256": "08bf14740df7970b4dcf743737615098af46dcebd4c81fc4cd4a4fcf7f13c693"
+      },
+      "decoded_line_count": 530,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 135,
+          "seconds": 2.707,
+          "result": "OK (skipped=3)"
+        }
+      ],
+      "python_skips": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run test -z \"$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)\""
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457326,
+      "run_id": 35230914478,
+      "workflow_name": "local-network-operator",
+      "name": "operator (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914478/job/105234457326",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check exact source and build real workers",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Build from isolated Git objects and verify create-only bundle",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Register executable paths only",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Actual operator processes, real payments and rejected false post-state",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Race and bounded fuzz checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Check source and dependency locks were not modified",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 21,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 22,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 23,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457326.log",
+        "bytes": 57015,
+        "sha256": "2ee56801dcf625bfcf1587b512356bb12d4711bc297597102314d6db0ee27809"
+      },
+      "decoded_line_count": 518,
+      "utf8_bom": true,
+      "crlf_count": 518,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 135,
+          "seconds": 10.043,
+          "result": "OK (skipped=1)"
+        }
+      ],
+      "python_skips": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run test -z \"$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)\""
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456883,
+      "run_id": 35230914481,
+      "workflow_name": "payment-resource-baseline",
+      "name": "resources (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914481/job/105234456883",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Preserve initial identity even if setup or compilation fails",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Install fixed Rust formatter and compiler",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Test resource evidence validation and process measurement",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Check source formatting without rewriting the candidate",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 8,
+          "name": "Compile and vet the explicit resource test tag",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Build the actual fixed-profile worker and wallet scenario",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Execute 32 real payments, full recovery and payment 33 with OS resource gates",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Assert exact source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Preserve only public setup and resource evidence, including failures",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456883.log",
+        "bytes": 45428,
+        "sha256": "1c98e7b9f040a6760c7eb88905b5ed6ca7bc70f5656c59ef77b3315adad5d282"
+      },
+      "decoded_line_count": 503,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 53,
+          "seconds": 1.607,
+          "result": "OK (skipped=3)"
+        }
+      ],
+      "python_skips": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run python - <<'PY'",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt",
+        "##[group]Run python -m unittest discover -s scripts/tests -p 'test_payment_resources*.py' -v",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge)\"",
+        "##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      ],
+      "artifact_upload_observations": [
+        "Artifact payment-resources-ubuntu-latest-066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5 has been successfully uploaded! Final size is 460 bytes. Artifact ID is 10501366180",
+        "Artifact download URL: https://github.com/youq616/Zevune/actions/runs/35230914481/artifacts/10501366180"
+      ]
+    },
+    {
+      "id": 105234457336,
+      "run_id": 35230914481,
+      "workflow_name": "payment-resource-baseline",
+      "name": "resources (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914481/job/105234457336",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Preserve initial identity even if setup or compilation fails",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Install fixed Rust formatter and compiler",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Test resource evidence validation and process measurement",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Check source formatting without rewriting the candidate",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 8,
+          "name": "Compile and vet the explicit resource test tag",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Build the actual fixed-profile worker and wallet scenario",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Execute 32 real payments, full recovery and payment 33 with OS resource gates",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Assert exact source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Preserve only public setup and resource evidence, including failures",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457336.log",
+        "bytes": 46918,
+        "sha256": "feda623aaeb567cf7d8f69b8dda7e6219b2a130217a5c61c42fc7cc8c708d903"
+      },
+      "decoded_line_count": 492,
+      "utf8_bom": true,
+      "crlf_count": 490,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 53,
+          "seconds": 5.736,
+          "result": "OK (skipped=1)"
+        }
+      ],
+      "python_skips": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run python - <<'PY'",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt",
+        "##[group]Run python -m unittest discover -s scripts/tests -p 'test_payment_resources*.py' -v",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge)\"",
+        "##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      ],
+      "artifact_upload_observations": [
+        "Artifact payment-resources-windows-latest-066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5 has been successfully uploaded! Final size is 464 bytes. Artifact ID is 10500499765",
+        "Artifact download URL: https://github.com/youq616/Zevune/actions/runs/35230914481/artifacts/10500499765"
+      ]
+    },
+    {
+      "id": 105234456578,
+      "run_id": 35230914482,
+      "workflow_name": "scaffold-tests",
+      "name": "tests (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914482/job/105234456578",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Format",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Run go test ./... -count=1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Race detector",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Bounded decoder fuzz smoke test",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Bounded journal decoder fuzz smoke test",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 17,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 18,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 19,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456578.log",
+        "bytes": 21320,
+        "sha256": "437e3e279467c6f3f1d16c0eef759d1dd9292d4172ac2b8ee1dca50a1ec81975"
+      },
+      "decoded_line_count": 282,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [],
+      "format_hunks": [],
+      "normalized_format_block_sha256": null,
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.023s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.004s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.095s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.004s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.216s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.556s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.004s",
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t1.037s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t1.013s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.279s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t1.013s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t1.358s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t4.011s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t1.018s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t4.005s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t3.027s"
+      ],
+      "fuzz_terminal_progress": [
+        "fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed",
+        "fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers",
+        "fuzz: elapsed: 3s, execs: 11057 (3685/sec), new interesting: 1 (total: 4)",
+        "fuzz: elapsed: 4s, execs: 11057 (0/sec), new interesting: 1 (total: 4)",
+        "fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed",
+        "fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers",
+        "fuzz: elapsed: 3s, execs: 116693 (38884/sec), new interesting: 8 (total: 11)",
+        "fuzz: elapsed: 3s, execs: 116693 (0/sec), new interesting: 8 (total: 11)"
+      ],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run test -z \"$(gofmt -l ./cmd ./internal)\"",
+        "##[group]Run go test ./... -count=1",
+        "##[group]Run go vet ./...",
+        "##[group]Run go test -race ./... -count=1",
+        "##[group]Run go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2",
+        "##[group]Run go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456841,
+      "run_id": 35230914482,
+      "workflow_name": "scaffold-tests",
+      "name": "tests (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914482/job/105234456841",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Format",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Run go test ./... -count=1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Race detector",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Bounded decoder fuzz smoke test",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Bounded journal decoder fuzz smoke test",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 17,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 18,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 19,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456841.log",
+        "bytes": 19227,
+        "sha256": "6847aafb4163201f5afaa7a120a988cd4a9bce5255c4a459e82285764fc3a6ed"
+      },
+      "decoded_line_count": 232,
+      "utf8_bom": true,
+      "crlf_count": 232,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [],
+      "format_hunks": [],
+      "normalized_format_block_sha256": null,
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.267s",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.034s",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t2.835s",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.031s",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.700s",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t1.428s",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.365s"
+      ],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run test -z \"$(gofmt -l ./cmd ./internal)\"",
+        "##[group]Run go test ./... -count=1",
+        "##[group]Run go vet ./..."
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457019,
+      "run_id": 35230914499,
+      "workflow_name": "active-ledger-growth",
+      "name": "source",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914499/job/105234457019",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install fixed formatter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check both source formats without rewriting the candidate",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Compile both Go modules and preserve locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 13,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457019.log",
+        "bytes": 28812,
+        "sha256": "158a8fe444fbe84a6cc0114281a8b38daaf9ae9c3b838cacebcf5d12a7dfdde7"
+      },
+      "decoded_line_count": 384,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt",
+        "##[group]Run python - <<'PY'"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234829708,
+      "run_id": 35230914499,
+      "workflow_name": "active-ledger-growth",
+      "name": "growth",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914499/job/105234829708",
+      "step_conclusions": [],
+      "execution_credit": "none; unexpanded dependent matrix placeholder"
+    },
+    {
+      "id": 105234456961,
+      "run_id": 35230914503,
+      "workflow_name": "orchard-bridge",
+      "name": "boundary (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914503/job/105234456961",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install pinned Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check committed Rust source and locked dependencies",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Reserve public-fixture directory",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Real cryptography, Orchard pool replay and framing tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Static checks and build actual worker",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Go regression and static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Actual Go to Rust proof verification",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Boundary race checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Bounded decoder fuzz checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 13,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 25,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 26,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 27,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456961.log",
+        "bytes": 27188,
+        "sha256": "623e6292fd0a94d791e342355aaa8a456722bde6aed9483f9cfceb937547c9c1"
+      },
+      "decoded_line_count": 373,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457400,
+      "run_id": 35230914503,
+      "workflow_name": "orchard-bridge",
+      "name": "boundary (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914503/job/105234457400",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install pinned Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check committed Rust source and locked dependencies",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Reserve public-fixture directory",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Real cryptography, Orchard pool replay and framing tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 8,
+          "name": "Static checks and build actual worker",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Go regression and static checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Actual Go to Rust proof verification",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Boundary race checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Bounded decoder fuzz checks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 13,
+          "name": "Assert no tracked source or dependency drift",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 25,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 26,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 27,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457400.log",
+        "bytes": 28640,
+        "sha256": "5e63c705aba49e6219ab7a5c2c0b6ef791797dec50c3cbc4dbcb28c0729c6169"
+      },
+      "decoded_line_count": 362,
+      "utf8_bom": true,
+      "crlf_count": 362,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run rustc --version"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234456987,
+      "run_id": 35230914556,
+      "workflow_name": "funded-wallet-consensus",
+      "name": "funded-library (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914556/job/105234456987",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Verify target partition scheduler",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check canonical source and locked dependencies",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Complete funded library suite with genuine cryptography",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert unchanged tracked source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234456987.log",
+        "bytes": 24586,
+        "sha256": "a9499de0a117253c986de698115d1d636f9dddc9c2c7718151ee81ef3abc3de2"
+      },
+      "decoded_line_count": 316,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 13,
+          "seconds": 0.008,
+          "result": "OK"
+        }
+      ],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run python -m unittest discover -s scripts/tests -p test_funded_rust.py -v",
+        "##[group]Run cargo fmt --all -- --check"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457126,
+      "run_id": 35230914556,
+      "workflow_name": "funded-wallet-consensus",
+      "name": "funded (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914556/job/105234457126",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Compile Go modules before expensive cryptography checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Local console request and hidden-password boundary tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Verify exact source and unchanged locks",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 8,
+          "name": "Complete binary, integration and documentation tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Actual Python to Rust local wallet interoperability",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Register only executable paths, never wallet secrets",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Actual funded four-node payments and encrypted wallet recovery",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Assert unchanged tracked source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457126.log",
+        "bytes": 59689,
+        "sha256": "089e494e95c3e4df11cec5b9d12bd641e037686d8b3a9e1027e378c3e12cb9c0"
+      },
+      "decoded_line_count": 551,
+      "utf8_bom": true,
+      "crlf_count": 551,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 135,
+          "seconds": 11.228,
+          "result": "OK (skipped=1)"
+        }
+      ],
+      "python_skips": [
+        "test_proc_pinned_identity_rechecks_both_sides_of_memory_read (test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read) ... skipped 'Linux proc descriptor semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.049s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.019s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.081s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.176s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.038s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.018s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.019s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.036s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.040s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.037s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.035s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.026s [no tests to run]"
+      ],
+      "go_package_results": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.049s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.019s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.081s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.176s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.038s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.018s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.019s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.036s [no tests to run]",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.040s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.037s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.035s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.026s [no tests to run]"
+      ],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run go test -mod=readonly ./... -run '^$'",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run python -m unittest discover -s scripts/tests -v",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\""
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457228,
+      "run_id": 35230914556,
+      "workflow_name": "funded-wallet-consensus",
+      "name": "funded-library (windows-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914556/job/105234457228",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Verify target partition scheduler",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Check canonical source and locked dependencies",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 6,
+          "name": "Complete funded library suite with genuine cryptography",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 7,
+          "name": "Assert unchanged tracked source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 14,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457228.log",
+        "bytes": 24985,
+        "sha256": "84f8ea9f8a25c14592074c6300183bc2306292283013203feb05ed16d2d213c1"
+      },
+      "decoded_line_count": 303,
+      "utf8_bom": true,
+      "crlf_count": 303,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 13,
+          "seconds": 0.02,
+          "result": "OK"
+        }
+      ],
+      "python_skips": [],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [],
+      "go_package_results": [],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run python -m unittest discover -s scripts/tests -p test_funded_rust.py -v",
+        "##[group]Run cargo fmt --all -- --check"
+      ],
+      "artifact_upload_observations": []
+    },
+    {
+      "id": 105234457244,
+      "run_id": 35230914556,
+      "workflow_name": "funded-wallet-consensus",
+      "name": "funded (ubuntu-latest)",
+      "head_sha": "99ec771c57207167f473d23ffd07b54f15a36abc",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "html_url": "https://github.com/youq616/Zevune/actions/runs/35230914556/job/105234457244",
+      "step_conclusions": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Compile Go modules before expensive cryptography checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Install fixed Rust",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Local console request and hidden-password boundary tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Verify exact source and unchanged locks",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 8,
+          "name": "Complete binary, integration and documentation tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 9,
+          "name": "Actual Python to Rust local wallet interoperability",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 10,
+          "name": "Register only executable paths, never wallet secrets",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 11,
+          "name": "Actual funded four-node payments and encrypted wallet recovery",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 12,
+          "name": "Assert unchanged tracked source and dependency locks",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Post Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Post Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "log_original": {
+        "path": "c1-native/job-105234457244.log",
+        "bytes": 58319,
+        "sha256": "592b612f52b34514d3152a08ebc439912c622995dc758eac32ebcccdb9d38e32"
+      },
+      "decoded_line_count": 565,
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "checkout_outputs": [
+        "066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5"
+      ],
+      "complete_cleanup_observed": true,
+      "action_errors": [
+        "##[error]Process completed with exit code 1."
+      ],
+      "format_hunks": [
+        "Diff in integration/orchard/src/pool/active/incremental.rs:154:",
+        "Diff in integration/orchard/src/pool/active_flow_tests.rs:135:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:",
+        "Diff in integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:24:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:161:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:304:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:373:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:526:",
+        "Diff in integration/orchard/tests/active_incremental_cli.rs:543:"
+      ],
+      "normalized_format_block_sha256": "e22dad3d33ea5d1e56f1f0a104f74e87d229a090ba405dab4d8727ca42045d2c",
+      "rust_harness_results": 0,
+      "funded_cohort_completions": 0,
+      "python_results": [
+        {
+          "discovered": 135,
+          "seconds": 2.851,
+          "result": "OK (skipped=3)"
+        }
+      ],
+      "python_skips": [
+        "test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_post_read_size_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check) ... skipped 'requires native Windows file-sharing semantics'",
+        "test_delete_sharing_does_not_disable_replacement_identity_check (test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check) ... skipped 'requires native Windows file-sharing semantics'"
+      ],
+      "go_top_level_passes": [],
+      "go_failures": [],
+      "go_skips": [],
+      "go_compile_only_packages": [
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.004s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.005s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.032s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.013s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.016s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.013s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.008s [no tests to run]"
+      ],
+      "go_package_results": [
+        "?   \tgithub.com/youq616/Zevune/cmd/latency-report\t[no test files]",
+        "?   \tgithub.com/youq616/Zevune/cmd/zevuned\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/internal/api\t0.004s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/latency\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/ledger\t0.003s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/merkle\t0.005s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/orchardbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/poolbridge\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/internal/protocol\t0.002s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/app\t0.032s [no tests to run]",
+        "?   \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet\t[no test files]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/cmd/zevune-network\t0.013s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/devnet\t0.016s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/labnet\t0.013s [no tests to run]",
+        "ok  \tgithub.com/youq616/Zevune/integration/cometbft/poolapp\t0.008s [no tests to run]"
+      ],
+      "fuzz_terminal_progress": [],
+      "run_commands": [
+        "##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+        "##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+        "##[group]Run go test -mod=readonly ./... -run '^$'",
+        "##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+        "##[group]Run python -m unittest discover -s scripts/tests -v",
+        "##[group]Run test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\""
+      ],
+      "artifact_upload_observations": []
+    }
+  ],
+  "limits": [
+    "No Rust compilation, test, Clippy or funded completion credit",
+    "No new incremental-planner runtime acceptance",
+    "No 100000-block or 32+1 payment resource execution credit",
+    "No funded four-node or operator execution credit",
+    "Existing untaged CometBFT scaffold process tests are not funded Orchard payment tests",
+    "C2 must complete its own exact PR matrix and reviews"
+  ]
+}
