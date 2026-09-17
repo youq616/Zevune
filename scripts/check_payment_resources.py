@@ -15,7 +15,6 @@ from __future__ import annotations
 import ctypes
 from dataclasses import asdict, dataclass
 import argparse
-from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -54,14 +53,37 @@ PHASES = (
     ("complete_33", 33, 2),
 )
 CORE_OPERATIONS = ("prepare", "candidate", "worker_commit", "scenario_apply", "wallet_sync")
-EXTRA_OPERATIONS = {
-    "scenario_start": {(0, 0)}, "worker_create": {(0, 0)},
-    "worker_reopen": {(0, 32)}, "wallet_recover": {(0, 32)},
-    "outbox_restore": {(33, 32)},
-    "duplicate_rejection": {(0, n) for n in (8, 16, 24, 32, 33)},
-    "disk_check": {(0, 32), (0, 33)}, "worker_close": {(0, 32), (0, 33)},
-    "finish": {(0, 33)},
-}
+
+
+def expected_operations() -> tuple[tuple[str, int, int, int], ...]:
+    """The fixed Go execution order: operation, payment, start/end count.
+
+    Recovery must finish before preparing payment 33, and its newly created
+    outbox must be restored before that payment enters candidate selection.
+    A multiset of successful operations cannot establish those dependencies.
+    """
+    operations = [("scenario_start", 0, 0, 0), ("worker_create", 0, 0, 0),
+                  ("wallet_sync", 0, 0, 0)]
+    for payment in range(1, 34):
+        previous = payment - 1
+        if payment == 33:
+            operations.extend((operation, 0, 32, 32) for operation in
+                              ("worker_close", "disk_check", "worker_reopen", "wallet_recover"))
+        operations.append(("prepare", payment, previous, previous))
+        if payment == 33:
+            operations.append(("outbox_restore", 33, 32, 32))
+        operations.extend((("candidate", payment, previous, previous),
+                           ("worker_commit", payment, previous, payment),
+                           ("scenario_apply", payment, payment, payment),
+                           ("wallet_sync", payment, payment, payment)))
+        if payment in (8, 16, 24, 32, 33):
+            operations.append(("duplicate_rejection", 0, payment, payment))
+    operations.extend((operation, 0, 33, 33) for operation in
+                      ("worker_close", "disk_check", "finish"))
+    return tuple(operations)
+
+
+EXPECTED_OPERATIONS = expected_operations()
 CHECKS = {
     "genuine_payments", "summary_agreement", "capacity_accounting", "wallet_records",
     "wallet_file_bytes", "physical_frames", "worker_full_replay", "scenario_full_replay",
@@ -196,35 +218,28 @@ def checked_progress(value: object, seq: int, pending: dict | None) -> dict:
     if checked_uint(value["schema_version"]) != 1 or checked_uint(value["seq"]) != seq:
         raise MeasurementError("invalid_progress_sequence")
     operation = value["operation"]
-    if not isinstance(operation, str) or operation not in set(CORE_OPERATIONS) | set(EXTRA_OPERATIONS):
+    if not isinstance(operation, str):
         raise MeasurementError("invalid_progress_operation")
     payment = checked_uint(value["payment_index"], 33)
     committed = checked_uint(value["committed_blocks"], 33)
-    if operation == "wallet_sync" and payment == 0:
-        expected = 0
-    elif operation in CORE_OPERATIONS:
-        if payment == 0:
-            raise MeasurementError("invalid_progress_payment")
-        expected = payment if operation in {"scenario_apply", "wallet_sync"} else payment - 1
-        if operation == "worker_commit" and value["status"] == "completed":
-            expected += 1
-    else:
-        if (payment, committed) not in EXTRA_OPERATIONS[operation]:
-            raise MeasurementError("invalid_progress_scope")
-        expected = committed
-    if committed != expected:
-        raise MeasurementError("invalid_progress_committed_count")
+    if seq > 2 * len(EXPECTED_OPERATIONS):
+        raise MeasurementError("unexpected_progress_step")
+    name, expected_payment, before, after = EXPECTED_OPERATIONS[(seq - 1) // 2]
+    expected_status = "started" if seq % 2 else "completed"
+    expected_count = before if seq % 2 else after
+    if (operation != name or payment != expected_payment or committed != expected_count
+            or value["status"] != expected_status):
+        raise MeasurementError("unexpected_progress_step")
     if value["status"] == "started":
         if pending is not None:
             raise MeasurementError("overlapping_progress_operations")
     else:
         checked_uint(value["duration_ms"], 1_200_000)
-        if pending is None or any(value[key] != pending[key]
-                                  for key in ("operation", "payment_index")):
+        if pending is None:
             raise MeasurementError("unpaired_progress_completion")
-        increment = 1 if operation == "worker_commit" else 0
-        if committed != pending["committed_blocks"] + increment:
-            raise MeasurementError("inconsistent_progress_completion")
+        # Recheck the exact preceding start record as well, so a direct call
+        # cannot pair a valid completion with an unrelated or malformed start.
+        checked_progress(pending, seq - 1, None)
     return value
 
 
@@ -233,8 +248,12 @@ def checked_result(value: object, events: list[dict], progress: list[dict]) -> d
                        "actions_per_payment", "commitments", "nullifiers", "fees",
                        "logical_bytes", "segments", "tail_bytes", "wallet_records",
                        "wallet_bytes", "checks", "timings"})
-    if len(events) != 9 or not progress or progress[-1]["status"] != "completed":
+    if len(events) != 9 or not isinstance(progress, list) or len(progress) != 2 * len(EXPECTED_OPERATIONS):
         raise MeasurementError("incomplete_checkpoint_or_progress_sequence")
+    pending = None
+    for seq, entry in enumerate(progress, 1):
+        checked_progress(entry, seq, pending)
+        pending = entry if entry["status"] == "started" else None
     for key, expected in (("schema_version", 1), ("paid_blocks", 33), ("height", 33),
                           ("actions_per_payment", 2), ("commitments", 68),
                           ("nullifiers", 66), ("fees", 33000)):
@@ -260,18 +279,6 @@ def checked_result(value: object, events: list[dict], progress: list[dict]) -> d
         raise MeasurementError("result_progress_disagrees")
     if total < sum(entry["duration_ms"] for entry in completed) or total < events[-1]["elapsed_ms"]:
         raise MeasurementError("inconsistent_total_duration")
-    core = [(entry["operation"], entry["payment_index"]) for entry in completed
-            if entry["operation"] in CORE_OPERATIONS and entry["payment_index"] != 0]
-    if core != [(operation, n) for n in range(1, 34) for operation in CORE_OPERATIONS]:
-        raise MeasurementError("missing_or_reordered_payment_operations")
-    extras = Counter((entry["operation"], entry["payment_index"], entry["committed_blocks"])
-                     for entry in completed if entry["operation"] not in CORE_OPERATIONS
-                     or entry["payment_index"] == 0)
-    expected_extras = Counter((operation, n, height) for operation, scopes in EXTRA_OPERATIONS.items()
-                             for n, height in scopes)
-    expected_extras[("wallet_sync", 0, 0)] = 1
-    if extras != expected_extras:
-        raise MeasurementError("missing_or_repeated_recovery_operations")
     return value
 
 

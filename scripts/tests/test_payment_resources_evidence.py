@@ -45,6 +45,22 @@ def validate_progress(records):
     return pending
 
 
+def moved_pair(source, target, after=False):
+    """Move a whole well-formed operation without changing its count or timing."""
+    records = fixtures.progress_sequence()
+    pairs = [records[index:index + 2] for index in range(0, len(records), 2)]
+
+    def matches(pair, identity):
+        entry = pair[0]
+        return (entry["operation"], entry["payment_index"], entry["committed_blocks"]) == identity
+
+    index = next(index for index, pair in enumerate(pairs) if matches(pair, source))
+    moving = pairs.pop(index)
+    position = next(index for index, pair in enumerate(pairs) if matches(pair, target))
+    pairs.insert(position + int(after), moving)
+    return resequence([entry for pair in pairs for entry in pair])
+
+
 class EvidenceCompletenessTests(unittest.TestCase):
     def test_fixture_has_exact_fixed_go_operation_contract(self):
         # The fixture must keep the 32+1 schedule even if implementation
@@ -69,9 +85,11 @@ class EvidenceCompletenessTests(unittest.TestCase):
         for operation in ("prepare", "candidate", "worker_commit", "scenario_apply", "wallet_sync"):
             records = resequence([entry for entry in fixtures.progress_sequence()
                                   if (entry["operation"], entry["payment_index"]) != (operation, 17)])
-            self.assertIsNone(validate_progress(records))
             with self.subTest(operation=operation), self.assertRaisesRegex(
-                    resource.MeasurementError, "payment_operations"):
+                    resource.MeasurementError, "unexpected_progress_step"):
+                validate_progress(records)
+            with self.subTest(operation=operation), self.assertRaisesRegex(
+                    resource.MeasurementError, "incomplete_checkpoint_or_progress_sequence"):
                 resource.checked_result(result_for(records), events, records)
 
     def test_reordering_complete_core_pairs_is_not_a_valid_timing_result(self):
@@ -80,8 +98,9 @@ class EvidenceCompletenessTests(unittest.TestCase):
                        if entry["operation"] == "prepare" and entry["payment_index"] == 16)
         records[prepare:prepare + 4] = records[prepare + 2:prepare + 4] + records[prepare:prepare + 2]
         records = resequence(records)
-        self.assertIsNone(validate_progress(records))
-        with self.assertRaisesRegex(resource.MeasurementError, "payment_operations"):
+        with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
+            validate_progress(records)
+        with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
             resource.checked_result(result_for(records), [fixtures.event(n) for n in range(1, 10)], records)
 
     def test_missing_or_repeated_recovery_pair_cannot_claim_complete_recovery(self):
@@ -97,9 +116,11 @@ class EvidenceCompletenessTests(unittest.TestCase):
                     index = original.index(pair[0])
                     records = original[:index] + copy.deepcopy(pair) + original[index:]
                 records = resequence(records)
-                self.assertIsNone(validate_progress(records))
                 with self.subTest(operation=operation, remove=remove), self.assertRaisesRegex(
-                        resource.MeasurementError, "recovery_operations"):
+                        resource.MeasurementError, "unexpected_progress_step"):
+                    validate_progress(records)
+                with self.subTest(operation=operation, remove=remove), self.assertRaisesRegex(
+                        resource.MeasurementError, "incomplete_checkpoint_or_progress_sequence"):
                     resource.checked_result(result_for(records), [fixtures.event(n) for n in range(1, 10)], records)
 
     def test_recovery_cannot_be_recorded_at_a_different_committed_height(self):
@@ -109,7 +130,7 @@ class EvidenceCompletenessTests(unittest.TestCase):
             for height in (0, 31, 33):
                 changed = dict(start, committed_blocks=height)
                 with self.subTest(operation=operation, height=height), self.assertRaisesRegex(
-                        resource.MeasurementError, "progress_scope"):
+                        resource.MeasurementError, "unexpected_progress_step"):
                     resource.checked_progress(changed, changed["seq"], None)
 
     def test_every_one_of_nine_checkpoints_is_required(self):
@@ -118,6 +139,65 @@ class EvidenceCompletenessTests(unittest.TestCase):
             with self.subTest(missing=missing + 1), self.assertRaisesRegex(
                     resource.MeasurementError, "incomplete_checkpoint"):
                 resource.checked_result(result_for(records), events[:missing] + events[missing + 1:], records)
+
+    def assert_reordered_operations_rejected(self, records):
+        original = fixtures.progress_sequence()
+        self.assertEqual(len(records), 362)
+
+        def signatures(entries):
+            return sorted((entry["operation"], entry["payment_index"], entry["committed_blocks"],
+                           entry["status"], entry.get("duration_ms")) for entry in entries)
+
+        # These are the reviewer's dangerous counterexamples: every operation
+        # and duration remains present, and result timings match the reordered
+        # progress. A successful-operation multiset cannot detect the problem.
+        self.assertEqual(signatures(records), signatures(original))
+        changed = next(index for index, (before, after) in enumerate(zip(original, records)) if before != after)
+        pending = validate_progress(records[:changed])
+        with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
+            resource.checked_progress(records[changed], changed + 1, pending)
+        with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
+            resource.checked_result(result_for(records), [fixtures.event(n) for n in range(1, 10)], records)
+
+    def test_review_c1_wallet_recovery_after_new_payment_and_outbox_is_rejected(self):
+        reordered = moved_pair(("wallet_recover", 0, 32), ("outbox_restore", 33, 32), after=True)
+        self.assert_reordered_operations_rejected(reordered)
+
+    def test_review_c1_worker_reopen_before_scenario_start_is_rejected(self):
+        reordered = moved_pair(("worker_reopen", 0, 32), ("scenario_start", 0, 0))
+        self.assert_reordered_operations_rejected(reordered)
+
+    def test_close_disk_check_and_outbox_boundaries_cannot_move(self):
+        cases = (
+            (("worker_close", 0, 32), ("worker_reopen", 0, 32), True),
+            (("disk_check", 0, 32), ("wallet_recover", 0, 32), True),
+            (("wallet_recover", 0, 32), ("worker_reopen", 0, 32), False),
+            (("outbox_restore", 33, 32), ("prepare", 33, 32), False),
+            (("worker_close", 0, 33), ("disk_check", 0, 33), True),
+            (("finish", 0, 33), ("disk_check", 0, 33), False),
+        )
+        for source, target, after in cases:
+            with self.subTest(source=source, target=target):
+                self.assert_reordered_operations_rejected(moved_pair(source, target, after))
+
+    def test_valid_partial_recovery_prefixes_remain_incomplete_without_fake_duration(self):
+        records = fixtures.progress_sequence()
+        cutoffs = {0, 1, 2, 6}
+        for index, entry in enumerate(records):
+            if entry["status"] == "started" and (entry["payment_index"] == 33
+                                                   or entry["committed_blocks"] == 32):
+                cutoffs.update((index, index + 1, index + 2))
+        for cutoff in sorted(cutoffs):
+            prefix = records[:cutoff]
+            with self.subTest(cutoff=cutoff):
+                pending = validate_progress(prefix)
+                if prefix and prefix[-1]["status"] == "started":
+                    self.assertEqual(pending, prefix[-1])
+                    self.assertNotIn("duration_ms", pending)
+                else:
+                    self.assertIsNone(pending)
+                with self.assertRaisesRegex(resource.MeasurementError, "incomplete_checkpoint_or_progress_sequence"):
+                    resource.checked_result(result_for(prefix), [fixtures.event(n) for n in range(1, 10)], prefix)
 
 
 class EvidenceCollectorBoundaryTests(unittest.TestCase):
@@ -242,6 +322,31 @@ class EvidenceCollectorBoundaryTests(unittest.TestCase):
             self.assertEqual(evidence["unfinished_operation"]["operation"], "scenario_apply")
             self.assertNotIn("duration_ms", evidence["unfinished_operation"])
             self.assertIsNone(evidence["result"])
+
+    def test_bad_order_is_rejected_before_copying_it_over_a_valid_prefix(self):
+        cases = (
+            moved_pair(("wallet_recover", 0, 32), ("outbox_restore", 33, 32), after=True),
+            moved_pair(("worker_reopen", 0, 32), ("scenario_start", 0, 0)),
+        )
+        original = fixtures.progress_sequence()
+        for reordered in cases:
+            changed = next(index for index, (before, after) in enumerate(zip(original, reordered)) if before != after)
+            prefix = reordered[:changed]
+            with self.subTest(first_bad_seq=changed + 1), self.collector() as (collector, evidence, directory, _report):
+                for entry in reordered[:changed + 1]:
+                    publish(directory, f"progress-{entry['seq']:04d}.json", entry)
+                with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
+                    collector.progress()
+                self.assertEqual(evidence["progress"], prefix)
+                self.assertIsNone(evidence["unfinished_operation"])
+                self.assertIs(evidence["commit_outcome_uncertain"], False)
+                self.assertIsNone(evidence["result"])
+                self.assertNotIn(f"progress-{changed + 1:04d}.json", collector.hashes)
+                self.assertEqual(evidence["last_confirmed_committed_blocks"], 32 if prefix else None)
+                if prefix:
+                    self.assertEqual(collector.writer.last["progress"], prefix)
+                else:
+                    self.assertIsNone(collector.writer.last)
 
     def test_zero_exit_without_checkpoints_is_not_successful_acceptance(self):
         with tempfile.TemporaryDirectory() as temporary:

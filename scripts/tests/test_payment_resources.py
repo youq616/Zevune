@@ -82,6 +82,14 @@ def result_value():
     }
 
 
+def validated_progress_prefix(records):
+    pending = None
+    for seq, entry in enumerate(records, 1):
+        resource.checked_progress(entry, seq, pending)
+        pending = entry if entry["status"] == "started" else None
+    return pending
+
+
 class FakeProbe:
     def __init__(self, pid, parent_pid):
         creation = "1" if pid == 99 else str(100 + pid)
@@ -254,27 +262,33 @@ class ProgressAndResultTests(unittest.TestCase):
         resource.checked_result(result_value(), [event(n) for n in range(1, 10)], records)
 
     def test_unfinished_operation_has_no_fabricated_duration(self):
-        start = {"schema_version": 1, "seq": 1, "operation": "worker_commit",
-                 "payment_index": 33, "committed_blocks": 32, "status": "started"}
-        resource.checked_progress(start, 1, None)
+        records = progress_sequence()
+        index = next(index for index, entry in enumerate(records)
+                     if entry["operation"] == "worker_commit" and entry["payment_index"] == 33
+                     and entry["status"] == "started")
+        start = records[index]
+        self.assertEqual(validated_progress_prefix(records[:index + 1]), start)
         self.assertNotIn("duration_ms", start)
         for change in (dict(start, duration_ms=0), dict(start, status="completed"),
                        dict(start, status=[]), dict(start, payment_index=True),
                        dict(start, committed_blocks=33)):
             with self.assertRaises(resource.MeasurementError):
-                resource.checked_progress(change, 1, None)
+                resource.checked_progress(change, start["seq"], None)
         with self.assertRaisesRegex(resource.MeasurementError, "overlapping"):
-            resource.checked_progress(start, 1, start)
+            resource.checked_progress(start, start["seq"], start)
 
     def test_progress_completion_must_match_operation_payment_and_commit_count(self):
-        start = {"schema_version": 1, "seq": 1, "operation": "worker_commit",
-                 "payment_index": 33, "committed_blocks": 32, "status": "started"}
-        complete = dict(start, seq=2, status="completed", committed_blocks=33, duration_ms=1)
-        resource.checked_progress(complete, 2, start)
-        for key, value in (("seq", 3), ("duration_ms", True), ("committed_blocks", 32),
+        records = progress_sequence()
+        index = next(index for index, entry in enumerate(records)
+                     if entry["operation"] == "worker_commit" and entry["payment_index"] == 33
+                     and entry["status"] == "started")
+        start, complete = records[index:index + 2]
+        self.assertEqual(validated_progress_prefix(records[:index + 1]), start)
+        resource.checked_progress(complete, complete["seq"], start)
+        for key, value in (("seq", complete["seq"] + 1), ("duration_ms", True), ("committed_blocks", 32),
                            ("operation", "scenario_apply"), ("payment_index", 32)):
             with self.subTest(key=key), self.assertRaises(resource.MeasurementError):
-                resource.checked_progress(dict(complete, **{key: value}), 2, start)
+                resource.checked_progress(dict(complete, **{key: value}), complete["seq"], start)
 
     def test_final_result_does_not_accept_empty_tests_missing_checks_or_edited_timings(self):
         events, records = [event(n) for n in range(1, 10)], progress_sequence()
@@ -298,7 +312,7 @@ class ProgressAndResultTests(unittest.TestCase):
         completed[4]["payment_index"] = 2
         value = result_value()
         value["timings"]["operations"] = completed
-        with self.assertRaisesRegex(resource.MeasurementError, "payment_operations"):
+        with self.assertRaisesRegex(resource.MeasurementError, "unexpected_progress_step"):
             resource.checked_result(value, events, repeated)
 
 
@@ -379,18 +393,22 @@ class PersistenceAndCollectorTests(unittest.TestCase):
             evidence, writer = resource.initial_evidence(), RecordingWriter()
             collector = resource.ProtocolCollector(directory, evidence, writer, 99, FakeProbe)
             try:
-                start = {"schema_version": 1, "seq": 1, "operation": "worker_commit",
-                         "payment_index": 33, "committed_blocks": 32, "status": "started"}
-                (directory / "progress-0001.json").write_text(json.dumps(start))
+                records = progress_sequence()
+                index = next(index for index, entry in enumerate(records)
+                             if entry["operation"] == "worker_commit" and entry["payment_index"] == 33
+                             and entry["status"] == "started")
+                prefix, start = records[:index + 1], records[index]
+                for entry in prefix:
+                    (directory / f"progress-{entry['seq']:04d}.json").write_text(json.dumps(entry))
                 collector.progress()
                 self.assertEqual(writer.last["last_confirmed_committed_blocks"], 32)
                 self.assertTrue(writer.last["commit_outcome_uncertain"])
                 self.assertEqual(writer.last["unfinished_operation"], start)
                 self.assertNotIn("duration_ms", writer.last["unfinished_operation"])
-                (directory / "progress-0003.json").write_text("{}")
+                (directory / f"progress-{start['seq'] + 2:04d}.json").write_text("{}")
                 with self.assertRaisesRegex(resource.MeasurementError, "sequence_gap"):
                     collector.check_names()
-                self.assertEqual(len(writer.last["progress"]), 1)
+                self.assertEqual(len(writer.last["progress"]), len(prefix))
             finally:
                 collector.close()
 
