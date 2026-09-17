@@ -1,0 +1,2546 @@
+{
+  "schema": "zevune-legacy-source-expectations-1",
+  "review_kind": "static expectations only; no native CI success is established by this file",
+  "created_at_utc": "2026-09-17T05:52:07.056612+00:00",
+  "source_identity": {
+    "commit": "cd5fe98053ce64e1acc6796dae44ec0e822c124f",
+    "tree": "cc60276872b26bbd2be1b0a0a62fceac325f5b45",
+    "base": "8324ec8bd153d9502e3e6761d25bfe281a5f3b44",
+    "parent": "9e46e03165250c6c51fa7031526d8de1bbdf27d6",
+    "base_to_commit_changed_paths": [
+      ".github/workflows/payment-resources.yml",
+      "docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md",
+      "integration/orchard/src/bin/zevune-funded-scenario.rs",
+      "internal/poolbridge/payment_resource_e2e_test.go",
+      "scripts/check_payment_resources.py",
+      "scripts/tests/test_payment_resources.py",
+      "scripts/tests/test_payment_resources_evidence.py",
+      "scripts/tests/test_payment_resources_windows.py"
+    ],
+    "previous_to_commit_changed_paths": [
+      "M\tscripts/check_payment_resources.py",
+      "A\tscripts/tests/test_payment_resources_windows.py"
+    ],
+    "workflows_rust_go_and_funded_runner_unchanged_from_C3_by_exact_git_diff": true,
+    "synthetic_merge_reported_by_parent": "caece5bb6e82adc11156601880d7e1b4f2b5f463",
+    "synthetic_identity_verification_delegated_to_parent": true
+  },
+  "workflow_count": 9,
+  "expanded_job_count": 21,
+  "excluded_workflows": [
+    {
+      "path": ".github/workflows/payment-resources.yml",
+      "reason": "delegated scope excludes new payment-resource workflow"
+    },
+    {
+      "path": ".github/workflows/development-source.yml",
+      "reason": "no pull_request trigger"
+    },
+    {
+      "path": ".github/workflows/crate-notices.yml",
+      "reason": "pull_request path filters do not match any base-to-C4 changed path"
+    }
+  ],
+  "workflows": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "workflow_name": "scaffold-tests",
+      "blob_oid": "8b6b6c467afc743dfd749d160cb90f984784bf5d",
+      "sha256_utf8": "429eb85ef77e55fd1a3bc664329fa92d417f33f4b2abd76141108c4f30c3219d",
+      "on": {
+        "push": null,
+        "pull_request": null
+      },
+      "jobs": [
+        {
+          "job_id": "tests",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 15,
+          "env": {},
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "stable",
+                "cache": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Format",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "test -z \"$(gofmt -l ./cmd ./internal)\"",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "go test ./... -count=1",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test ./... -count=1",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "go vet ./...",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go vet ./...",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Race detector",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -race ./... -count=1",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Bounded decoder fuzz smoke test",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test ./internal/protocol -run=^$ -fuzz=FuzzDecodeBinary -fuzztime=3s -parallel=2",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Bounded journal decoder fuzz smoke test",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test ./internal/ledger -run=^$ -fuzz=FuzzJournalBlockDecode -fuzztime=3s -parallel=2",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/consensus-lab.yml",
+      "workflow_name": "consensus-laboratory",
+      "blob_oid": "50f265b292514e6aac596fa16bb66260ed6df0c5",
+      "sha256_utf8": "354b9e9e7e2c1a3a1a63f3ccd79d495d10d9e8cb40124f6db7f2e9d899670908",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ]
+        },
+        "pull_request": null
+      },
+      "jobs": [
+        {
+          "job_id": "integration",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 18,
+          "env": {},
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache": true,
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Verify locked dependencies and canonical source",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go version\ngo mod download\ngo mod verify\ngo mod tidy -diff\ntest -z \"$(gofmt -l .)\"\n",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Adapter and four independent process integration tests",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly ./... -count=1 -timeout=8m -v",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Static analysis",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go vet -mod=readonly ./...",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Adapter race checks",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -race ./app -count=1 -timeout=3m",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Build local launcher",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go build -mod=readonly ./cmd/zevune-devnet",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Assert checks did not modify tracked files",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/orchard-lab.yml",
+      "workflow_name": "orchard-cryptography-laboratory",
+      "blob_oid": "e2d80ee9126f31ebb9f3930e7309088a6d9934fd",
+      "sha256_utf8": "8d6554b2b4491c343d90f38e2f565196c78c75e69edd25eacaeb5f49ee37e0a2",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ],
+          "paths": [
+            "integration/orchard/**",
+            ".github/workflows/orchard-lab.yml",
+            ".gitattributes"
+          ]
+        },
+        "pull_request": {
+          "paths": [
+            "integration/orchard/**",
+            ".github/workflows/orchard-lab.yml",
+            ".gitattributes"
+          ]
+        }
+      },
+      "jobs": [
+        {
+          "job_id": "tests",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 25,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "Install pinned Rust toolchain",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Check committed formatting and dependency lock",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustc --version\ncargo fmt --all -- --check\ncargo metadata --locked --format-version=1 > /dev/null\ntest -z \"$(git status --porcelain --untracked-files=no)\"\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Real proofs, pool replay, durable worker codec and zero-value fixture",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo test --locked --release -- --nocapture --test-threads=1",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Static checks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo clippy --locked --release --all-targets -- -D warnings",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Assert no tracked source or dependency drift",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/orchard-bridge.yml",
+      "workflow_name": "orchard-bridge",
+      "blob_oid": "fe78c2a02aaff2880fc2a25accf44ce37e261537",
+      "sha256_utf8": "bf190dd56d44b0aa1f464a0784022429fb8aa2cb0a263333e30eadfecf702398",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ]
+        },
+        "pull_request": null
+      },
+      "jobs": [
+        {
+          "job_id": "boundary",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 20,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Install pinned Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Check committed Rust source and locked dependencies",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustc --version\ncargo fmt --all -- --check\ncargo metadata --locked --format-version=1 > /dev/null\ntest -z \"$(git status --porcelain --untracked-files=no)\"\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Reserve public-fixture directory",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "fixture=\"$RUNNER_TEMP/zevune-public-fixture\"\nmkdir \"$fixture\"\nif [ \"$RUNNER_OS\" = \"Windows\" ]; then fixture=$(cygpath -w \"$fixture\"); fi\necho \"ZEVUNE_PUBLIC_FIXTURE_DIR=$fixture\" >> \"$GITHUB_ENV\"\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Real cryptography, Orchard pool replay and framing tests",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo test --locked --release -- --nocapture --test-threads=1",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Static checks and build actual worker",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo clippy --locked --release --all-targets -- -D warnings\ncargo build --locked --release --bin zevune-orchard-worker\nworker=\"$(pwd)/target/release/zevune-orchard-worker\"\nfixture=\"$ZEVUNE_PUBLIC_FIXTURE_DIR/authorized.bin\"\nif [ \"$RUNNER_OS\" = \"Windows\" ]; then\n  worker=$(cygpath -w \"$worker.exe\")\n  fixture=$(cygpath -w \"$fixture\")\nfi\necho \"ZEVUNE_REAL_WORKER=$worker\" >> \"$GITHUB_ENV\"\necho \"ZEVUNE_PUBLIC_FIXTURE=$fixture\" >> \"$GITHUB_ENV\"\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Go regression and static checks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "test -z \"$(gofmt -l internal/orchardbridge)\"\ngo test ./... -count=1 -timeout=4m\ngo vet ./...\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 9,
+              "name": "Actual Go to Rust proof verification",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -tags=orchard_e2e ./internal/orchardbridge -run '^TestGenuineRustWorkerAuthorization$' -count=1 -timeout=2m -v",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 10,
+              "name": "Boundary race checks",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -race ./internal/orchardbridge -count=1 -timeout=2m",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 11,
+              "name": "Bounded decoder fuzz checks",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "GOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzDecodeEnvelope$' -fuzztime=10s -parallel=2\nGOMAXPROCS=2 go test ./internal/orchardbridge -run '^$' -fuzz '^FuzzReadFrame$' -fuzztime=10s -parallel=2\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 12,
+              "name": "Assert no tracked source or dependency drift",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/orchard-consensus.yml",
+      "workflow_name": "orchard-consensus-integration",
+      "blob_oid": "7cc16cebcddcc4c56051c6ebc0180693625755cf",
+      "sha256_utf8": "642161027b9f5e0a6da8f83e3829f28a5d728314103fa909774656005563d9ca",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ]
+        },
+        "pull_request": null
+      },
+      "jobs": [
+        {
+          "job_id": "integrated",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 25,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Install pinned Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Check committed source and unchanged dependency locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\"\ncargo fmt --manifest-path integration/orchard/Cargo.toml --all -- --check\ncargo metadata --manifest-path integration/orchard/Cargo.toml --locked --format-version=1 > /dev/null\ngit diff --exit-code\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Prepare only public zero-value fixture path",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport os, tempfile\nd = tempfile.mkdtemp(prefix='zevune-m7-', dir=os.environ['RUNNER_TEMP'])\nworker = os.path.abspath('integration/orchard/target/release/zevune-pool-worker' + ('.exe' if os.name == 'nt' else ''))\nwith open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:\n    f.write('ZEVUNE_POOL_FIXTURE=' + os.path.join(d, 'zero-value.bin') + '\\n')\n    f.write('ZEVUNE_POOL_WORKER=' + worker + '\\n')\nPY\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Real cryptography, pool replay and worker codec tests",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo test --locked --release -- --test-threads=1\ncargo clippy --locked --release --all-targets -- -D warnings\ncargo build --locked --release --bin zevune-pool-worker\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Root Go regression",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test ./... -count=1\ngo vet ./...\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Four-process Orchard consensus and restart",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go mod download\ngo mod verify\ngo mod tidy -diff\ngo test -mod=readonly -tags=pool_e2e ./poolapp -count=1 -timeout=8m -v\ngo test -mod=readonly ./... -count=1 -timeout=8m\ngo vet -mod=readonly -tags=pool_e2e ./...\n",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 9,
+              "name": "Real adapter race checks",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -race -tags=pool_e2e ./poolapp -run '^TestReal(FinalizationCommitAndRestart|ProposalSelectionAndAtomicRejection)$' -count=1 -timeout=3m",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 10,
+              "name": "Local IPC race and bounded fuzz",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -race ./internal/poolbridge -count=1 -timeout=2m\ngo test ./internal/poolbridge -run '^$' -fuzz '^FuzzPoolFrame$' -fuzztime=10s -parallel=2\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 11,
+              "name": "Assert no tracked source or dependency drift",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/wallet-lab.yml",
+      "workflow_name": "wallet-laboratory",
+      "blob_oid": "eb181add7d6bc09e66dc8e60dd399728e0122393",
+      "sha256_utf8": "32afa268bf17dc59279f100b4b7abcab3eaca803093b34dcce6967df2d8eeafb",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ],
+          "paths": [
+            "integration/orchard/**",
+            ".github/workflows/wallet-lab.yml",
+            ".gitattributes"
+          ]
+        },
+        "pull_request": {
+          "paths": [
+            "integration/orchard/**",
+            ".github/workflows/wallet-lab.yml",
+            ".gitattributes"
+          ]
+        }
+      },
+      "jobs": [
+        {
+          "job_id": "wallet",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 25,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "Install fixed Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Check exact committed source and dependency lock",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustc --version\ncargo fmt --all -- --check\ncargo metadata --locked --format-version=1 > /dev/null\ngit diff --exit-code\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Genuine wallet payments, encrypted recovery and crypto regression",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo test --locked --release -- --nocapture --test-threads=1",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Strict static checks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo clippy --locked --release --all-targets -- -D warnings",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Assert no tracked source or dependency drift",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/funded-wallet.yml",
+      "workflow_name": "funded-wallet-consensus",
+      "blob_oid": "9a60159e5765a07f109b83a6df2575bb23c98362",
+      "sha256_utf8": "bb6d2ea2490ad878805532baf2c608bc49dd423eb0c0a5f014168f509ab22296",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ],
+          "paths": [
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "internal/protocol/**",
+            "integration/cometbft/**",
+            "scripts/run_funded_rust.py",
+            "scripts/zevune_wallet.py",
+            "scripts/check_wallet_backend.py",
+            "scripts/tests/**",
+            ".github/workflows/funded-wallet.yml",
+            ".gitattributes"
+          ]
+        },
+        "pull_request": {
+          "paths": [
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "internal/protocol/**",
+            "integration/cometbft/**",
+            "scripts/run_funded_rust.py",
+            "scripts/zevune_wallet.py",
+            "scripts/check_wallet_backend.py",
+            "scripts/tests/**",
+            ".github/workflows/funded-wallet.yml",
+            ".gitattributes"
+          ]
+        }
+      },
+      "jobs": [
+        {
+          "job_id": "funded-library",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 30,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "Install fixed Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Verify target partition scheduler",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python -m unittest discover -s scripts/tests -p test_funded_rust.py -v",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Check canonical source and locked dependencies",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo fmt --all -- --check\ncargo metadata --locked --format-version=1 > /dev/null\ngit diff --exit-code\n",
+              "working_directory": "integration/orchard",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Complete funded library suite with genuine cryptography",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python scripts/run_funded_rust.py library",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Assert unchanged tracked source and dependency locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        },
+        {
+          "job_id": "funded",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 30,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Compile Go modules before expensive cryptography checks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly ./... -run '^$'\ncd integration/cometbft\ngo test -mod=readonly ./... -run '^$'\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Install fixed Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Local console request and hidden-password boundary tests",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python -m unittest discover -s scripts/tests -v",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Verify exact source and unchanged locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "test -z \"$(gofmt -l internal/poolbridge integration/cometbft/poolapp)\"\ncd integration/orchard\ncargo fmt --all -- --check\ncargo metadata --locked --format-version=1 > /dev/null\ncargo clippy --locked --release --features local-funding-lab --all-targets -- -D warnings\ngit diff --exit-code\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Complete binary, integration and documentation tests",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python scripts/run_funded_rust.py interfaces\ncargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Actual Python to Rust local wallet interoperability",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport os, subprocess, sys\nsuffix = '.exe' if os.name == 'nt' else ''\nsubprocess.run([sys.executable, 'scripts/check_wallet_backend.py', os.path.abspath('integration/orchard/target/release/zevune-wallet-local' + suffix)], check=True)\nPY\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 9,
+              "name": "Register only executable paths, never wallet secrets",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport os\nsuffix = '.exe' if os.name == 'nt' else ''\nwith open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:\n    for env, name in [('ZEVUNE_POOL_WORKER', 'zevune-pool-worker'), ('ZEVUNE_FUNDED_SCENARIO', 'zevune-funded-scenario')]:\n        f.write(env + '=' + os.path.abspath('integration/orchard/target/release/' + name + suffix) + '\\n')\nPY\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 10,
+              "name": "Actual funded four-node payments and encrypted wallet recovery",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch)$' -count=1 -timeout=15m -v\ngo vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp\n",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 11,
+              "name": "Assert unchanged tracked source and dependency locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/network-operator.yml",
+      "workflow_name": "local-network-operator",
+      "blob_oid": "af53882b37906a1a622df40b681b6a2978057873",
+      "sha256_utf8": "25ffb6fe7489d14e5e3a58e0710bb67f38bb15fbfb5492874d63f72665f94696",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ],
+          "paths": [
+            "integration/cometbft/**",
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "scripts/**",
+            "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md",
+            ".github/workflows/network-operator.yml"
+          ]
+        },
+        "pull_request": {
+          "paths": [
+            "integration/cometbft/**",
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "scripts/**",
+            "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md",
+            ".github/workflows/network-operator.yml"
+          ]
+        }
+      },
+      "jobs": [
+        {
+          "job_id": "operator",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 30,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Install fixed Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Check exact source and build real workers",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "test -z \"$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)\"\npython -m unittest discover -s scripts/tests -v\ncd integration/orchard\ncargo fmt --all -- --check\ncargo build --locked --release --features local-funding-lab --bins\ngit diff --exit-code\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Build from isolated Git objects and verify create-only bundle",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python scripts/build_local_lab.py --output \"$RUNNER_TEMP/zevune-local-bundle\"",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Register executable paths only",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport os\nfrom pathlib import Path\nsuffix = '.exe' if os.name == 'nt' else ''\nbundle = Path(os.environ['RUNNER_TEMP']) / 'zevune-local-bundle'\nwith open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:\n    for key, path in [('ZEVUNE_NETWORK_OPERATOR', bundle / ('zevune-network' + suffix)), ('ZEVUNE_POOL_WORKER', bundle / ('zevune-pool-worker' + suffix)), ('ZEVUNE_FUNDED_SCENARIO', Path('integration/orchard/target/release').absolute() / ('zevune-funded-scenario' + suffix))]:\n        f.write(key + '=' + str(path) + '\\n')\nPY\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Actual operator processes, real payments and rejected false post-state",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v\ngo vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network\n",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 8,
+              "name": "Race and bounded fuzz checks",
+              "if": "runner.os == 'Linux'",
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -race ./labnet ./cmd/zevune-network -count=1\ngo test -mod=readonly -race -tags=operator_e2e ./labnet -run '^TestQuorumSignedWrongPostStateNeverPersists$' -count=1\ngo test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzCanonicalPublicConfiguration$' -fuzztime=3s -parallel=2\ngo test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2\ncd ../..\ngo test -mod=readonly ./internal/poolbridge -run '^$' -fuzz '^FuzzTestGenesisFrame$' -fuzztime=3s -parallel=2\n",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "expected_condition_skip"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 9,
+              "name": "Check source and dependency locks were not modified",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 10,
+              "name": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+              "if": null,
+              "uses": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+              "with": {
+                "name": "zevune-local-lab-${{ runner.os }}",
+                "path": "${{ runner.temp }}/zevune-local-bundle/",
+                "if-no-files-found": "error",
+                "retention-days": 7
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/active-ledger.yml",
+      "workflow_name": "active-ledger-growth",
+      "blob_oid": "f0a7f81bfab291487fea1cef858f7007f5384ec5",
+      "sha256_utf8": "d6a23f40525f6dca01d3b03fd48649c180e63c65f145d67d5a12bfe7615c90c3",
+      "on": {
+        "push": {
+          "branches": [
+            "main",
+            "dev/**"
+          ],
+          "paths": [
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "integration/cometbft/**",
+            ".github/workflows/active-ledger.yml"
+          ]
+        },
+        "pull_request": {
+          "paths": [
+            "integration/orchard/**",
+            "internal/poolbridge/**",
+            "integration/cometbft/**",
+            ".github/workflows/active-ledger.yml"
+          ]
+        }
+      },
+      "jobs": [
+        {
+          "job_id": "source",
+          "matrix_os": [
+            "ubuntu-latest"
+          ],
+          "needs": null,
+          "timeout_minutes": 15,
+          "env": {},
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Install fixed formatter",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal --component rustfmt",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Check both source formats without rewriting the candidate",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport subprocess\npaths = ['internal/poolbridge', 'integration/cometbft/poolapp',\n         'integration/cometbft/labnet', 'integration/cometbft/cmd/zevune-network']\nresult = subprocess.run(['gofmt', '-l', *paths], check=True,\n                        stdout=subprocess.PIPE, text=True)\ngo_diff_code = 0\nif result.stdout.strip():\n    go_diff_code = subprocess.run(['gofmt', '-d', *paths]).returncode\nrust = subprocess.run(['cargo', '+1.98.1', 'fmt', '--manifest-path',\n                       'integration/orchard/Cargo.toml', '--all', '--', '--check'])\nraise SystemExit(bool(result.stdout.strip()) or go_diff_code != 0 or rust.returncode != 0)\nPY\n",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Compile both Go modules and preserve locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly ./... -run '^$'\ncd integration/cometbft\ngo test -mod=readonly -tags=pool_e2e,funded_e2e ./... -run '^$'\ngit diff --exit-code\n",
+              "working_directory": ".",
+              "shell": "runner-default",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        },
+        {
+          "job_id": "growth",
+          "matrix_os": [
+            "ubuntu-latest",
+            "windows-latest"
+          ],
+          "needs": "source",
+          "timeout_minutes": 40,
+          "env": {
+            "RAYON_NUM_THREADS": "2",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "steps": [
+            {
+              "ordinal": 1,
+              "name": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "if": null,
+              "uses": "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+              "with": {
+                "persist-credentials": false
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 2,
+              "name": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "if": null,
+              "uses": "actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00",
+              "with": {
+                "go-version": "1.27.1",
+                "cache-dependency-path": "integration/cometbft/go.sum"
+              },
+              "run": null,
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 3,
+              "name": "Install fixed Rust",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "rustup toolchain install 1.98.1 --profile minimal",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 4,
+              "name": "Build the real fixed-profile worker and wallet scenario",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 5,
+              "name": "Register executable paths only",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "python - <<'PY'\nimport os\nsuffix = '.exe' if os.name == 'nt' else ''\nwith open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:\n    for key, binary in [('ZEVUNE_POOL_WORKER', 'zevune-pool-worker'),\n                        ('ZEVUNE_FUNDED_SCENARIO', 'zevune-funded-scenario')]:\n        output.write(key + '=' + os.path.abspath('integration/orchard/target/release/' + binary + suffix) + '\\n')\nPY\n",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 6,
+              "name": "Actual 100000-block commits, boundary payments and full restart",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart$' -count=1 -timeout=25m -v",
+              "working_directory": "integration/cometbft",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            },
+            {
+              "ordinal": 7,
+              "name": "Assert exact committed source and dependency locks",
+              "if": null,
+              "uses": null,
+              "with": null,
+              "run": "git diff --exit-code",
+              "working_directory": ".",
+              "shell": "bash",
+              "expected_by_matrix_os": {
+                "ubuntu-latest": "requires_native_execution",
+                "windows-latest": "requires_native_execution"
+              },
+              "actual_observed": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "funded_cohorts": {
+    "runner_source": "scripts/run_funded_rust.py",
+    "library": {
+      "test_targets": [
+        [
+          "lib",
+          "zevune_orchard_lab"
+        ]
+      ],
+      "documentation_tests": false,
+      "commands": [
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--lib",
+          "--",
+          "--test-threads=1"
+        ]
+      ],
+      "required_completion_marker": "FUNDED_COHORT_COMPLETE library"
+    },
+    "interfaces": {
+      "test_targets": [
+        [
+          "bin",
+          "zevune-funded-scenario"
+        ],
+        [
+          "bin",
+          "zevune-orchard-worker"
+        ],
+        [
+          "bin",
+          "zevune-pool-recovery"
+        ],
+        [
+          "bin",
+          "zevune-pool-worker"
+        ],
+        [
+          "bin",
+          "zevune-wallet-local"
+        ],
+        [
+          "test",
+          "authorization_cache"
+        ],
+        [
+          "test",
+          "bridge"
+        ],
+        [
+          "test",
+          "cache_state_guards"
+        ],
+        [
+          "test",
+          "default_worker_policy"
+        ],
+        [
+          "test",
+          "genesis_domain"
+        ],
+        [
+          "test",
+          "genesis_manifest_bounds"
+        ],
+        [
+          "test",
+          "operator_cli"
+        ],
+        [
+          "test",
+          "payment_preflight"
+        ],
+        [
+          "test",
+          "pool_network"
+        ],
+        [
+          "test",
+          "real_bundle"
+        ],
+        [
+          "test",
+          "recipient_domain"
+        ],
+        [
+          "test",
+          "recovery_cli"
+        ],
+        [
+          "test",
+          "test_genesis"
+        ]
+      ],
+      "documentation_tests": true,
+      "commands": [
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--bin",
+          "zevune-funded-scenario",
+          "--bin",
+          "zevune-orchard-worker",
+          "--bin",
+          "zevune-pool-recovery",
+          "--bin",
+          "zevune-pool-worker",
+          "--bin",
+          "zevune-wallet-local",
+          "--test",
+          "authorization_cache",
+          "--test",
+          "bridge",
+          "--test",
+          "cache_state_guards",
+          "--test",
+          "default_worker_policy",
+          "--test",
+          "genesis_domain",
+          "--test",
+          "genesis_manifest_bounds",
+          "--test",
+          "operator_cli",
+          "--test",
+          "payment_preflight",
+          "--test",
+          "pool_network",
+          "--test",
+          "real_bundle",
+          "--test",
+          "recipient_domain",
+          "--test",
+          "recovery_cli",
+          "--test",
+          "test_genesis",
+          "--",
+          "--test-threads=1"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--features",
+          "local-funding-lab",
+          "--doc",
+          "--",
+          "--test-threads=1"
+        ]
+      ],
+      "required_completion_marker": "FUNDED_COHORT_COMPLETE interfaces"
+    },
+    "proof_policy": "Observe emitted RUN command, real Cargo test results, and final cohort completion marker; plan-only output alone is not execution proof. Feature-gated targets may legitimately contain 0 compiled tests. Runtime ignored/filtered counts must be recorded separately.",
+    "actual_observed": null
+  },
+  "python": {
+    "source_static_test_method_counts": {
+      "scripts/tests/test_crate_notices.py": 9,
+      "scripts/tests/test_funded_rust.py": 13,
+      "scripts/tests/test_local_bundle.py": 3,
+      "scripts/tests/test_payment_resources.py": 24,
+      "scripts/tests/test_payment_resources_evidence.py": 20,
+      "scripts/tests/test_payment_resources_windows.py": 9,
+      "scripts/tests/test_prepare_timing.py": 4,
+      "scripts/tests/test_protocol_vectors.py": 2,
+      "scripts/tests/test_source_snapshot.py": 8,
+      "scripts/tests/test_verify_local_lab.py": 16,
+      "scripts/tests/test_wallet_compaction.py": 6,
+      "scripts/tests/test_wallet_network.py": 11,
+      "scripts/tests/test_wallet_storage.py": 5,
+      "scripts/tests/test_zevune_wallet.py": 5
+    },
+    "all_discover_static_expected_total": 135,
+    "all_discover_expected": {
+      "ubuntu-latest": {
+        "unittest_Ran_total": 135,
+        "actual_non_skipped": 132,
+        "skipped": 3
+      },
+      "windows-latest": {
+        "unittest_Ran_total": 135,
+        "actual_non_skipped": 134,
+        "skipped": 1
+      }
+    },
+    "scheduler_only_expected": {
+      "unittest_Ran_total": 13,
+      "actual_non_skipped": 13,
+      "skipped": 0
+    },
+    "skip_rules": [
+      {
+        "test": "test_payment_resources.LinuxParserTests.test_proc_pinned_identity_rechecks_both_sides_of_memory_read",
+        "path": "scripts/tests/test_payment_resources.py",
+        "line": 231,
+        "scope": "method",
+        "condition_source": "unittest.skipUnless(sys.platform == \"linux\", \"Linux proc descriptor semantics\")"
+      },
+      {
+        "test": "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json",
+        "path": "scripts/tests/test_payment_resources_windows.py",
+        "line": 53,
+        "scope": "class",
+        "condition_source": "unittest.skipUnless(sys.platform == \"win32\", \"requires native Windows file-sharing semantics\")"
+      },
+      {
+        "test": "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check",
+        "path": "scripts/tests/test_payment_resources_windows.py",
+        "line": 53,
+        "scope": "class",
+        "condition_source": "unittest.skipUnless(sys.platform == \"win32\", \"requires native Windows file-sharing semantics\")"
+      },
+      {
+        "test": "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check",
+        "path": "scripts/tests/test_payment_resources_windows.py",
+        "line": 53,
+        "scope": "class",
+        "condition_source": "unittest.skipUnless(sys.platform == \"win32\", \"requires native Windows file-sharing semantics\")"
+      }
+    ],
+    "required_windows_native_tests": [
+      "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_holder_blocks_legacy_open_but_shared_reader_preserves_exact_json",
+      "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_replacement_identity_check",
+      "test_payment_resources_windows.WindowsSharedProtocolTests.test_delete_sharing_does_not_disable_post_read_size_check"
+    ],
+    "windows_native_semantics_limit": "The three WindowsSharedProtocolTests exercise real Win32 DELETE-sharing state and identity/size guards with synthetic public JSON. They do not establish the historical cause of the C3 CI failure.",
+    "actual_observed": null
+  },
+  "rust_static_inventory": {
+    "bins": [
+      "zevune-funded-scenario",
+      "zevune-orchard-worker",
+      "zevune-pool-recovery",
+      "zevune-pool-worker",
+      "zevune-wallet-local"
+    ],
+    "feature_required_bins": [
+      "zevune-funded-scenario",
+      "zevune-pool-recovery",
+      "zevune-wallet-local"
+    ],
+    "integration_targets": [
+      {
+        "name": "authorization_cache",
+        "path": "integration/orchard/tests/authorization_cache.rs",
+        "crate_cfg": [],
+        "static_test_annotation_count": 1
+      },
+      {
+        "name": "bridge",
+        "path": "integration/orchard/tests/bridge.rs",
+        "crate_cfg": [],
+        "static_test_annotation_count": 1
+      },
+      {
+        "name": "cache_state_guards",
+        "path": "integration/orchard/tests/cache_state_guards.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 1
+      },
+      {
+        "name": "default_worker_policy",
+        "path": "integration/orchard/tests/default_worker_policy.rs",
+        "crate_cfg": [
+          "#![cfg(not(feature = \"local-funding-lab\"))]"
+        ],
+        "static_test_annotation_count": 1
+      },
+      {
+        "name": "genesis_domain",
+        "path": "integration/orchard/tests/genesis_domain.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 5
+      },
+      {
+        "name": "genesis_manifest_bounds",
+        "path": "integration/orchard/tests/genesis_manifest_bounds.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 4
+      },
+      {
+        "name": "operator_cli",
+        "path": "integration/orchard/tests/operator_cli.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 3
+      },
+      {
+        "name": "payment_preflight",
+        "path": "integration/orchard/tests/payment_preflight.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 4
+      },
+      {
+        "name": "pool_network",
+        "path": "integration/orchard/tests/pool_network.rs",
+        "crate_cfg": [],
+        "static_test_annotation_count": 1
+      },
+      {
+        "name": "real_bundle",
+        "path": "integration/orchard/tests/real_bundle.rs",
+        "crate_cfg": [],
+        "static_test_annotation_count": 4
+      },
+      {
+        "name": "recipient_domain",
+        "path": "integration/orchard/tests/recipient_domain.rs",
+        "crate_cfg": [],
+        "static_test_annotation_count": 4
+      },
+      {
+        "name": "recovery_cli",
+        "path": "integration/orchard/tests/recovery_cli.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 4
+      },
+      {
+        "name": "test_genesis",
+        "path": "integration/orchard/tests/test_genesis.rs",
+        "crate_cfg": [
+          "#![cfg(feature = \"local-funding-lab\")]"
+        ],
+        "static_test_annotation_count": 3
+      }
+    ],
+    "feature_and_os_cfg_source": [
+      {
+        "path": "integration/orchard/src/bin/zevune-pool-worker.rs",
+        "line": 251,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/bin/zevune-pool-worker.rs",
+        "line": 278,
+        "source": "#[cfg(not(feature = \"local-funding-lab\"))]"
+      },
+      {
+        "path": "integration/orchard/src/bin/zevune-wallet-local.rs",
+        "line": 198,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool.rs",
+        "line": 376,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool.rs",
+        "line": 765,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool.rs",
+        "line": 784,
+        "source": "#[cfg(all(test, feature = \"local-funding-lab\"))]"
+      },
+      {
+        "path": "integration/orchard/src/pool.rs",
+        "line": 788,
+        "source": "#[cfg(all(test, feature = \"local-funding-lab\"))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 48,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 55,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 90,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 106,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 215,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 220,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 225,
+        "source": "#[cfg(not(any(unix, windows)))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 271,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active.rs",
+        "line": 283,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active/tests.rs",
+        "line": 120,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active/tests.rs",
+        "line": 182,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active/tests.rs",
+        "line": 582,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active/tests.rs",
+        "line": 622,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/active/tests.rs",
+        "line": 635,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/capacity_tests.rs",
+        "line": 189,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery.rs",
+        "line": 127,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery.rs",
+        "line": 161,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery.rs",
+        "line": 212,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery.rs",
+        "line": 222,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery.rs",
+        "line": 228,
+        "source": "#[cfg(not(unix))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments.rs",
+        "line": 83,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments.rs",
+        "line": 120,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments.rs",
+        "line": 134,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments.rs",
+        "line": 382,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/index/tests.rs",
+        "line": 243,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/index/tests.rs",
+        "line": 256,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 20,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 31,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 38,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 45,
+        "source": "#[cfg(not(any(unix, windows)))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 50,
+        "source": "#[cfg(any(unix, windows))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 58,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 67,
+        "source": "#[cfg(not(windows))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 83,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace.rs",
+        "line": 120,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 5,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 29,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 56,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 149,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 155,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/namespace_tests.rs",
+        "line": 181,
+        "source": "#[cfg(windows)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/payment_boundary_tests.rs",
+        "line": 4,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/tests.rs",
+        "line": 297,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/tests.rs",
+        "line": 333,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/tests.rs",
+        "line": 412,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/segments/tests.rs",
+        "line": 416,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/tests.rs",
+        "line": 148,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/tests.rs",
+        "line": 240,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/tests.rs",
+        "line": 323,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/pool/recovery/tests.rs",
+        "line": 348,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/replay_tests.rs",
+        "line": 286,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/pool/selection.rs",
+        "line": 99,
+        "source": "#[cfg(all(test, feature = \"local-funding-lab\"))]"
+      },
+      {
+        "path": "integration/orchard/src/pool/testnet.rs",
+        "line": 250,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet.rs",
+        "line": 217,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault.rs",
+        "line": 145,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store.rs",
+        "line": 111,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store.rs",
+        "line": 121,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store.rs",
+        "line": 131,
+        "source": "#[cfg(not(unix))]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store/compact_tests.rs",
+        "line": 159,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store/tests.rs",
+        "line": 15,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store/tests.rs",
+        "line": 83,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store/tests.rs",
+        "line": 133,
+        "source": "#[cfg(unix)]"
+      },
+      {
+        "path": "integration/orchard/src/wallet/vault/store/tests.rs",
+        "line": 365,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/wallet_history.rs",
+        "line": 10,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/src/wallet_history.rs",
+        "line": 62,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      },
+      {
+        "path": "integration/orchard/tests/recipient_domain.rs",
+        "line": 65,
+        "source": "#[cfg(feature = \"local-funding-lab\")]"
+      }
+    ],
+    "ignored_test_attributes_found": [],
+    "note": "Source annotation counts and cfg mappings are static inputs, not native test-result counts."
+  },
+  "native_observation": {
+    "state": "pending_C4_native_job_logs",
+    "observed_job_logs": [],
+    "no_ci_execution_started_by_this_review": true,
+    "prior_candidates_C1_C2_C3_provide_no_C4_native_credit": true
+  }
+}

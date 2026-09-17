@@ -1,0 +1,546 @@
+{
+  "schema_version": 1,
+  "auditor": "/root/p2_resource_native_audit",
+  "observed_at": "2026-09-17T05:20:33.878723+00:00",
+  "designation": "historical_C1_not_accepted",
+  "scope": "independent public artifact consistency and full actual chronology; not a source code acceptance or external security audit",
+  "report_filename": "8f0de0d-ubuntu-payment-resources.json",
+  "report_bytes": 130207,
+  "report_sha256": "0ab169c45dc3bcee60846c16263a207ed31483a7a0efaaaafd015578a61bfa3e",
+  "setup_filename": "8f0de0d-ubuntu-payment-resource-setup.json",
+  "source": {
+    "checkout_commit": "b829fa3f6a0acb614a79ed8195a8bd119da82b6a",
+    "checkout_tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+    "source_head": "8f0de0df649a0bae719b7ced789d8fc0857ca475",
+    "source_tree": "e861d8af54cc33735b82e796a20e301e10bea137",
+    "toolchains": {
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "go": "go version go1.27.1 linux/amd64",
+      "python": "3.12.3",
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+    }
+  },
+  "artifact_consistency": "PASS",
+  "counts": {
+    "events": 9,
+    "complete_memory_checkpoints": 9,
+    "process_samples": 18,
+    "progress_records": 362,
+    "completed_operations": 181,
+    "registered_processes": 3
+  },
+  "process_lifetimes": [
+    {
+      "role": "scenario",
+      "generation": 1,
+      "identity": {
+        "creation_identity": "48331",
+        "creation_identity_kind": "linux_proc_starttime_ticks",
+        "parent_pid": 6512,
+        "pid": 6518
+      },
+      "sample_count": 9,
+      "max_observed_os_lifetime_peak_bytes": 180658176,
+      "checkpoints": [
+        {
+          "phase": "genesis",
+          "current_bytes": 44343296,
+          "os_lifetime_peak_bytes": 111140864
+        },
+        {
+          "phase": "payment_8",
+          "current_bytes": 106565632,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "payment_16",
+          "current_bytes": 110006272,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "payment_24",
+          "current_bytes": 108691456,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "payment_32",
+          "current_bytes": 111509504,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "worker_reopened_32",
+          "current_bytes": 111509504,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "wallet_recovered_32",
+          "current_bytes": 111374336,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "pending_restored_33",
+          "current_bytes": 111374336,
+          "os_lifetime_peak_bytes": 180658176
+        },
+        {
+          "phase": "complete_33",
+          "current_bytes": 111374336,
+          "os_lifetime_peak_bytes": 180658176
+        }
+      ]
+    },
+    {
+      "role": "worker",
+      "generation": 1,
+      "identity": {
+        "creation_identity": "49065",
+        "creation_identity_kind": "linux_proc_starttime_ticks",
+        "parent_pid": 6512,
+        "pid": 6521
+      },
+      "sample_count": 5,
+      "max_observed_os_lifetime_peak_bytes": 11509760,
+      "checkpoints": [
+        {
+          "phase": "genesis",
+          "current_bytes": 11022336,
+          "os_lifetime_peak_bytes": 11509760
+        },
+        {
+          "phase": "payment_8",
+          "current_bytes": 11030528,
+          "os_lifetime_peak_bytes": 11509760
+        },
+        {
+          "phase": "payment_16",
+          "current_bytes": 11030528,
+          "os_lifetime_peak_bytes": 11509760
+        },
+        {
+          "phase": "payment_24",
+          "current_bytes": 11030528,
+          "os_lifetime_peak_bytes": 11509760
+        },
+        {
+          "phase": "payment_32",
+          "current_bytes": 11030528,
+          "os_lifetime_peak_bytes": 11509760
+        }
+      ]
+    },
+    {
+      "role": "worker",
+      "generation": 2,
+      "identity": {
+        "creation_identity": "62532",
+        "creation_identity_kind": "linux_proc_starttime_ticks",
+        "parent_pid": 6512,
+        "pid": 6556
+      },
+      "sample_count": 4,
+      "max_observed_os_lifetime_peak_bytes": 11657216,
+      "checkpoints": [
+        {
+          "phase": "worker_reopened_32",
+          "current_bytes": 11177984,
+          "os_lifetime_peak_bytes": 11657216
+        },
+        {
+          "phase": "wallet_recovered_32",
+          "current_bytes": 11177984,
+          "os_lifetime_peak_bytes": 11657216
+        },
+        {
+          "phase": "pending_restored_33",
+          "current_bytes": 11177984,
+          "os_lifetime_peak_bytes": 11657216
+        },
+        {
+          "phase": "complete_33",
+          "current_bytes": 11177984,
+          "os_lifetime_peak_bytes": 11657216
+        }
+      ]
+    }
+  ],
+  "timing_ms": {
+    "go_workload_total": 159403,
+    "supervisor_total": 159526,
+    "supervised_process": 159462,
+    "completed_operations_total": 158826,
+    "by_operation": {
+      "scenario_start": {
+        "count": 1,
+        "sum": 7330,
+        "min": 7330,
+        "max": 7330
+      },
+      "worker_create": {
+        "count": 1,
+        "sum": 1995,
+        "min": 1995,
+        "max": 1995
+      },
+      "wallet_sync": {
+        "count": 34,
+        "sum": 14370,
+        "min": 51,
+        "max": 594
+      },
+      "prepare": {
+        "count": 33,
+        "sum": 111624,
+        "min": 3050,
+        "max": 3756
+      },
+      "candidate": {
+        "count": 33,
+        "sum": 8422,
+        "min": 96,
+        "max": 408
+      },
+      "worker_commit": {
+        "count": 33,
+        "sum": 759,
+        "min": 10,
+        "max": 411
+      },
+      "scenario_apply": {
+        "count": 33,
+        "sum": 1270,
+        "min": 34,
+        "max": 50
+      },
+      "duplicate_rejection": {
+        "count": 5,
+        "sum": 1450,
+        "min": 134,
+        "max": 393
+      },
+      "worker_close": {
+        "count": 2,
+        "sum": 0,
+        "min": 0,
+        "max": 0
+      },
+      "disk_check": {
+        "count": 2,
+        "sum": 0,
+        "min": 0,
+        "max": 0
+      },
+      "worker_reopen": {
+        "count": 1,
+        "sum": 2957,
+        "min": 2957,
+        "max": 2957
+      },
+      "wallet_recover": {
+        "count": 1,
+        "sum": 5402,
+        "min": 5402,
+        "max": 5402
+      },
+      "outbox_restore": {
+        "count": 1,
+        "sum": 3245,
+        "min": 3245,
+        "max": 3245
+      },
+      "finish": {
+        "count": 1,
+        "sum": 2,
+        "min": 2,
+        "max": 2
+      }
+    }
+  },
+  "checkpoint_progression": [
+    {
+      "seq": 1,
+      "phase": "genesis",
+      "elapsed_ms": 9385,
+      "height": 0,
+      "paid_blocks": 0,
+      "state": {
+        "commitments": 2,
+        "fees": 0,
+        "logical_bytes": 140,
+        "nullifiers": 0,
+        "segments": 0,
+        "tail_bytes": 0
+      },
+      "wallets": [
+        {
+          "file_bytes": 65968,
+          "records_used": 2
+        },
+        {
+          "file_bytes": 65968,
+          "records_used": 2
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "phase": "payment_8",
+      "elapsed_ms": 38349,
+      "height": 8,
+      "paid_blocks": 8,
+      "state": {
+        "commitments": 18,
+        "fees": 8000,
+        "logical_bytes": 74956,
+        "nullifiers": 16,
+        "segments": 1,
+        "tail_bytes": 74816
+      },
+      "wallets": [
+        {
+          "file_bytes": 461344,
+          "records_used": 14
+        },
+        {
+          "file_bytes": 461344,
+          "records_used": 14
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "phase": "payment_16",
+      "elapsed_ms": 70083,
+      "height": 16,
+      "paid_blocks": 16,
+      "state": {
+        "commitments": 34,
+        "fees": 16000,
+        "logical_bytes": 149772,
+        "nullifiers": 32,
+        "segments": 1,
+        "tail_bytes": 149632
+      },
+      "wallets": [
+        {
+          "file_bytes": 856720,
+          "records_used": 26
+        },
+        {
+          "file_bytes": 856720,
+          "records_used": 26
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "phase": "payment_24",
+      "elapsed_ms": 104653,
+      "height": 24,
+      "paid_blocks": 24,
+      "state": {
+        "commitments": 50,
+        "fees": 24000,
+        "logical_bytes": 224588,
+        "nullifiers": 48,
+        "segments": 1,
+        "tail_bytes": 224448
+      },
+      "wallets": [
+        {
+          "file_bytes": 1252096,
+          "records_used": 38
+        },
+        {
+          "file_bytes": 1252096,
+          "records_used": 38
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "phase": "payment_32",
+      "elapsed_ms": 141987,
+      "height": 32,
+      "paid_blocks": 32,
+      "state": {
+        "commitments": 66,
+        "fees": 32000,
+        "logical_bytes": 299404,
+        "nullifiers": 64,
+        "segments": 1,
+        "tail_bytes": 299264
+      },
+      "wallets": [
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        },
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "phase": "worker_reopened_32",
+      "elapsed_ms": 144969,
+      "height": 32,
+      "paid_blocks": 32,
+      "state": {
+        "commitments": 66,
+        "fees": 32000,
+        "logical_bytes": 299404,
+        "nullifiers": 64,
+        "segments": 1,
+        "tail_bytes": 299264
+      },
+      "wallets": [
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        },
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "phase": "wallet_recovered_32",
+      "elapsed_ms": 150414,
+      "height": 32,
+      "paid_blocks": 32,
+      "state": {
+        "commitments": 66,
+        "fees": 32000,
+        "logical_bytes": 299404,
+        "nullifiers": 64,
+        "segments": 1,
+        "tail_bytes": 299264
+      },
+      "wallets": [
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        },
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "phase": "pending_restored_33",
+      "elapsed_ms": 157459,
+      "height": 32,
+      "paid_blocks": 32,
+      "state": {
+        "commitments": 66,
+        "fees": 32000,
+        "logical_bytes": 299404,
+        "nullifiers": 64,
+        "segments": 1,
+        "tail_bytes": 299264
+      },
+      "wallets": [
+        {
+          "file_bytes": 1680420,
+          "records_used": 51
+        },
+        {
+          "file_bytes": 1647472,
+          "records_used": 50
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "phase": "complete_33",
+      "elapsed_ms": 159356,
+      "height": 33,
+      "paid_blocks": 33,
+      "state": {
+        "commitments": 68,
+        "fees": 33000,
+        "logical_bytes": 308756,
+        "nullifiers": 66,
+        "segments": 1,
+        "tail_bytes": 308616
+      },
+      "wallets": [
+        {
+          "file_bytes": 1713368,
+          "records_used": 52
+        },
+        {
+          "file_bytes": 1680420,
+          "records_used": 51
+        }
+      ]
+    }
+  ],
+  "result": {
+    "actions_per_payment": 2,
+    "checks": {
+      "capacity_accounting": true,
+      "exact_outbox_recovery": true,
+      "genuine_payments": true,
+      "pending_cleared": true,
+      "pending_commit_preserved": true,
+      "physical_frames": true,
+      "post_recovery_payment": true,
+      "rejection_nonmutation": true,
+      "scenario_full_replay": true,
+      "summary_agreement": true,
+      "wallet_backup_recovery": true,
+      "wallet_file_bytes": true,
+      "wallet_records": true,
+      "worker_full_replay": true
+    },
+    "commitments": 68,
+    "complete": true,
+    "fees": 33000,
+    "height": 33,
+    "logical_bytes": 308756,
+    "nullifiers": 66,
+    "paid_blocks": 33,
+    "schema_version": 1,
+    "segments": 1,
+    "tail_bytes": 308616,
+    "wallet_bytes": [
+      1713368,
+      1680420
+    ],
+    "wallet_records": [
+      52,
+      51
+    ]
+  },
+  "cleanup": {
+    "initial_roles_registered": true,
+    "precheckpoint_child_tree_cleanup_confirmed": false,
+    "registered_children_exit_confirmed": true,
+    "registered_processes": 3,
+    "scope": "retained_identities_and_normal_Go_cleanup_not_a_process_sandbox"
+  },
+  "measurement_limits": [
+    "OS reported resident or working set; not private heap or total machine memory",
+    "Linux RSS accounting can be approximate; no cross-platform ratio claim",
+    "OS lifetime peak is per process generation, never a phase peak",
+    "Python supervisor and Go coordinator excluded from measured roles",
+    "scenario includes prover, authorization cache, history, both wallets and Argon2",
+    "no memory allocation enforcement; final cleanup follows the observation window",
+    "no production throughput, network finality, cold disk or full capacity claim"
+  ],
+  "limitations": [
+    "Original result.json bytes are not separately uploaded; embedded result is checked against public progress, not claimed to reconstruct its producer digest.",
+    "No private workload directories or wallet data were downloaded.",
+    "The setup file records not_started at setup time and is not interpreted as final status.",
+    "Operation timings are combinations of production calls and do not prove each nested RPC response latency individually.",
+    "Sub-millisecond measured operations round to zero; zero ms is not proof of zero cost."
+  ]
+}
+
