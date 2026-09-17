@@ -148,9 +148,7 @@ fn run(args: &[String]) -> Result<(), ()> {
             "--app-hash",
         ],
         "locate-height" => &["--source", "--checkpoint", "--height"],
-        "verify" | "verify-segments" | "index" | "verify-active" => {
-            &["--source", "--checkpoint"]
-        }
+        "verify" | "verify-segments" | "index" | "verify-active" => &["--source", "--checkpoint"],
         _ => &["--source", "--output", "--checkpoint"],
     };
     if options.len() != expected.len() || expected.iter().any(|k| !options.contains_key(k)) {

@@ -130,7 +130,10 @@ fn directory_bytes(path: &Path) -> DirectoryBytes {
 fn unchanged(path: &Path, expected: &DirectoryBytes) {
     // Avoid printing complete public journal/transaction bytes on assertion
     // failure; the contract being checked is byte equality, not their content.
-    assert!(directory_bytes(path) == *expected, "directory bytes changed");
+    assert!(
+        directory_bytes(path) == *expected,
+        "directory bytes changed"
+    );
 }
 
 fn write_fixture(path: &Path, entries: &DirectoryBytes) {
@@ -262,7 +265,11 @@ fn active_cli_real_payment_backup_restore_and_receiver_spend() {
         ("verify-active", &backup, None),
         ("restore-active", &backup, Some(restored.as_path())),
     ] {
-        success(&call(&archive_args(mode, input, &encoded, output)), mode, pin);
+        success(
+            &call(&archive_args(mode, input, &encoded, output)),
+            mode,
+            pin,
+        );
         unchanged(&source, &original);
         unchanged(&backup, &original);
     }
@@ -286,7 +293,13 @@ fn active_cli_real_payment_backup_restore_and_receiver_spend() {
     assert!(alice.pending_id().is_none());
     drop(history);
     let second = bob
-        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)
+        .build_payment(
+            carol.receive_address(0).unwrap(),
+            40_000,
+            1_000,
+            100,
+            &prover,
+        )
         .unwrap()
         .bytes()
         .to_vec();
@@ -354,7 +367,12 @@ fn active_cli_genesis_without_segments_is_an_explicit_checkpoint() {
     assert_eq!(f.pin.segment_count(), 0);
     assert_eq!(f.pin.length(), f.original["genesis"].len() as u64);
     success(
-        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
+        &call(&checkpoint_args(
+            &f.source,
+            &f.manifest,
+            &f.genesis,
+            &f.state,
+        )),
         "checkpoint-active",
         f.pin,
     );
@@ -390,11 +408,7 @@ fn active_cli_bad_options_and_exact_tip_fail_without_changes() {
     let target = f.dir.path("not-created");
     let encoded = hex(&f.pin.to_bytes());
     let base = archive_args("backup-active", &f.source, &encoded, Some(&target));
-    let mut cases = vec![
-        vec![],
-        vec!["unknown".into()],
-        vec!["backup-active".into()],
-    ];
+    let mut cases = vec![vec![], vec!["unknown".into()], vec!["backup-active".into()]];
     let mut missing_ack = base.clone();
     missing_ack.retain(|arg| arg != "--no-real-funds");
     cases.push(missing_ack);
@@ -485,11 +499,19 @@ fn active_cli_locked_sources_and_existing_or_nested_targets_are_refused() {
         ("restore-active", Some(target.as_path())),
         ("verify-active", None),
     ] {
-        failure(&call(&archive_args(mode, &f.source, &encoded, output)), &f.dir);
+        failure(
+            &call(&archive_args(mode, &f.source, &encoded, output)),
+            &f.dir,
+        );
         assert!(!target.exists());
     }
     failure(
-        &call(&checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state)),
+        &call(&checkpoint_args(
+            &f.source,
+            &f.manifest,
+            &f.genesis,
+            &f.state,
+        )),
         &f.dir,
     );
     assert_eq!(owner.summary().unwrap(), f.state);
@@ -528,7 +550,12 @@ fn active_cli_locked_sources_and_existing_or_nested_targets_are_refused() {
         }
     }
     success(
-        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
+        &call(&archive_args(
+            "backup-active",
+            &f.source,
+            &encoded,
+            Some(&target),
+        )),
         "backup-active",
         f.pin,
     );
@@ -553,7 +580,10 @@ fn active_cli_keeps_legacy_profiles_pins_commands_and_json_separate() {
     let legacy_encoded = hex(&legacy_pin.to_bytes());
     let active_encoded = hex(&f.pin.to_bytes());
     let target = f.dir.path("profile-mismatch-output");
-    failure(&call(&checkpoint_args(&source, &manifest, &legacy, &state)), &f.dir);
+    failure(
+        &call(&checkpoint_args(&source, &manifest, &legacy, &state)),
+        &f.dir,
+    );
     let mut old_checkpoint = checkpoint_args(&f.source, &f.manifest, &f.genesis, &f.state);
     old_checkpoint[0] = "checkpoint".into();
     failure(&call(&old_checkpoint), &f.dir);
@@ -608,7 +638,11 @@ fn active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation() 
     bad_header.get_mut("genesis").unwrap()[0] ^= 1;
     cases.push(bad_header);
     let mut damaged = f.original.clone();
-    *damaged.get_mut("00000000.journal").unwrap().last_mut().unwrap() ^= 1;
+    *damaged
+        .get_mut("00000000.journal")
+        .unwrap()
+        .last_mut()
+        .unwrap() ^= 1;
     cases.push(damaged);
     let mut missing = f.original.clone();
     missing.remove("00000000.journal");
@@ -623,7 +657,10 @@ fn active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation() 
     appended.get_mut("00000000.journal").unwrap().push(0);
     cases.push(appended);
     let mut early_rotation = f.original.clone();
-    let second = early_rotation.get_mut("00000000.journal").unwrap().split_off(150);
+    let second = early_rotation
+        .get_mut("00000000.journal")
+        .unwrap()
+        .split_off(150);
     early_rotation.insert("00000001.journal".into(), second);
     cases.push(early_rotation);
     for (number, entries) in cases.into_iter().enumerate() {
@@ -635,7 +672,10 @@ fn active_cli_corrupt_missing_extra_and_split_files_fail_before_copy_creation() 
             ("backup-active", Some(target.as_path())),
             ("restore-active", Some(target.as_path())),
         ] {
-            failure(&call(&archive_args(mode, &candidate, &encoded, output)), &f.dir);
+            failure(
+                &call(&archive_args(mode, &candidate, &encoded, output)),
+                &f.dir,
+            );
             assert!(!target.exists());
             unchanged(&candidate, &entries);
             unchanged(&f.source, &f.original);
@@ -662,7 +702,12 @@ fn active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable()
     // fail on both supported platforms. Process creation still gets a valid
     // inherited handle; this tests publication followed by a failed receipt.
     let output = Command::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
-        .args(archive_args("backup-active", &f.source, &encoded, Some(&target)))
+        .args(archive_args(
+            "backup-active",
+            &f.source,
+            &encoded,
+            Some(&target),
+        ))
         .stdout(Stdio::from(File::open(&sink).unwrap()))
         .output()
         .unwrap();
@@ -677,7 +722,12 @@ fn active_cli_stdout_failure_is_nonzero_and_complete_target_remains_verifiable()
     );
     // A later explicit command cannot replace the already complete target.
     failure(
-        &call(&archive_args("backup-active", &f.source, &encoded, Some(&target))),
+        &call(&archive_args(
+            "backup-active",
+            &f.source,
+            &encoded,
+            Some(&target),
+        )),
         &f.dir,
     );
     unchanged(&target, &f.original);

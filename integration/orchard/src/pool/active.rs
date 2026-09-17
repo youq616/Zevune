@@ -364,17 +364,13 @@ impl ActiveJournal {
         expected_header_length: u32,
     ) -> Result<(File, Self), PoolError> {
         let header_length = u64::from(expected_header_length);
-        if !(76..=MAX_HEADER_BYTES).contains(&header_length)
-            || (header_length - 76) % 32 != 0
-        {
+        if !(76..=MAX_HEADER_BYTES).contains(&header_length) || (header_length - 76) % 32 != 0 {
             return Err(PoolError::Bounds);
         }
         let location = namespace::Directory::open(path)?;
-        let genesis =
-            open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
+        let genesis = open_file_access(&path.join(GENESIS), Some(header_length), false)?.file;
         genesis.try_lock_shared().map_err(|_| PoolError::Locked)?;
-        let (genesis, journal) =
-            Self::finish_open(path, location, genesis, header_length, false)?;
+        let (genesis, journal) = Self::finish_open(path, location, genesis, header_length, false)?;
         journal.read_header(&genesis)?;
         Ok((genesis, journal))
     }

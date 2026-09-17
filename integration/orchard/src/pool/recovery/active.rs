@@ -96,7 +96,10 @@ impl ActiveRecoveryCheckpoint {
             }
         } else if segments == 0
             || segments > self.height
-            || records < MIN_FRAME.checked_mul(self.height).ok_or(PoolError::Bounds)?
+            || records
+                < MIN_FRAME
+                    .checked_mul(self.height)
+                    .ok_or(PoolError::Bounds)?
             || records
                 > segments
                     .checked_mul(super::super::active::SEGMENT_BYTES)
@@ -120,8 +123,7 @@ impl PoolStore {
         let result = (|| {
             let journal = self.active.as_ref().ok_or(PoolError::Bounds)?;
             let before = journal.layout_hash(&self.file)?;
-            let (state, _) =
-                Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
+            let (state, _) = Self::replay_active_handles(&self.file, journal, self.state.genesis)?;
             if state.genesis != self.state.genesis
                 || state.summary() != committed
                 || journal.length() != self.length

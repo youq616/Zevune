@@ -41,11 +41,7 @@ fn active_archive_locks_coordinate_real_processes() {
     let d = Dir::new();
     let source = d.path("source");
     let (pin, original) = fixture(&source, 2);
-    let encoded: String = pin
-        .to_bytes()
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect();
+    let encoded: String = pin.to_bytes().iter().map(|b| format!("{b:02x}")).collect();
     let probe = |mode: &str| {
         let output = std::process::Command::new(std::env::current_exe().unwrap())
             .args(["--exact", TEST_NAME, "--nocapture"])
@@ -184,10 +180,7 @@ fn persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified() {
             drop(archive);
             if kind == "replacement" {
                 // A deliberate reopen may authenticate the same bytes anew.
-                ActiveArchive::open(&source, pin)
-                    .unwrap()
-                    .verify()
-                    .unwrap();
+                ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
             } else {
                 assert!(ActiveArchive::open(&source, pin).is_err());
                 if kind == "hardlink" {
@@ -231,14 +224,8 @@ fn parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive() 
     assert_eq!(directory_bytes(&source), original);
     assert_eq!(directory_bytes(&moved), original);
     drop(archive);
-    ActiveArchive::open(&source, pin)
-        .unwrap()
-        .verify()
-        .unwrap();
-    ActiveArchive::open(&moved, pin)
-        .unwrap()
-        .verify()
-        .unwrap();
+    ActiveArchive::open(&source, pin).unwrap().verify().unwrap();
+    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
 }
 
 #[test]
@@ -324,10 +311,7 @@ fn windows_files_and_directory_cannot_be_renamed_or_deleted_until_last_reader_dr
         fs::rename(&to, source.join(name)).unwrap();
     }
     fs::rename(&source, &moved).unwrap();
-    ActiveArchive::open(&moved, pin)
-        .unwrap()
-        .verify()
-        .unwrap();
+    ActiveArchive::open(&moved, pin).unwrap().verify().unwrap();
     assert_eq!(directory_bytes(&moved), original);
     // Positive delete controls use normal files after every archive is dropped.
     for name in original.keys() {

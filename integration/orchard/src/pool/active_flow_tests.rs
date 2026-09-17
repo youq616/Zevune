@@ -125,7 +125,10 @@ fn repin_layout(
     let header = &entries["genesis"];
     let mut raw = original.to_bytes();
     raw[8..40].copy_from_slice(&Sha256::digest(header));
-    let length = entries.values().map(|bytes| bytes.len() as u64).sum::<u64>();
+    let length = entries
+        .values()
+        .map(|bytes| bytes.len() as u64)
+        .sum::<u64>();
     raw[80..88].copy_from_slice(&length.to_be_bytes());
     raw[88..92].copy_from_slice(&(header.len() as u32).to_be_bytes());
     let segments = entries.len() - 1;

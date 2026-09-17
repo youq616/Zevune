@@ -101,10 +101,7 @@ fn owned_bytes(pool: &PoolStore) -> Vec<u8> {
 // framing or state-replay rejection instead of merely failing the old hash.
 // This does NOT authenticate an externally supplied checkpoint. The hard-coded
 // independent vector below separately checks the production layout encoding.
-fn repin(
-    mut pin: ActiveRecoveryCheckpoint,
-    entries: &DirectoryBytes,
-) -> ActiveRecoveryCheckpoint {
+fn repin(mut pin: ActiveRecoveryCheckpoint, entries: &DirectoryBytes) -> ActiveRecoveryCheckpoint {
     let header = &entries["genesis"];
     pin.genesis = Sha256::digest(header).into();
     pin.header_length = u32::try_from(header.len()).unwrap();
@@ -295,7 +292,11 @@ fn genesis_and_committed_archive_copies_preserve_every_file_and_continue_normall
             );
             for name in original.keys() {
                 assert_eq!(
-                    fs::metadata(restored.join(name)).unwrap().permissions().mode() & 0o777,
+                    fs::metadata(restored.join(name))
+                        .unwrap()
+                        .permissions()
+                        .mode()
+                        & 0o777,
                     0o600
                 );
             }
@@ -335,7 +336,10 @@ fn checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_byt
     assert_ne!(fresh, pin);
     drop(pool);
     assert!(ActiveArchive::open(&source, pin).is_err());
-    ActiveArchive::open(&source, fresh).unwrap().verify().unwrap();
+    ActiveArchive::open(&source, fresh)
+        .unwrap()
+        .verify()
+        .unwrap();
 }
 
 #[test]
@@ -394,7 +398,10 @@ fn checkpoint_export_replays_same_length_replacement_and_never_publishes_its_sta
     writer.write_all(&replacement[SEGMENT]).unwrap();
     writer.sync_all().unwrap();
     drop(writer);
-    assert_eq!(fs::read(source.join(SEGMENT)).unwrap(), replacement[SEGMENT]);
+    assert_eq!(
+        fs::read(source.join(SEGMENT)).unwrap(),
+        replacement[SEGMENT]
+    );
     assert_eq!(pool.active_recovery_checkpoint(), Err(PoolError::Corrupt));
     assert_eq!(pool.state.summary(), committed);
     assert_eq!(pool.summary(), Err(PoolError::Unavailable));
@@ -454,9 +461,7 @@ fn repinned_headers_are_bounded_inside_the_physical_genesis_file() {
         let header = changed.get_mut("genesis").unwrap();
         match label {
             "borrow-segment-for-commitment" => header[72..76].copy_from_slice(&1u32.to_be_bytes()),
-            "unbounded-commitment-count" => {
-                header[72..76].copy_from_slice(&u32::MAX.to_be_bytes())
-            }
+            "unbounded-commitment-count" => header[72..76].copy_from_slice(&u32::MAX.to_be_bytes()),
             "extra-physical-header-bytes" => header.extend_from_slice(&[0; 32]),
             "wrong-profile" => header[..8].copy_from_slice(b"ZVOPOL02"),
             "wrong-network" => header[8] ^= 1,
@@ -506,7 +511,11 @@ fn repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_st
         ));
         assert_eq!(directory_bytes(&path), changed);
     }
-    for label in ["wrong-record-checksum", "wrong-final-state", "trailing-byte"] {
+    for label in [
+        "wrong-record-checksum",
+        "wrong-final-state",
+        "trailing-byte",
+    ] {
         let mut changed = original.clone();
         let records = changed.get_mut(SEGMENT).unwrap();
         match label {
