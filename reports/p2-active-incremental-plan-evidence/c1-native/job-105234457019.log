@@ -1,0 +1,384 @@
+﻿2026-09-17T14:02:44.5232204Z Current runner version: '2.337.0'
+2026-09-17T14:02:44.5257802Z ##[group]Runner Image Provisioner
+2026-09-17T14:02:44.5258690Z Hosted Compute Agent
+2026-09-17T14:02:44.5259389Z Version: 20260828.587
+2026-09-17T14:02:44.5260076Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-17T14:02:44.5261070Z Build Date: 2026-08-28T16:44:25Z
+2026-09-17T14:02:44.5262063Z Worker ID: {438e5b33-008d-4d5d-934b-bb99a27e2af1}
+2026-09-17T14:02:44.5262829Z Azure Region: eastus
+2026-09-17T14:02:44.5263394Z ##[endgroup]
+2026-09-17T14:02:44.5265025Z ##[group]Operating System
+2026-09-17T14:02:44.5265687Z Ubuntu
+2026-09-17T14:02:44.5266314Z 24.04.5
+2026-09-17T14:02:44.5266873Z LTS
+2026-09-17T14:02:44.5267465Z ##[endgroup]
+2026-09-17T14:02:44.5268059Z ##[group]Runner Image
+2026-09-17T14:02:44.5268669Z Image: ubuntu-24.04
+2026-09-17T14:02:44.5269354Z Version: 20260907.300.1
+2026-09-17T14:02:44.5270630Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-17T14:02:44.5272501Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-17T14:02:44.5273501Z ##[endgroup]
+2026-09-17T14:02:44.5274753Z ##[group]GITHUB_TOKEN Permissions
+2026-09-17T14:02:44.5276892Z Contents: read
+2026-09-17T14:02:44.5277600Z Metadata: read
+2026-09-17T14:02:44.5278203Z ##[endgroup]
+2026-09-17T14:02:44.5280455Z Secret source: Actions
+2026-09-17T14:02:44.5281714Z Cache mode: write
+2026-09-17T14:02:44.5282496Z Prepare workflow directory
+2026-09-17T14:02:44.5623663Z Prepare all required actions
+2026-09-17T14:02:44.5674713Z Getting action download info
+2026-09-17T14:02:44.8062274Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-17T14:02:44.9263595Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-17T14:02:45.2108187Z Complete job name: source
+2026-09-17T14:02:45.2927880Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-17T14:02:45.2929000Z with:
+2026-09-17T14:02:45.2929496Z   persist-credentials: false
+2026-09-17T14:02:45.2930045Z   repository: youq616/Zevune
+2026-09-17T14:02:45.2934284Z   token: ***
+2026-09-17T14:02:45.2934755Z   ssh-strict: true
+2026-09-17T14:02:45.2935225Z   ssh-user: git
+2026-09-17T14:02:45.2935776Z   clean: true
+2026-09-17T14:02:45.2936258Z   sparse-checkout-cone-mode: true
+2026-09-17T14:02:45.2936811Z   fetch-depth: 1
+2026-09-17T14:02:45.2937264Z   fetch-tags: false
+2026-09-17T14:02:45.2937729Z   show-progress: true
+2026-09-17T14:02:45.2938205Z   lfs: false
+2026-09-17T14:02:45.2938653Z   submodules: false
+2026-09-17T14:02:45.2939130Z   set-safe-directory: true
+2026-09-17T14:02:45.2939928Z ##[endgroup]
+2026-09-17T14:02:45.3982318Z Syncing repository: youq616/Zevune
+2026-09-17T14:02:45.3984984Z ##[group]Getting Git version info
+2026-09-17T14:02:45.3986201Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-17T14:02:45.3987893Z [command]/usr/bin/git version
+2026-09-17T14:02:45.4072488Z git version 2.55.0
+2026-09-17T14:02:45.4094991Z ##[endgroup]
+2026-09-17T14:02:45.4112933Z Temporarily overriding HOME='/home/runner/work/_temp/332240c2-f1cd-4a85-baab-f897bfe363e1' before making global git config changes
+2026-09-17T14:02:45.4115247Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T14:02:45.4118909Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T14:02:45.4183428Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-17T14:02:45.4189243Z ##[group]Initializing the repository
+2026-09-17T14:02:45.4195685Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-17T14:02:45.4345491Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-17T14:02:45.4346801Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-17T14:02:45.4347860Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-17T14:02:45.4348995Z hint: call:
+2026-09-17T14:02:45.4349444Z hint:
+2026-09-17T14:02:45.4350331Z hint: 	git config --global init.defaultBranch <name>
+2026-09-17T14:02:45.4351304Z hint:
+2026-09-17T14:02:45.4351938Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-17T14:02:45.4352916Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-17T14:02:45.4353683Z hint:
+2026-09-17T14:02:45.4354125Z hint: 	git branch -m <name>
+2026-09-17T14:02:45.4354628Z hint:
+2026-09-17T14:02:45.4355293Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-17T14:02:45.4361840Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-17T14:02:45.4374137Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-17T14:02:45.4432646Z ##[endgroup]
+2026-09-17T14:02:45.4433573Z ##[group]Disabling automatic garbage collection
+2026-09-17T14:02:45.4437719Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-17T14:02:45.4473872Z ##[endgroup]
+2026-09-17T14:02:45.4474885Z ##[group]Setting up auth
+2026-09-17T14:02:45.4484843Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T14:02:45.4526073Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T14:02:45.4969735Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T14:02:45.5011164Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T14:02:45.5276017Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-17T14:02:45.5321370Z ##[endgroup]
+2026-09-17T14:02:45.5322858Z ##[group]Fetching the repository
+2026-09-17T14:02:45.5333276Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5:refs/remotes/pull/15/merge
+2026-09-17T14:02:46.9133334Z From https://github.com/youq616/Zevune
+2026-09-17T14:02:46.9135483Z  * [new ref]         066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5 -> pull/15/merge
+2026-09-17T14:02:46.9141989Z ##[endgroup]
+2026-09-17T14:02:46.9143920Z ##[group]Determining the checkout info
+2026-09-17T14:02:46.9148432Z ##[endgroup]
+2026-09-17T14:02:46.9149376Z [command]/usr/bin/git sparse-checkout disable
+2026-09-17T14:02:46.9205554Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-17T14:02:46.9242600Z ##[group]Checking out the ref
+2026-09-17T14:02:46.9247883Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/15/merge
+2026-09-17T14:02:47.0140665Z Note: switching to 'refs/remotes/pull/15/merge'.
+2026-09-17T14:02:47.0142139Z 
+2026-09-17T14:02:47.0142894Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-17T14:02:47.0144726Z changes and commit them, and you can discard any commits you make in this
+2026-09-17T14:02:47.0146541Z state without impacting any branches by switching back to a branch.
+2026-09-17T14:02:47.0147605Z 
+2026-09-17T14:02:47.0148339Z If you want to create a new branch to retain commits you create, you may
+2026-09-17T14:02:47.0150008Z do so (now or later) by using -c with the switch command. Example:
+2026-09-17T14:02:47.0151107Z 
+2026-09-17T14:02:47.0151515Z   git switch -c <new-branch-name>
+2026-09-17T14:02:47.0152326Z 
+2026-09-17T14:02:47.0153127Z Or undo this operation with:
+2026-09-17T14:02:47.0154375Z 
+2026-09-17T14:02:47.0155115Z   git switch -
+2026-09-17T14:02:47.0156119Z 
+2026-09-17T14:02:47.0157462Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-17T14:02:47.0159533Z 
+2026-09-17T14:02:47.0162514Z HEAD is now at 066f033 Merge 99ec771c57207167f473d23ffd07b54f15a36abc into 0927af157a3cc35abde14b036bc50a99a793a32b
+2026-09-17T14:02:47.0169803Z ##[endgroup]
+2026-09-17T14:02:47.0211723Z [command]/usr/bin/git log -1 --format=%H
+2026-09-17T14:02:47.0241383Z 066f033f2ca441bdd8533c8e1e4bfe2d3faa84a5
+2026-09-17T14:02:47.0251710Z ##[group]Removing auth
+2026-09-17T14:02:47.0256081Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T14:02:47.0292312Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T14:02:47.0522173Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T14:02:47.0553737Z http.https://github.com/.extraheader
+2026-09-17T14:02:47.0562434Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-17T14:02:47.0605123Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T14:02:47.0832183Z ##[endgroup]
+2026-09-17T14:02:47.1190701Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-17T14:02:47.1197347Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-17T14:02:47.1198950Z with:
+2026-09-17T14:02:47.1199801Z   go-version: 1.27.1
+2026-09-17T14:02:47.1201119Z   cache-dependency-path: integration/cometbft/go.sum
+2026-09-17T14:02:47.1202543Z   check-latest: false
+2026-09-17T14:02:47.1213506Z   token: ***
+2026-09-17T14:02:47.1214413Z   cache: true
+2026-09-17T14:02:47.1215330Z ##[endgroup]
+2026-09-17T14:02:47.2640683Z Setup go version spec 1.27.1
+2026-09-17T14:02:47.2652082Z Attempting to download 1.27.1...
+2026-09-17T14:02:47.2768835Z (node:2283) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-17T14:02:47.2772606Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-17T14:02:48.1007107Z matching 1.27.1...
+2026-09-17T14:02:48.1033457Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-linux-x64.tar.gz
+2026-09-17T14:02:48.5432944Z Extracting Go...
+2026-09-17T14:02:48.5558181Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/b00c95a0-3aaa-42ca-a243-061d0ea4e761 -f /home/runner/work/_temp/fbaf95b2-6c21-4cb1-9a3e-d72c177a1105
+2026-09-17T14:02:50.2478785Z Successfully extracted go to /home/runner/work/_temp/b00c95a0-3aaa-42ca-a243-061d0ea4e761
+2026-09-17T14:02:50.2479801Z Adding to the cache ...
+2026-09-17T14:02:56.1553137Z Successfully cached go to /opt/hostedtoolcache/go/1.27.1/x64
+2026-09-17T14:02:56.1557096Z Added go to the path
+2026-09-17T14:02:56.1558147Z Successfully set up Go version 1.27.1
+2026-09-17T14:02:56.1778354Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-17T14:02:56.1820195Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-17T14:02:56.1866009Z /home/runner/go/pkg/mod
+2026-09-17T14:02:56.1886371Z /home/runner/.cache/go-build
+2026-09-17T14:02:56.2621102Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-17T14:02:56.2744966Z (node:2283) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-17T14:02:57.3031460Z Received 247463936 of 484452015 (51.1%), 234.4 MBs/sec
+2026-09-17T14:02:58.2654527Z Received 484452015 of 484452015 (100.0%), 234.5 MBs/sec
+2026-09-17T14:02:58.2655259Z Cache Size: ~462 MB (484452015 B)
+2026-09-17T14:02:58.2785695Z [command]/usr/bin/tar -xf /home/runner/work/_temp/d85f7601-638a-4bbd-ab1b-53fadee6a00d/cache.tzst -P -C /home/runner/work/Zevune/Zevune --use-compress-program unzstd
+2026-09-17T14:03:00.6977757Z Cache restored successfully
+2026-09-17T14:03:00.7220133Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-17T14:03:00.7242206Z go version go1.27.1 linux/amd64
+2026-09-17T14:03:00.7242430Z 
+2026-09-17T14:03:00.7242746Z ##[group]go env
+2026-09-17T14:03:00.7959733Z AR='ar'
+2026-09-17T14:03:00.7960077Z CC='gcc'
+2026-09-17T14:03:00.7960301Z CGO_CFLAGS='-O2 -g'
+2026-09-17T14:03:00.7960557Z CGO_CPPFLAGS=''
+2026-09-17T14:03:00.7961003Z CGO_CXXFLAGS='-O2 -g'
+2026-09-17T14:03:00.7961462Z CGO_ENABLED='1'
+2026-09-17T14:03:00.7961709Z CGO_FFLAGS='-O2 -g'
+2026-09-17T14:03:00.7962026Z CGO_LDFLAGS='-O2 -g'
+2026-09-17T14:03:00.7962261Z CXX='g++'
+2026-09-17T14:03:00.7962465Z GCCGO='gccgo'
+2026-09-17T14:03:00.7962672Z GO111MODULE=''
+2026-09-17T14:03:00.7962875Z GOAMD64='v1'
+2026-09-17T14:03:00.7963079Z GOARCH='amd64'
+2026-09-17T14:03:00.7963591Z GOAUTH='netrc'
+2026-09-17T14:03:00.7963824Z GOBIN='/home/runner/go/bin'
+2026-09-17T14:03:00.7964101Z GOCACHE='/home/runner/.cache/go-build'
+2026-09-17T14:03:00.7964380Z GOCACHEPROG=''
+2026-09-17T14:03:00.7964592Z GODEBUG=''
+2026-09-17T14:03:00.7964813Z GOENV='/home/runner/.config/go/env'
+2026-09-17T14:03:00.7965077Z GOEXE=''
+2026-09-17T14:03:00.7965273Z GOEXPERIMENT=''
+2026-09-17T14:03:00.7965492Z GOFIPS140='off'
+2026-09-17T14:03:00.7965693Z GOFLAGS=''
+2026-09-17T14:03:00.7966427Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build3262127307=/tmp/go-build -gno-record-gcc-switches'
+2026-09-17T14:03:00.7967124Z GOHOSTARCH='amd64'
+2026-09-17T14:03:00.7967357Z GOHOSTOS='linux'
+2026-09-17T14:03:00.7967577Z GOINSECURE=''
+2026-09-17T14:03:00.7967887Z GOMOD='/home/runner/work/Zevune/Zevune/go.mod'
+2026-09-17T14:03:00.7968215Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-09-17T14:03:00.7968487Z GONOPROXY=''
+2026-09-17T14:03:00.7968690Z GONOSUMDB=''
+2026-09-17T14:03:00.7968887Z GOOS='linux'
+2026-09-17T14:03:00.7969094Z GOPACKAGESDRIVER=''
+2026-09-17T14:03:00.7969330Z GOPATH='/home/runner/go'
+2026-09-17T14:03:00.7969569Z GOPRIVATE=''
+2026-09-17T14:03:00.7969837Z GOPROXY='https://proxy.golang.org,direct'
+2026-09-17T14:03:00.7970171Z GOROOT='/opt/hostedtoolcache/go/1.27.1/x64'
+2026-09-17T14:03:00.7970472Z GOSUMDB='sum.golang.org'
+2026-09-17T14:03:00.7970718Z GOTELEMETRY='local'
+2026-09-17T14:03:00.7971844Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-09-17T14:03:00.7973058Z GOTMPDIR=''
+2026-09-17T14:03:00.7973453Z GOTOOLCHAIN='local'
+2026-09-17T14:03:00.7974055Z GOTOOLDIR='/opt/hostedtoolcache/go/1.27.1/x64/pkg/tool/linux_amd64'
+2026-09-17T14:03:00.7974707Z GOVCS=''
+2026-09-17T14:03:00.7975077Z GOVERSION='go1.27.1'
+2026-09-17T14:03:00.7975466Z GOWORK=''
+2026-09-17T14:03:00.7975834Z PKG_CONFIG='pkg-config'
+2026-09-17T14:03:00.7976103Z 
+2026-09-17T14:03:00.7976629Z ##[endgroup]
+2026-09-17T14:03:00.8209718Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+2026-09-17T14:03:00.8210510Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt[0m
+2026-09-17T14:03:00.8253734Z shell: /usr/bin/bash -e {0}
+2026-09-17T14:03:00.8254022Z env:
+2026-09-17T14:03:00.8254235Z   GOTOOLCHAIN: local
+2026-09-17T14:03:00.8254468Z ##[endgroup]
+2026-09-17T14:03:01.5013528Z info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+2026-09-17T14:03:02.3983064Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T14:03:02.3983972Z info: downloading 4 components
+2026-09-17T14:03:10.0571488Z 
+2026-09-17T14:03:10.0647406Z   1.98.1-x86_64-unknown-linux-gnu installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-17T14:03:10.0648106Z 
+2026-09-17T14:03:10.0726430Z ##[group]Run python - <<'PY'
+2026-09-17T14:03:10.0726767Z [36;1mpython - <<'PY'[0m
+2026-09-17T14:03:10.0727005Z [36;1mimport subprocess[0m
+2026-09-17T14:03:10.0727364Z [36;1mpaths = ['internal/poolbridge', 'integration/cometbft/poolapp',[0m
+2026-09-17T14:03:10.0727905Z [36;1m         'integration/cometbft/labnet', 'integration/cometbft/cmd/zevune-network'][0m
+2026-09-17T14:03:10.0728441Z [36;1mresult = subprocess.run(['gofmt', '-l', *paths], check=True,[0m
+2026-09-17T14:03:10.0728868Z [36;1m                        stdout=subprocess.PIPE, text=True)[0m
+2026-09-17T14:03:10.0729182Z [36;1mgo_diff_code = 0[0m
+2026-09-17T14:03:10.0729433Z [36;1mif result.stdout.strip():[0m
+2026-09-17T14:03:10.0729803Z [36;1m    go_diff_code = subprocess.run(['gofmt', '-d', *paths]).returncode[0m
+2026-09-17T14:03:10.0730292Z [36;1mrust = subprocess.run(['cargo', '+1.98.1', 'fmt', '--manifest-path',[0m
+2026-09-17T14:03:10.0731057Z [36;1m                       'integration/orchard/Cargo.toml', '--all', '--', '--check'])[0m
+2026-09-17T14:03:10.0732056Z [36;1mraise SystemExit(bool(result.stdout.strip()) or go_diff_code != 0 or rust.returncode != 0)[0m
+2026-09-17T14:03:10.0732546Z [36;1mPY[0m
+2026-09-17T14:03:10.0770732Z shell: /usr/bin/bash -e {0}
+2026-09-17T14:03:10.0771267Z env:
+2026-09-17T14:03:10.0771475Z   GOTOOLCHAIN: local
+2026-09-17T14:03:10.0771707Z ##[endgroup]
+2026-09-17T14:03:10.2324051Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active/incremental.rs:154:
+2026-09-17T14:03:10.2325058Z          }
+2026-09-17T14:03:10.2325554Z          let mut appended = 0;
+2026-09-17T14:03:10.2326302Z          if let Some(base) = self.segments.last() {
+2026-09-17T14:03:10.2327181Z -            let index = self.segments.len().checked_sub(1).ok_or(PoolError::Bounds)?;
+2026-09-17T14:03:10.2327968Z +            let index = self
+2026-09-17T14:03:10.2328420Z +                .segments
+2026-09-17T14:03:10.2328842Z +                .len()
+2026-09-17T14:03:10.2329293Z +                .checked_sub(1)
+2026-09-17T14:03:10.2329839Z +                .ok_or(PoolError::Bounds)?;
+2026-09-17T14:03:10.2331375Z              let next = later.segments.get(index).ok_or(PoolError::Stale)?;
+2026-09-17T14:03:10.2332365Z -            let length = next.length.checked_sub(base.length).ok_or(PoolError::Stale)?;
+2026-09-17T14:03:10.2333150Z +            let length = next
+2026-09-17T14:03:10.2333585Z +                .length
+2026-09-17T14:03:10.2334025Z +                .checked_sub(base.length)
+2026-09-17T14:03:10.2334562Z +                .ok_or(PoolError::Stale)?;
+2026-09-17T14:03:10.2335214Z              if length != 0 {
+2026-09-17T14:03:10.2336512Z                  emit_range(&mut consume, &mut appended, index, base.length, length)?;
+2026-09-17T14:03:10.2337271Z              }
+2026-09-17T14:03:10.2501995Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/active_flow_tests.rs:135:
+2026-09-17T14:03:10.2503130Z      assert_eq!(plan.base_checkpoint(), base_pin);
+2026-09-17T14:03:10.2503926Z      assert_eq!(plan.checkpoint(), later_pin);
+2026-09-17T14:03:10.2504721Z      assert_eq!(plan.reused_bytes(), base_pin.length());
+2026-09-17T14:03:10.2505590Z -    assert_eq!(plan.appended_bytes(), later_pin.length() - base_pin.length());
+2026-09-17T14:03:10.2506333Z +    assert_eq!(
+2026-09-17T14:03:10.2506745Z +        plan.appended_bytes(),
+2026-09-17T14:03:10.2507269Z +        later_pin.length() - base_pin.length()
+2026-09-17T14:03:10.2507781Z +    );
+2026-09-17T14:03:10.2508138Z      assert_eq!(
+2026-09-17T14:03:10.2508676Z          plan.new_segment_count(),
+2026-09-17T14:03:10.2509536Z          later_pin.segment_count() - base_pin.segment_count()
+2026-09-17T14:03:10.2575471Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/incremental/tests.rs:311:
+2026-09-17T14:03:10.2576987Z              assert_eq!(directory_bytes(changed_path), changed);
+2026-09-17T14:03:10.2577706Z              assert_eq!(
+2026-09-17T14:03:10.2579528Z                  directory_bytes(if change_base { &later_path } else { &base_path }),
+2026-09-17T14:03:10.2580784Z -                if change_base { original_later } else { original_base }
+2026-09-17T14:03:10.2581766Z +                if change_base {
+2026-09-17T14:03:10.2582247Z +                    original_later
+2026-09-17T14:03:10.2582717Z +                } else {
+2026-09-17T14:03:10.2583148Z +                    original_base
+2026-09-17T14:03:10.2583603Z +                }
+2026-09-17T14:03:10.2584021Z              );
+2026-09-17T14:03:10.2584404Z          }
+2026-09-17T14:03:10.2584748Z      }
+2026-09-17T14:03:10.2585623Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/src/pool/recovery/active/incremental/tests.rs:425:
+2026-09-17T14:03:10.2587330Z              assert_eq!(base.incremental_plan(&mut later), Err(PoolError::Corrupt));
+2026-09-17T14:03:10.2588589Z              assert_eq!(directory_bytes(&base_path), base_bytes);
+2026-09-17T14:03:10.2589839Z              assert_eq!(directory_bytes(&later_path), later_bytes);
+2026-09-17T14:03:10.2590718Z -            assert_eq!(fs::read(alias).unwrap(), fs::read(path.join(SEGMENT)).unwrap());
+2026-09-17T14:03:10.2591705Z +            assert_eq!(
+2026-09-17T14:03:10.2592141Z +                fs::read(alias).unwrap(),
+2026-09-17T14:03:10.2592685Z +                fs::read(path.join(SEGMENT)).unwrap()
+2026-09-17T14:03:10.2593187Z +            );
+2026-09-17T14:03:10.2593569Z          }
+2026-09-17T14:03:10.2593900Z      }
+2026-09-17T14:03:10.2594228Z  }
+2026-09-17T14:03:10.3495048Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:24:
+2026-09-17T14:03:10.3496362Z      fn new() -> Self {
+2026-09-17T14:03:10.3496928Z          let mut nonce = [0; 16];
+2026-09-17T14:03:10.3497516Z          OsRng.fill_bytes(&mut nonce);
+2026-09-17T14:03:10.3498405Z -        let path = std::env::temp_dir().join(format!("zevune-active-incremental-cli-{}", hex(&nonce)));
+2026-09-17T14:03:10.3499200Z +        let path =
+2026-09-17T14:03:10.3499948Z +            std::env::temp_dir().join(format!("zevune-active-incremental-cli-{}", hex(&nonce)));
+2026-09-17T14:03:10.3501194Z          fs::create_dir(&path).unwrap();
+2026-09-17T14:03:10.3501768Z          Self(path)
+2026-09-17T14:03:10.3502142Z      }
+2026-09-17T14:03:10.3502909Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:161:
+2026-09-17T14:03:10.3503789Z      );
+2026-09-17T14:03:10.3504258Z      assert!(output.stderr.is_empty());
+2026-09-17T14:03:10.3504889Z      assert!(output.stdout.is_ascii());
+2026-09-17T14:03:10.3505642Z -    assert_eq!(output.stdout.iter().filter(|&&byte| byte == b'\n').count(), 1);
+2026-09-17T14:03:10.3506365Z +    assert_eq!(
+2026-09-17T14:03:10.3506911Z +        output.stdout.iter().filter(|&&byte| byte == b'\n').count(),
+2026-09-17T14:03:10.3507555Z +        1
+2026-09-17T14:03:10.3507897Z +    );
+2026-09-17T14:03:10.3508473Z      assert_eq!(output.stdout, expected.as_bytes());
+2026-09-17T14:03:10.3509030Z  }
+2026-09-17T14:03:10.3509353Z  
+2026-09-17T14:03:10.3510172Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:304:
+2026-09-17T14:03:10.3511495Z      assert!(alice.pending_id().is_none());
+2026-09-17T14:03:10.3512069Z      drop(history);
+2026-09-17T14:03:10.3512519Z      let second = bob
+2026-09-17T14:03:10.3513216Z -        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 100, &prover)
+2026-09-17T14:03:10.3513994Z +        .build_payment(
+2026-09-17T14:03:10.3514476Z +            carol.receive_address(0).unwrap(),
+2026-09-17T14:03:10.3515035Z +            40_000,
+2026-09-17T14:03:10.3515408Z +            1_000,
+2026-09-17T14:03:10.3515772Z +            100,
+2026-09-17T14:03:10.3516154Z +            &prover,
+2026-09-17T14:03:10.3516545Z +        )
+2026-09-17T14:03:10.3516963Z          .unwrap()
+2026-09-17T14:03:10.3517401Z          .bytes()
+2026-09-17T14:03:10.3517836Z          .to_vec();
+2026-09-17T14:03:10.3519016Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:373:
+2026-09-17T14:03:10.3520333Z          Err(PoolError::Authorization)
+2026-09-17T14:03:10.3521285Z      ));
+2026-09-17T14:03:10.3521682Z      failure(
+2026-09-17T14:03:10.3522351Z -        &call_readonly(&plan_args(&source, base_pin, &forged_path, forged_pin), &dir),
+2026-09-17T14:03:10.3523124Z +        &call_readonly(
+2026-09-17T14:03:10.3523695Z +            &plan_args(&source, base_pin, &forged_path, forged_pin),
+2026-09-17T14:03:10.3524314Z +            &dir,
+2026-09-17T14:03:10.3524678Z +        ),
+2026-09-17T14:03:10.3525061Z          &dir,
+2026-09-17T14:03:10.3525422Z      );
+2026-09-17T14:03:10.3525985Z      success(&call_readonly(&args, &dir), &expected);
+2026-09-17T14:03:10.3526976Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:526:
+2026-09-17T14:03:10.3527962Z          drop(right);
+2026-09-17T14:03:10.3528430Z          drop(left);
+2026-09-17T14:03:10.3528871Z          failure(
+2026-09-17T14:03:10.3529622Z -            &call_readonly(&plan_args(&base.path, base.pin, &later.path, later.pin), &f.dir),
+2026-09-17T14:03:10.3530444Z +            &call_readonly(
+2026-09-17T14:03:10.3531292Z +                &plan_args(&base.path, base.pin, &later.path, later.pin),
+2026-09-17T14:03:10.3531976Z +                &f.dir,
+2026-09-17T14:03:10.3532372Z +            ),
+2026-09-17T14:03:10.3532814Z              &f.dir,
+2026-09-17T14:03:10.3533224Z          );
+2026-09-17T14:03:10.3533569Z      }
+2026-09-17T14:03:10.3534340Z Diff in /home/runner/work/Zevune/Zevune/integration/orchard/tests/active_incremental_cli.rs:543:
+2026-09-17T14:03:10.3535616Z  fn active_incremental_cli_wrong_pins_missing_and_damaged_bytes_fail_on_either_side() {
+2026-09-17T14:03:10.3536499Z      let f = fixture(1, 3);
+2026-09-17T14:03:10.3537370Z      let args = plan_args(&f.base.path, f.base.pin, &f.later.path, f.later.pin);
+2026-09-17T14:03:10.3538403Z -    for (key, pin) in [("--base-checkpoint", f.later.pin), ("--checkpoint", f.base.pin)] {
+2026-09-17T14:03:10.3539210Z +    for (key, pin) in [
+2026-09-17T14:03:10.3539710Z +        ("--base-checkpoint", f.later.pin),
+2026-09-17T14:03:10.3540257Z +        ("--checkpoint", f.base.pin),
+2026-09-17T14:03:10.3540722Z +    ] {
+2026-09-17T14:03:10.3541513Z          let mut wrong_pin = args.clone();
+2026-09-17T14:03:10.3542409Z          set_option(&mut wrong_pin, key, hex(&pin.to_bytes()));
+2026-09-17T14:03:10.3543372Z          failure(&call_readonly(&wrong_pin, &f.dir), &f.dir);
+2026-09-17T14:03:10.3915277Z ##[error]Process completed with exit code 1.
+2026-09-17T14:03:10.4065816Z Post job cleanup.
+2026-09-17T14:03:10.5007661Z [command]/usr/bin/git version
+2026-09-17T14:03:10.5054027Z git version 2.55.0
+2026-09-17T14:03:10.5100159Z Temporarily overriding HOME='/home/runner/work/_temp/90efaaac-32be-43a3-8f1c-348909a7d480' before making global git config changes
+2026-09-17T14:03:10.5101877Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T14:03:10.5106868Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-17T14:03:10.5149736Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T14:03:10.5187150Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T14:03:10.5439273Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T14:03:10.5478087Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T14:03:10.5899637Z Cleaning up orphan processes
+2026-09-17T14:03:10.6210596Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
