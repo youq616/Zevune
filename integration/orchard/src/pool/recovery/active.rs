@@ -277,5 +277,8 @@ fn fault_entry(path: &Path, name: &str) -> Result<(), PoolError> {
 /// Read-only exact-prefix plans between two independently pinned archives.
 pub mod incremental;
 
+/// Immutable append packages, verified with an independently pinned base.
+pub mod package;
+
 #[cfg(test)]
 mod tests;

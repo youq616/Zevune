@@ -13,6 +13,16 @@ pub struct ActiveAppendRange {
 }
 
 impl ActiveAppendRange {
+    // Package decoding remains private and must apply the complete plan and
+    // actual base-tail checks before any decoded value is published.
+    pub(super) fn from_parts(segment_index: u32, offset: u32, length: u32) -> Self {
+        Self {
+            segment_index,
+            offset,
+            length,
+        }
+    }
+
     pub fn segment_index(&self) -> u32 {
         self.segment_index
     }
@@ -60,7 +70,7 @@ impl ActiveIncrementalPlan {
         &self.ranges
     }
 
-    fn checked(
+    pub(super) fn checked(
         base: ActiveRecoveryCheckpoint,
         later: ActiveRecoveryCheckpoint,
         unchanged: u32,
@@ -126,6 +136,25 @@ impl ActiveIncrementalPlan {
     }
 }
 
+pub(super) fn check_pins(
+    base: ActiveRecoveryCheckpoint,
+    later: ActiveRecoveryCheckpoint,
+) -> Result<(), PoolError> {
+    base.check_bounds()?;
+    later.check_bounds()?;
+    if base.genesis != later.genesis || base.header_length != later.header_length {
+        return Err(PoolError::Genesis);
+    }
+    if later.height < base.height
+        || (later.height == base.height && later != base)
+        || (later.height > base.height && later.length <= base.length)
+        || later.segment_count < base.segment_count
+    {
+        return Err(PoolError::Stale);
+    }
+    Ok(())
+}
+
 impl ActiveArchive {
     /// Fully replay BOTH retained archives on every call, compare every reused
     /// physical byte, and recheck both entire layouts before returning any plan.
@@ -135,20 +164,7 @@ impl ActiveArchive {
         &mut self,
         later: &mut ActiveArchive,
     ) -> Result<ActiveIncrementalPlan, PoolError> {
-        self.pin.check_bounds()?;
-        later.pin.check_bounds()?;
-        if self.pin.genesis != later.pin.genesis
-            || self.pin.header_length != later.pin.header_length
-        {
-            return Err(PoolError::Genesis);
-        }
-        if later.pin.height < self.pin.height
-            || (later.pin.height == self.pin.height && later.pin != self.pin)
-            || (later.pin.height > self.pin.height && later.pin.length <= self.pin.length)
-            || later.pin.segment_count < self.pin.segment_count
-        {
-            return Err(PoolError::Stale);
-        }
+        check_pins(self.pin, later.pin)?;
         self.verify()?;
         later.verify()?;
         let capacity = usize::try_from(later.pin.segment_count).map_err(|_| PoolError::Bounds)?;

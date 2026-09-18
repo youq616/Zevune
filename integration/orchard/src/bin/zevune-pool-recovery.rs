@@ -2,6 +2,7 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
+use zevune_orchard_lab::pool::recovery::active::package::ActiveIncrementalPackage;
 use zevune_orchard_lab::pool::recovery::active::{
     ActiveArchive, ActiveRecoveryCheckpoint, ACTIVE_CHECKPOINT_BYTES,
 };
@@ -14,6 +15,8 @@ use zevune_orchard_lab::pool::StorageProfile;
 mod incremental_output;
 #[path = "../recovery_index_output.rs"]
 mod index_output;
+#[path = "../recovery_package_output.rs"]
+mod package_output;
 
 const HELP: &str = "Zevune PUBLIC journal recovery (NO FUNDS; NOT full validator recovery)\n\
 checkpoint --no-real-funds --source <absolute journal> --genesis <absolute manifest> --genesis-sha256 <64 hex> --height <trusted height> --app-hash <trusted hash>\n\
@@ -28,6 +31,9 @@ checkpoint-active --no-real-funds --source <absolute active directory> --genesis
 backup-active|restore-active --no-real-funds --source <absolute active/archive directory> --output <NEW absolute directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
 verify-active --no-real-funds --source <absolute active/archive directory> --checkpoint <256 hex independently retained ZVARCP01 pin>\n\
 plan-active-incremental --no-real-funds --base <absolute earlier archive> --base-checkpoint <256 hex pin> --source <absolute later archive> --checkpoint <256 hex pin> (read-only JSON; no incremental backup is written)\n\
+pack-active-incremental --no-real-funds --base <absolute earlier archive> --base-checkpoint <256 hex pin> --source <absolute later archive> --checkpoint <256 hex pin> --output <NEW absolute package file>\n\
+verify-active-incremental --no-real-funds --base <absolute earlier archive> --base-checkpoint <256 hex pin> --source <absolute package file> --checkpoint <256 hex independently retained later pin>\n\
+restore-active-incremental --no-real-funds --base <absolute earlier archive> --base-checkpoint <256 hex pin> --source <absolute package file> --checkpoint <256 hex independently retained later pin> --output <NEW absolute directory>\n\
 Stop the owning writer before use. No consensus database or signer state is copied.\n\
 A failed copy may leave a partial or complete target. No automatic retry or repair.\n";
 
@@ -144,6 +150,44 @@ fn run_incremental(source: &Path, options: &BTreeMap<&str, &str>) -> Result<(), 
     incremental_output::emit(&plan)
 }
 
+fn run_package(mode: &str, source: &Path, options: &BTreeMap<&str, &str>) -> Result<(), ()> {
+    // Both trust anchors must decode before any candidate input is opened.
+    // The package's embedded pins are compared with them, never trusted alone.
+    let base_pin = ActiveRecoveryCheckpoint::from_bytes(&unhex::<ACTIVE_CHECKPOINT_BYTES>(
+        options["--base-checkpoint"],
+    )?)
+    .map_err(|_| ())?;
+    let later_pin = ActiveRecoveryCheckpoint::from_bytes(&unhex::<ACTIVE_CHECKPOINT_BYTES>(
+        options["--checkpoint"],
+    )?)
+    .map_err(|_| ())?;
+    let mut base = ActiveArchive::open(Path::new(options["--base"]), base_pin).map_err(|_| ())?;
+    let package = match mode {
+        "pack-active-incremental" => {
+            let mut later = ActiveArchive::open(source, later_pin).map_err(|_| ())?;
+            // Two input opens plus four method replays: six in total.
+            base.pack_incremental_new(&mut later, Path::new(options["--output"]))
+                .map_err(|_| ())?
+        }
+        "verify-active-incremental" | "restore-active-incremental" => {
+            // Open fully verifies base and the reconstructed history. Together
+            // with base.open, a successful verify CLI performs three replays.
+            let mut package =
+                ActiveIncrementalPackage::open(source, &mut base, later_pin).map_err(|_| ())?;
+            if mode == "restore-active-incremental" {
+                // Restore adds five complete replays, for eight in this CLI.
+                package
+                    .restore_new(&mut base, Path::new(options["--output"]))
+                    .map_err(|_| ())?;
+            }
+            package
+        }
+        _ => return Err(()),
+    };
+    // A complete new output may already exist if receipt writing fails.
+    package_output::emit(&package, mode)
+}
+
 fn run(args: &[String]) -> Result<(), ()> {
     if args == ["--help"] || args == ["help"] {
         print!("{HELP}");
@@ -165,6 +209,9 @@ fn run(args: &[String]) -> Result<(), ()> {
         "verify-active",
         "restore-active",
         "plan-active-incremental",
+        "pack-active-incremental",
+        "verify-active-incremental",
+        "restore-active-incremental",
     ]
     .contains(&mode.as_str())
         || rest.len() > 13
@@ -200,7 +247,16 @@ fn run(args: &[String]) -> Result<(), ()> {
             "--app-hash",
         ],
         "locate-height" => &["--source", "--checkpoint", "--height"],
-        "plan-active-incremental" => &["--base", "--base-checkpoint", "--source", "--checkpoint"],
+        "plan-active-incremental" | "verify-active-incremental" => {
+            &["--base", "--base-checkpoint", "--source", "--checkpoint"]
+        }
+        "pack-active-incremental" | "restore-active-incremental" => &[
+            "--base",
+            "--base-checkpoint",
+            "--source",
+            "--checkpoint",
+            "--output",
+        ],
         "verify" | "verify-segments" | "index" | "verify-active" => &["--source", "--checkpoint"],
         _ => &["--source", "--output", "--checkpoint"],
     };
@@ -217,6 +273,12 @@ fn run(args: &[String]) -> Result<(), ()> {
     let source = Path::new(options["--source"]);
     if mode == "plan-active-incremental" {
         return run_incremental(source, &options);
+    }
+    if matches!(
+        mode.as_str(),
+        "pack-active-incremental" | "verify-active-incremental" | "restore-active-incremental"
+    ) {
+        return run_package(mode, source, &options);
     }
     if matches!(
         mode.as_str(),
