@@ -197,6 +197,39 @@ fn frame_size(length: u64) -> Result<(), PoolError> {
     Ok(())
 }
 
+// Shared by retained active files and the private incremental reconstruction.
+// Callers supply captured physical lengths; an append range is not a frame.
+fn validate_physical_frame(
+    header_length: u64,
+    length: u64,
+    segment_lengths: impl IntoIterator<Item = u64>,
+    start: u64,
+    end: u64,
+) -> Result<(), PoolError> {
+    let frame_length = end.checked_sub(start).ok_or(PoolError::Corrupt)?;
+    frame_size(frame_length)?;
+    if start < header_length || end > length {
+        return Err(PoolError::Corrupt);
+    }
+    let mut begin = header_length;
+    let mut previous = None;
+    for segment_length in segment_lengths {
+        let limit = begin.checked_add(segment_length).ok_or(PoolError::Bounds)?;
+        if start < limit {
+            if end > limit
+                || (start == begin
+                    && previous.is_some_and(|prior: u64| prior + frame_length <= SEGMENT_BYTES))
+            {
+                return Err(PoolError::Corrupt);
+            }
+            return Ok(());
+        }
+        previous = Some(segment_length);
+        begin = limit;
+    }
+    Err(PoolError::Corrupt)
+}
+
 /// Return whether the next complete frame needs a new segment. This pure budget
 /// check is shared by prepare and commit; it never reserves or creates a file.
 fn frame_budget(
@@ -608,27 +641,13 @@ impl ActiveJournal {
     /// `start` and `end` are the actual logical positions bracketing one full
     /// Replay record. Reject split physical frames and noncanonical early rolls.
     pub(super) fn validate_frame(&self, start: u64, end: u64) -> Result<(), PoolError> {
-        let frame_length = end.checked_sub(start).ok_or(PoolError::Corrupt)?;
-        frame_size(frame_length)?;
-        if start < self.header_length || end > self.length {
-            return Err(PoolError::Corrupt);
-        }
-        let mut begin = self.header_length;
-        for (index, segment) in self.segments.iter().enumerate() {
-            let limit = begin + segment.length;
-            if start < limit {
-                if end > limit
-                    || (start == begin
-                        && index != 0
-                        && self.segments[index - 1].length + frame_length <= SEGMENT_BYTES)
-                {
-                    return Err(PoolError::Corrupt);
-                }
-                return Ok(());
-            }
-            begin = limit;
-        }
-        Err(PoolError::Corrupt)
+        validate_physical_frame(
+            self.header_length,
+            self.length,
+            self.segments.iter().map(|segment| segment.length),
+            start,
+            end,
+        )
     }
 
     pub(super) fn check_frame(&self, frame_length: u64) -> Result<(), PoolError> {
@@ -831,6 +850,8 @@ impl Read for ActiveReader {
 }
 
 mod incremental;
+
+pub(in crate::pool) mod package;
 
 #[cfg(test)]
 mod tests;

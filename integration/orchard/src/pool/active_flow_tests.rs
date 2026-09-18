@@ -2,6 +2,7 @@
 //! No height edits, accepting verifier, synthetic record execution or reduced
 //! segment capacity stands in for the 10000-record and 1 MiB growth checks.
 use super::*;
+use crate::pool::recovery::active::package::ActiveIncrementalPackage;
 use crate::pool::recovery::active::{ActiveArchive, ActiveRecoveryCheckpoint};
 use crate::pool::root_cache_tests::assert_state;
 use crate::pool::testnet::{TestGenesis, TEST_SUPPLY};
@@ -220,6 +221,134 @@ fn repin_layout(
     }
     raw[96..128].copy_from_slice(&hash.finalize());
     ActiveRecoveryCheckpoint::from_bytes(&raw).unwrap()
+}
+
+// Encode the published package format independently from the production
+// metadata writer. Expected ranges come from actual committed file lengths.
+fn expected_package_bytes(
+    base: ActiveRecoveryCheckpoint,
+    later: ActiveRecoveryCheckpoint,
+    files: &DirectoryBytes,
+    ranges: &[(u32, u32, u32)],
+) -> Vec<u8> {
+    let mut bytes = b"ZVAIPK01".to_vec();
+    bytes.extend_from_slice(&base.to_bytes());
+    bytes.extend_from_slice(&later.to_bytes());
+    bytes.extend_from_slice(&u32::try_from(ranges.len()).unwrap().to_be_bytes());
+    for &(index, offset, length) in ranges {
+        bytes.extend_from_slice(&index.to_be_bytes());
+        bytes.extend_from_slice(&offset.to_be_bytes());
+        bytes.extend_from_slice(&length.to_be_bytes());
+    }
+    for &(index, offset, length) in ranges {
+        let file = &files[&format!("{index:08}.journal")];
+        let end = offset.checked_add(length).unwrap();
+        bytes.extend_from_slice(&file[offset as usize..end as usize]);
+    }
+    assert_eq!(
+        bytes.len() as u64,
+        268 + 12 * ranges.len() as u64 + later.length() - base.length()
+    );
+    bytes
+}
+
+// This restoration is a production API call, unlike the independent physical
+// reconstruction in assert_incremental_plan. Its returned path becomes the
+// ordinary store used by the following genuine spend or empty-block commit.
+fn incremental_package_and_restore(
+    dir: &Dir,
+    label: &str,
+    base_path: &Path,
+    base_pin: ActiveRecoveryCheckpoint,
+    later_path: &Path,
+    later_pin: ActiveRecoveryCheckpoint,
+    ranges: &[(u32, u32, u32)],
+) -> PathBuf {
+    let original_base = directory_bytes(base_path);
+    let original_later = directory_bytes(later_path);
+    let package_path = dir.path(&format!("{label}.incremental"));
+    let restored_path = dir.path(&format!("{label}-incremental-restored"));
+    let expected = expected_package_bytes(base_pin, later_pin, &original_later, ranges);
+    let mut base = ActiveArchive::open(base_path, base_pin).unwrap();
+    let mut later = ActiveArchive::open(later_path, later_pin).unwrap();
+    let package = base
+        .pack_incremental_new(&mut later, &package_path)
+        .unwrap();
+    assert_eq!(package.plan().base_checkpoint(), base_pin);
+    assert_eq!(package.plan().checkpoint(), later_pin);
+    assert_eq!(package.package_bytes(), expected.len() as u64);
+    let actual: Vec<_> = package
+        .plan()
+        .ranges()
+        .iter()
+        .map(|range| (range.segment_index(), range.offset(), range.length()))
+        .collect();
+    assert_eq!(actual, ranges);
+    // The creating object holds an exclusive package lock on both platforms.
+    // Drop it before inspecting bytes or independently opening that file.
+    drop(package);
+    drop(later);
+    assert!(fs::read(&package_path).unwrap() == expected);
+    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+    assert_eq!(
+        package.restore_new(&mut base, &restored_path).unwrap(),
+        later_pin
+    );
+    drop(package);
+    drop(base);
+    assert!(directory_bytes(base_path) == original_base);
+    assert!(directory_bytes(later_path) == original_later);
+    assert!(directory_bytes(&restored_path) == original_later);
+    assert!(fs::read(package_path).unwrap() == expected);
+    restored_path
+}
+
+fn rehashed_incremental_second_payment_requires_real_authorization(
+    dir: &Dir,
+    base_path: &Path,
+    base_pin: ActiveRecoveryCheckpoint,
+    later_pin: ActiveRecoveryCheckpoint,
+    later_bytes: &DirectoryBytes,
+    first_frame_bytes: usize,
+    second_frame_bytes: usize,
+) {
+    let original_base = directory_bytes(base_path);
+    let mut forged = later_bytes.clone();
+    let bytes = forged.get_mut("00000001.journal").unwrap();
+    assert!(bytes[..first_frame_bytes] == original_base["00000001.journal"]);
+    let start = bytes.len() - second_frame_bytes;
+    assert!(start >= first_frame_bytes);
+    let body = u32::from_be_bytes(bytes[start..start + 4].try_into().unwrap()) as usize;
+    let end = start + 4 + body;
+    assert_eq!(end + 32, bytes.len());
+    // Only the NEW second payment's binding signature is changed. Recompute
+    // the ordinary frame checksum AND the entire physical later pin, keeping
+    // the valid base prefix, all lengths, and expected state commitments.
+    bytes[end - 1] ^= 1;
+    let checksum = Sha256::digest(&bytes[start + 4..end]);
+    bytes[end..].copy_from_slice(&checksum);
+    let ranges = [(
+        1,
+        u32::try_from(first_frame_bytes).unwrap(),
+        u32::try_from(bytes.len() - first_frame_bytes).unwrap(),
+    )];
+    let forged_pin = repin_layout(later_pin, &forged);
+    assert_ne!(forged_pin, later_pin);
+    let raw = expected_package_bytes(base_pin, forged_pin, &forged, &ranges);
+    let package_path = dir.path("rehashed-invalid-second-payment.incremental");
+    fs::write(&package_path, &raw).unwrap();
+    let mut base = ActiveArchive::open(base_path, base_pin).unwrap();
+    // Do NOT open the invalid later directory as an ActiveArchive. This call
+    // combines the authentic base with package payload and reaches the real
+    // joined authorization verifier, beyond matching ordinary hashes.
+    assert!(matches!(
+        ActiveIncrementalPackage::open(&package_path, &mut base, forged_pin),
+        Err(PoolError::Authorization)
+    ));
+    base.verify().unwrap();
+    drop(base);
+    assert!(directory_bytes(base_path) == original_base);
+    assert!(fs::read(package_path).unwrap() == raw);
 }
 
 fn assert_noncanonical_layouts_reject(
@@ -636,6 +765,15 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
     assert!(directory_bytes(&before_payment_path) == before_payment_bytes);
     let rotated_source = path.clone();
     let path = archive_and_restore(&dir, &path, rotated_pin, "rotated-payment");
+    let path = incremental_package_and_restore(
+        &dir,
+        "rotated-payment",
+        &before_payment_path,
+        before_payment_pin,
+        &path,
+        rotated_pin,
+        &[(1, 0, u32::try_from(first_frame_bytes).unwrap())],
+    );
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.active_capacity().unwrap(), after_payment);
     assert_eq!(assert_state(&pool.state), paid);
@@ -721,6 +859,15 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
             before_reopen.3 - u32::try_from(first_frame_bytes).unwrap(),
         )],
     );
+    rehashed_incremental_second_payment_requires_real_authorization(
+        &dir,
+        &rotated_source,
+        rotated_pin,
+        above_legacy_pin,
+        &persisted,
+        first_frame_bytes,
+        second_frame_bytes,
+    );
 
     // Swap the two ACTUAL existing segments, retaining each complete record's
     // bytes and checksum. The old pin rejects the changed layout; even a newly
@@ -768,6 +915,19 @@ fn real_payments_rotate_default_segments_cross_10000_and_reopen_through_10002() 
 
     let above_legacy_source = path.clone();
     let path = archive_and_restore(&dir, &path, above_legacy_pin, "above-legacy-limit");
+    let path = incremental_package_and_restore(
+        &dir,
+        "above-legacy-limit",
+        &rotated_source,
+        rotated_pin,
+        &path,
+        above_legacy_pin,
+        &[(
+            1,
+            u32::try_from(first_frame_bytes).unwrap(),
+            before_reopen.3 - u32::try_from(first_frame_bytes).unwrap(),
+        )],
+    );
     let mut pool = genesis.open_pool(&path).unwrap();
     assert_eq!(pool.summary().unwrap(), at_10001);
     assert_eq!(assert_state(&pool.state), at_10001);
