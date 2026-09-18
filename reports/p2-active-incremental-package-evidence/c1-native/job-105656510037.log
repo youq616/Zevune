@@ -1,0 +1,609 @@
+﻿2026-09-18T15:28:37.1248740Z Current runner version: '2.337.0'
+2026-09-18T15:28:37.1265388Z ##[group]Runner Image Provisioner
+2026-09-18T15:28:37.1265856Z Hosted Compute Agent
+2026-09-18T15:28:37.1266197Z Version: 20260828.587
+2026-09-18T15:28:37.1266537Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-18T15:28:37.1266926Z Build Date: 2026-08-28T16:44:25Z
+2026-09-18T15:28:37.1267295Z Worker ID: {e5a78a56-1829-4d98-a625-87bbe1cde07d}
+2026-09-18T15:28:37.1267671Z Azure Region: centralus
+2026-09-18T15:28:37.1268120Z ##[endgroup]
+2026-09-18T15:28:37.1269122Z ##[group]Operating System
+2026-09-18T15:28:37.1269447Z Microsoft Windows Server 2025
+2026-09-18T15:28:37.1269765Z 10.0.26100
+2026-09-18T15:28:37.1270049Z Datacenter
+2026-09-18T15:28:37.1270331Z ##[endgroup]
+2026-09-18T15:28:37.1270625Z ##[group]Runner Image
+2026-09-18T15:28:37.1270971Z Image: windows-2025-vs2026
+2026-09-18T15:28:37.1271280Z Version: 20260907.229.1
+2026-09-18T15:28:37.1272159Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260907.229/images/windows/Windows2025-VS2026-Readme.md
+2026-09-18T15:28:37.1273012Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260907.229
+2026-09-18T15:28:37.1273527Z ##[endgroup]
+2026-09-18T15:28:37.1274119Z ##[group]GITHUB_TOKEN Permissions
+2026-09-18T15:28:37.1275237Z Contents: read
+2026-09-18T15:28:37.1275531Z Metadata: read
+2026-09-18T15:28:37.1275821Z ##[endgroup]
+2026-09-18T15:28:37.1277126Z Secret source: Actions
+2026-09-18T15:28:37.1277611Z Cache mode: write
+2026-09-18T15:28:37.1277982Z Prepare workflow directory
+2026-09-18T15:28:37.1553715Z Prepare all required actions
+2026-09-18T15:28:37.1596625Z Getting action download info
+2026-09-18T15:28:37.3991941Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-18T15:28:37.4696114Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-18T15:28:37.9303212Z Complete job name: integrated (windows-latest)
+2026-09-18T15:28:38.0714914Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-18T15:28:38.0715689Z with:
+2026-09-18T15:28:38.0715912Z   persist-credentials: false
+2026-09-18T15:28:38.0716169Z   repository: youq616/Zevune
+2026-09-18T15:28:38.0718067Z   token: ***
+2026-09-18T15:28:38.0718274Z   ssh-strict: true
+2026-09-18T15:28:38.0718487Z   ssh-user: git
+2026-09-18T15:28:38.0718691Z   clean: true
+2026-09-18T15:28:38.0718917Z   sparse-checkout-cone-mode: true
+2026-09-18T15:28:38.0719178Z   fetch-depth: 1
+2026-09-18T15:28:38.0719390Z   fetch-tags: false
+2026-09-18T15:28:38.0719611Z   show-progress: true
+2026-09-18T15:28:38.0719834Z   lfs: false
+2026-09-18T15:28:38.0720039Z   submodules: false
+2026-09-18T15:28:38.0720263Z   set-safe-directory: true
+2026-09-18T15:28:38.0720585Z env:
+2026-09-18T15:28:38.0720784Z   RAYON_NUM_THREADS: 2
+2026-09-18T15:28:38.0721010Z   CARGO_BUILD_JOBS: 2
+2026-09-18T15:28:38.0721246Z ##[endgroup]
+2026-09-18T15:28:38.1748973Z Syncing repository: youq616/Zevune
+2026-09-18T15:28:38.1751041Z ##[group]Getting Git version info
+2026-09-18T15:28:38.1752084Z Working directory is 'D:\a\Zevune\Zevune'
+2026-09-18T15:28:38.2217739Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-09-18T15:28:38.5862182Z git version 2.55.0.windows.5
+2026-09-18T15:28:38.5905306Z ##[endgroup]
+2026-09-18T15:28:38.5919589Z Temporarily overriding HOME='D:\a\_temp\ec634730-ab15-4fd5-a87e-67b76959864a' before making global git config changes
+2026-09-18T15:28:38.5921117Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:28:38.5927435Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Zevune\Zevune
+2026-09-18T15:28:38.6475746Z Deleting the contents of 'D:\a\Zevune\Zevune'
+2026-09-18T15:28:38.6479400Z ##[group]Initializing the repository
+2026-09-18T15:28:38.6484729Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\Zevune\Zevune
+2026-09-18T15:28:38.7112977Z Initialized empty Git repository in D:/a/Zevune/Zevune/.git/
+2026-09-18T15:28:38.7142583Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/youq616/Zevune
+2026-09-18T15:28:38.7625656Z ##[endgroup]
+2026-09-18T15:28:38.7631449Z ##[group]Disabling automatic garbage collection
+2026-09-18T15:28:38.7632436Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-09-18T15:28:38.7803779Z ##[endgroup]
+2026-09-18T15:28:38.7804645Z ##[group]Setting up auth
+2026-09-18T15:28:38.7811359Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:28:38.7986763Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-09-18T15:28:40.0618300Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:28:40.0797627Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-09-18T15:28:40.4337125Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-09-18T15:28:40.4525870Z ##[endgroup]
+2026-09-18T15:28:40.4533139Z ##[group]Fetching the repository
+2026-09-18T15:28:40.4533835Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +bd710cf4c985012ca23e86c333567ce116de72bb:refs/remotes/pull/17/merge
+2026-09-18T15:28:42.5777234Z From https://github.com/youq616/Zevune
+2026-09-18T15:28:42.5777888Z  * [new ref]         bd710cf4c985012ca23e86c333567ce116de72bb -> pull/17/merge
+2026-09-18T15:28:42.5815348Z ##[endgroup]
+2026-09-18T15:28:42.5817623Z ##[group]Determining the checkout info
+2026-09-18T15:28:42.5818338Z ##[endgroup]
+2026-09-18T15:28:42.5824556Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-09-18T15:28:42.6166697Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-09-18T15:28:42.6349944Z ##[group]Checking out the ref
+2026-09-18T15:28:42.6350301Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/remotes/pull/17/merge
+2026-09-18T15:28:42.8190770Z Note: switching to 'refs/remotes/pull/17/merge'.
+2026-09-18T15:28:42.8191166Z 
+2026-09-18T15:28:42.8191303Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-18T15:28:42.8191630Z changes and commit them, and you can discard any commits you make in this
+2026-09-18T15:28:42.8191933Z state without impacting any branches by switching back to a branch.
+2026-09-18T15:28:42.8192092Z 
+2026-09-18T15:28:42.8192326Z If you want to create a new branch to retain commits you create, you may
+2026-09-18T15:28:42.8192599Z do so (now or later) by using -c with the switch command. Example:
+2026-09-18T15:28:42.8192780Z 
+2026-09-18T15:28:42.8192956Z   git switch -c <new-branch-name>
+2026-09-18T15:28:42.8193098Z 
+2026-09-18T15:28:42.8193172Z Or undo this operation with:
+2026-09-18T15:28:42.8193286Z 
+2026-09-18T15:28:42.8193348Z   git switch -
+2026-09-18T15:28:42.8193467Z 
+2026-09-18T15:28:42.8193629Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-18T15:28:42.8193801Z 
+2026-09-18T15:28:42.8196429Z HEAD is now at bd710cf Merge 61c691270b91aece076177cb757e51e0e63fe310 into 2cc87a2207d502ac5cfe00ea52e525c1516917e5
+2026-09-18T15:28:42.8617859Z ##[endgroup]
+2026-09-18T15:28:42.8622932Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-09-18T15:28:42.8782992Z bd710cf4c985012ca23e86c333567ce116de72bb
+2026-09-18T15:28:42.8809332Z ##[group]Removing auth
+2026-09-18T15:28:42.8814882Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:28:42.8990690Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-09-18T15:28:43.2485690Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:28:43.2638114Z http.https://github.com/.extraheader
+2026-09-18T15:28:43.2661540Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-09-18T15:28:43.2835563Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-09-18T15:28:43.5953405Z ##[endgroup]
+2026-09-18T15:28:43.6258508Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-18T15:28:43.6259798Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-18T15:28:43.6260051Z with:
+2026-09-18T15:28:43.6260165Z   go-version: 1.27.1
+2026-09-18T15:28:43.6260308Z   cache-dependency-path: integration/cometbft/go.sum
+2026-09-18T15:28:43.6260470Z   check-latest: false
+2026-09-18T15:28:43.6261987Z   token: ***
+2026-09-18T15:28:43.6262082Z   cache: true
+2026-09-18T15:28:43.6262193Z env:
+2026-09-18T15:28:43.6262289Z   RAYON_NUM_THREADS: 2
+2026-09-18T15:28:43.6262395Z   CARGO_BUILD_JOBS: 2
+2026-09-18T15:28:43.6262503Z ##[endgroup]
+2026-09-18T15:28:43.7220002Z Setup go version spec 1.27.1
+2026-09-18T15:28:43.7226843Z Attempting to download 1.27.1...
+2026-09-18T15:28:43.7338039Z (node:3712) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-18T15:28:43.7338589Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-18T15:28:44.4231526Z matching 1.27.1...
+2026-09-18T15:28:44.4253245Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-win32-x64.zip
+2026-09-18T15:28:44.9753941Z Extracting Go...
+2026-09-18T15:28:45.0300064Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command "$ErrorActionPreference = 'Stop' ; try { Add-Type -AssemblyName System.IO.Compression.ZipFile } catch { } ; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('D:\a\_temp\go-1.27.1-win32-x64.zip', 'D:\a\_temp\ce5f5f5a-855a-4dbd-a693-74cb429e6f2a', $true) } catch { if (($_.Exception.GetType().FullName -eq 'System.Management.Automation.MethodException') -or ($_.Exception.GetType().FullName -eq 'System.Management.Automation.RuntimeException') ){ Expand-Archive -LiteralPath 'D:\a\_temp\go-1.27.1-win32-x64.zip' -DestinationPath 'D:\a\_temp\ce5f5f5a-855a-4dbd-a693-74cb429e6f2a' -Force } else { throw $_ } } ;"
+2026-09-18T15:28:47.5014772Z Successfully extracted go to D:\a\_temp\ce5f5f5a-855a-4dbd-a693-74cb429e6f2a
+2026-09-18T15:28:47.5015487Z Adding to the cache ...
+2026-09-18T15:28:53.0633580Z Created link C:\hostedtoolcache\windows\go\1.27.1\x64 => D:\hostedtoolcache\windows\go\1.27.1\x64
+2026-09-18T15:28:53.0636085Z Created link C:\hostedtoolcache\windows\go\1.27.1\x64.complete => D:\hostedtoolcache\windows\go\1.27.1\x64.complete
+2026-09-18T15:28:53.0636692Z Successfully cached go to C:\hostedtoolcache\windows\go\1.27.1\x64
+2026-09-18T15:28:53.0641705Z Added go to the path
+2026-09-18T15:28:53.0643713Z Successfully set up Go version 1.27.1
+2026-09-18T15:28:53.2662195Z [command]C:\hostedtoolcache\windows\go\1.27.1\x64\bin\go.exe env GOMODCACHE
+2026-09-18T15:28:53.2693987Z [command]C:\hostedtoolcache\windows\go\1.27.1\x64\bin\go.exe env GOCACHE
+2026-09-18T15:28:53.2832305Z C:\Users\runneradmin\go\pkg\mod
+2026-09-18T15:28:53.2854303Z C:\Users\runneradmin\AppData\Local\go-build
+2026-09-18T15:28:53.4962520Z Cache hit for: setup-go-Windows-x64-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:28:53.5032667Z (node:3712) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-18T15:28:54.6164469Z Received 130023424 of 429434914 (30.3%), 123.6 MBs/sec
+2026-09-18T15:28:55.6193570Z Received 205520896 of 429434914 (47.9%), 97.7 MBs/sec
+2026-09-18T15:28:56.6204053Z Received 322961408 of 429434914 (75.2%), 102.5 MBs/sec
+2026-09-18T15:28:57.6223664Z Received 425240610 of 429434914 (99.0%), 101.2 MBs/sec
+2026-09-18T15:28:57.6519571Z Received 429434914 of 429434914 (100.0%), 101.4 MBs/sec
+2026-09-18T15:28:57.6520215Z Cache Size: ~410 MB (429434914 B)
+2026-09-18T15:28:57.6572713Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/c4e2aac6-0694-4838-af17-ce6d0fda5eac/cache.tzst -P -C D:/a/Zevune/Zevune --force-local --use-compress-program "zstd -d"
+2026-09-18T15:29:16.0249837Z Cache restored successfully
+2026-09-18T15:29:16.0536992Z Cache restored from key: setup-go-Windows-x64-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:29:16.0557082Z go version go1.27.1 windows/amd64
+2026-09-18T15:29:16.0557253Z 
+2026-09-18T15:29:16.0557520Z ##[group]go env
+2026-09-18T15:29:16.7766436Z set AR=ar
+2026-09-18T15:29:16.7766647Z set CC=gcc
+2026-09-18T15:29:16.7766811Z set CGO_CFLAGS=-O2 -g
+2026-09-18T15:29:16.7766955Z set CGO_CPPFLAGS=
+2026-09-18T15:29:16.7767067Z set CGO_CXXFLAGS=-O2 -g
+2026-09-18T15:29:16.7767186Z set CGO_ENABLED=1
+2026-09-18T15:29:16.7767331Z set CGO_FFLAGS=-O2 -g
+2026-09-18T15:29:16.7767458Z set CGO_LDFLAGS=-O2 -g
+2026-09-18T15:29:16.7767564Z set CXX=g++
+2026-09-18T15:29:16.7767659Z set GCCGO=gccgo
+2026-09-18T15:29:16.7767759Z set GO111MODULE=
+2026-09-18T15:29:16.7767856Z set GOAMD64=v1
+2026-09-18T15:29:16.7767954Z set GOARCH=amd64
+2026-09-18T15:29:16.7768110Z set GOAUTH=netrc
+2026-09-18T15:29:16.7768291Z set GOBIN=C:\Users\runneradmin\go\bin
+2026-09-18T15:29:16.7768475Z set GOCACHE=C:\Users\runneradmin\AppData\Local\go-build
+2026-09-18T15:29:16.7768651Z set GOCACHEPROG=
+2026-09-18T15:29:16.7768752Z set GODEBUG=
+2026-09-18T15:29:16.7768880Z set GOENV=C:\Users\runneradmin\AppData\Roaming\go\env
+2026-09-18T15:29:16.7769074Z set GOEXE=.exe
+2026-09-18T15:29:16.7769172Z set GOEXPERIMENT=
+2026-09-18T15:29:16.7769279Z set GOFIPS140=off
+2026-09-18T15:29:16.7769380Z set GOFLAGS=
+2026-09-18T15:29:16.7769781Z set GOGCCFLAGS=-m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=C:\Users\RUNNER~1\AppData\Local\Temp\go-build2201656411=/tmp/go-build -gno-record-gcc-switches
+2026-09-18T15:29:16.7770181Z set GOHOSTARCH=amd64
+2026-09-18T15:29:16.7770292Z set GOHOSTOS=windows
+2026-09-18T15:29:16.7770396Z set GOINSECURE=
+2026-09-18T15:29:16.7770512Z set GOMOD=D:\a\Zevune\Zevune\go.mod
+2026-09-18T15:29:16.7770670Z set GOMODCACHE=C:\Users\runneradmin\go\pkg\mod
+2026-09-18T15:29:16.7770822Z set GONOPROXY=
+2026-09-18T15:29:16.7770918Z set GONOSUMDB=
+2026-09-18T15:29:16.7771014Z set GOOS=windows
+2026-09-18T15:29:16.7771132Z set GOPACKAGESDRIVER=
+2026-09-18T15:29:16.7771286Z set GOPATH=C:\Users\runneradmin\go
+2026-09-18T15:29:16.7771462Z set GOPRIVATE=
+2026-09-18T15:29:16.7771616Z set GOPROXY=https://proxy.golang.org,direct
+2026-09-18T15:29:16.7771805Z set GOROOT=C:\hostedtoolcache\windows\go\1.27.1\x64
+2026-09-18T15:29:16.7771970Z set GOSUMDB=sum.golang.org
+2026-09-18T15:29:16.7772090Z set GOTELEMETRY=local
+2026-09-18T15:29:16.7772260Z set GOTELEMETRYDIR=C:\Users\runneradmin\AppData\Roaming\go\telemetry
+2026-09-18T15:29:16.7772658Z set GOTMPDIR=
+2026-09-18T15:29:16.7772760Z set GOTOOLCHAIN=local
+2026-09-18T15:29:16.7772940Z set GOTOOLDIR=C:\hostedtoolcache\windows\go\1.27.1\x64\pkg\tool\windows_amd64
+2026-09-18T15:29:16.7773133Z set GOVCS=
+2026-09-18T15:29:16.7773232Z set GOVERSION=go1.27.1
+2026-09-18T15:29:16.7773345Z set GOWORK=
+2026-09-18T15:29:16.7773449Z set PKG_CONFIG=pkg-config
+2026-09-18T15:29:16.7773532Z 
+2026-09-18T15:29:16.7774746Z ##[endgroup]
+2026-09-18T15:29:16.8043411Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+2026-09-18T15:29:16.8043874Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy[0m
+2026-09-18T15:29:16.8056338Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:29:16.8056549Z env:
+2026-09-18T15:29:16.8056652Z   RAYON_NUM_THREADS: 2
+2026-09-18T15:29:16.8056766Z   CARGO_BUILD_JOBS: 2
+2026-09-18T15:29:16.8056874Z   GOTOOLCHAIN: local
+2026-09-18T15:29:16.8056995Z ##[endgroup]
+2026-09-18T15:29:17.9098900Z info: syncing channel updates for 1.98.1-x86_64-pc-windows-msvc
+2026-09-18T15:29:18.6807080Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-18T15:29:18.6944192Z info: downloading 5 components
+2026-09-18T15:29:26.7817372Z 
+2026-09-18T15:29:28.9638239Z   1.98.1-x86_64-pc-windows-msvc installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-18T15:29:28.9638572Z 
+2026-09-18T15:29:28.9817929Z ##[group]Run test -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"
+2026-09-18T15:29:28.9818391Z [36;1mtest -z "$(gofmt -l internal/poolbridge integration/cometbft/poolapp)"[0m
+2026-09-18T15:29:28.9818670Z [36;1mcargo fmt --manifest-path integration/orchard/Cargo.toml --all -- --check[0m
+2026-09-18T15:29:28.9819013Z [36;1mcargo metadata --manifest-path integration/orchard/Cargo.toml --locked --format-version=1 > /dev/null[0m
+2026-09-18T15:29:28.9819289Z [36;1mgit diff --exit-code[0m
+2026-09-18T15:29:28.9827317Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:29:28.9827523Z env:
+2026-09-18T15:29:28.9827636Z   RAYON_NUM_THREADS: 2
+2026-09-18T15:29:28.9827753Z   CARGO_BUILD_JOBS: 2
+2026-09-18T15:29:28.9827875Z   GOTOOLCHAIN: local
+2026-09-18T15:29:28.9827995Z ##[endgroup]
+2026-09-18T15:29:35.5668903Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:170:
+2026-09-18T15:29:35.5669379Z              if self.raw.len() >= self.limit {
+2026-09-18T15:29:35.5669724Z                  return Err(io::ErrorKind::PermissionDenied.into());
+2026-09-18T15:29:35.5669931Z              }
+2026-09-18T15:29:35.5670316Z [31m-            let count = bytes
+2026-09-18T15:29:35.5672996Z [0m[31m-                .len()
+2026-09-18T15:29:35.5673277Z [0m[31m-                .min(self.chunk)
+2026-09-18T15:29:35.5673643Z [0m[31m-                .min(self.limit - self.raw.len());
+2026-09-18T15:29:35.5674132Z [0m[32m+            let count = bytes.len().min(self.chunk).min(self.limit - self.raw.len());
+2026-09-18T15:29:35.5674619Z [0m             self.raw.extend_from_slice(&bytes[..count]);
+2026-09-18T15:29:35.5674943Z              Ok(count)
+2026-09-18T15:29:35.5675152Z          }
+2026-09-18T15:29:35.5675482Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:283:
+2026-09-18T15:29:35.5675997Z              encoded.extend_from_slice(&bytes);
+2026-09-18T15:29:35.5676311Z          }
+2026-09-18T15:29:35.5677270Z          assert_eq!(package_bytes(&package), encoded);
+2026-09-18T15:29:35.5677832Z [31m-        assert_eq!(package.length(), metadata.len() as u64 + later.length() - base.length());
+2026-09-18T15:29:35.5678288Z [0m[32m+        assert_eq!(
+2026-09-18T15:29:35.5678556Z [0m[32m+            package.length(),
+2026-09-18T15:29:35.5678985Z [0m[32m+            metadata.len() as u64 + later.length() - base.length()
+2026-09-18T15:29:35.5679335Z [0m[32m+        );
+2026-09-18T15:29:35.5680904Z [0m         let joined = JoinedJournal::new(
+2026-09-18T15:29:35.5681193Z              &base,
+2026-09-18T15:29:35.5681430Z              &base_genesis,
+2026-09-18T15:29:35.5681793Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:294:
+2026-09-18T15:29:35.5682232Z              later.length(),
+2026-09-18T15:29:35.5682452Z          )
+2026-09-18T15:29:35.5682636Z          .unwrap();
+2026-09-18T15:29:35.5683067Z [31m-        assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
+2026-09-18T15:29:35.5683511Z [0m[32m+        assert_eq!(
+2026-09-18T15:29:35.5683813Z [0m[32m+            joined.layout_hash().unwrap(),
+2026-09-18T15:29:35.5684178Z [0m[32m+            later.layout_hash(&later_genesis).unwrap()
+2026-09-18T15:29:35.5684481Z [0m[32m+        );
+2026-09-18T15:29:35.5684747Z [0m         let mut reader = joined.reader().unwrap();
+2026-09-18T15:29:35.5685080Z          let mut actual = Vec::new();
+2026-09-18T15:29:35.5685379Z          let mut buffer = [0; 8191];
+2026-09-18T15:29:35.5685753Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:330:
+2026-09-18T15:29:35.5686150Z              );
+2026-09-18T15:29:35.5686323Z          }
+2026-09-18T15:29:35.5686673Z          assert_eq!(logical(&restored, &restored_genesis), expected);
+2026-09-18T15:29:35.5689002Z [31m-        assert_eq!(restored.layout_hash(&restored_genesis).unwrap(), joined.layout_hash().unwrap());
+2026-09-18T15:29:35.5689535Z [0m[32m+        assert_eq!(
+2026-09-18T15:29:35.5689882Z [0m[32m+            restored.layout_hash(&restored_genesis).unwrap(),
+2026-09-18T15:29:35.5690278Z [0m[32m+            joined.layout_hash().unwrap()
+2026-09-18T15:29:35.5690558Z [0m[32m+        );
+2026-09-18T15:29:35.5690779Z [0m         assert!(matches!(
+2026-09-18T15:29:35.5691170Z              ActiveJournal::open(&restored_path, &[0; 76]),
+2026-09-18T15:29:35.5691544Z              Err(PoolError::Locked)
+2026-09-18T15:29:35.5691937Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:518:
+2026-09-18T15:29:35.5692400Z                  later.length(),
+2026-09-18T15:29:35.5692630Z              )
+2026-09-18T15:29:35.5693025Z              .unwrap();
+2026-09-18T15:29:35.5693473Z [31m-            assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
+2026-09-18T15:29:35.5693934Z [0m[32m+            assert_eq!(
+2026-09-18T15:29:35.5694247Z [0m[32m+                joined.layout_hash().unwrap(),
+2026-09-18T15:29:35.5694634Z [0m[32m+                later.layout_hash(&later_genesis).unwrap()
+2026-09-18T15:29:35.5694959Z [0m[32m+            );
+2026-09-18T15:29:35.5695173Z [0m         }
+2026-09-18T15:29:35.5695352Z      }
+2026-09-18T15:29:35.5695644Z      assert_eq!(logical(&base, &base_genesis), before_base);
+2026-09-18T15:29:35.5696092Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:564:
+2026-09-18T15:29:35.5696588Z              assert_eq!(retained.len(), 1);
+2026-09-18T15:29:35.5696855Z          } else {
+2026-09-18T15:29:35.5697136Z              assert_eq!(retained.len(), 2);
+2026-09-18T15:29:35.5697586Z [31m-            assert_eq!(retained[&name(0)].len(), if fault == 12 { 200 } else { 1000 });
+2026-09-18T15:29:35.5698021Z [0m[32m+            assert_eq!(
+2026-09-18T15:29:35.5698323Z [0m[32m+                retained[&name(0)].len(),
+2026-09-18T15:29:35.5698674Z [0m[32m+                if fault == 12 { 200 } else { 1000 }
+2026-09-18T15:29:35.5698960Z [0m[32m+            );
+2026-09-18T15:29:35.5699163Z [0m         }
+2026-09-18T15:29:35.5699452Z          assert!(joined.copy_new(&target).is_err());
+2026-09-18T15:29:35.5699824Z          assert_eq!(output_bytes(&path), retained);
+2026-09-18T15:29:35.5700239Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package\tests.rs:571:
+2026-09-18T15:29:35.5700652Z          if fault >= 13 {
+2026-09-18T15:29:35.5701142Z              let (genesis, restored) = ActiveJournal::open(&path, &[0; 76]).unwrap();
+2026-09-18T15:29:35.5701842Z              assert_eq!(logical(&restored, &genesis), before_later);
+2026-09-18T15:29:35.5702386Z [31m-            assert_eq!(restored.layout_hash(&genesis).unwrap(), joined.layout_hash().unwrap());
+2026-09-18T15:29:35.5702837Z [0m[32m+            assert_eq!(
+2026-09-18T15:29:35.5703164Z [0m[32m+                restored.layout_hash(&genesis).unwrap(),
+2026-09-18T15:29:35.5703532Z [0m[32m+                joined.layout_hash().unwrap()
+2026-09-18T15:29:35.5703818Z [0m[32m+            );
+2026-09-18T15:29:35.5704036Z [0m         }
+2026-09-18T15:29:35.5704202Z      }
+2026-09-18T15:29:35.5704480Z      assert_eq!(logical(&base, &base_genesis), before_base);
+2026-09-18T15:29:35.5730485Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package.rs:3:
+2026-09-18T15:29:35.5731043Z  //! bind both trusted pins, and repeat complete byte/namespace checks at the end.
+2026-09-18T15:29:35.5748989Z  use super::{
+2026-09-18T15:29:35.5749384Z      check_file, create_file, name, namespace, open_file_access, read_at, regular,
+2026-09-18T15:29:35.5749812Z [31m-    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment,
+2026-09-18T15:29:35.5750204Z [0m[31m-    COPY_CHUNK, GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
+2026-09-18T15:29:35.5751127Z [0m[32m+    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment, COPY_CHUNK,
+2026-09-18T15:29:35.5751514Z [0m[32m+    GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
+2026-09-18T15:29:35.5751745Z [0m };
+2026-09-18T15:29:35.5751876Z  use sha2::{Digest, Sha256};
+2026-09-18T15:29:35.5752019Z  use std::fs;
+2026-09-18T15:29:35.5752220Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package.rs:116:
+2026-09-18T15:29:35.5752468Z      while position < end {
+2026-09-18T15:29:35.5752732Z          let take = usize::try_from((end - position).min(COPY_CHUNK as u64))
+2026-09-18T15:29:35.5753018Z              .map_err(|_| PoolError::Bounds)?;
+2026-09-18T15:29:35.5753439Z [31m-        fill_at(&mut buffer[..take], position, |bytes, at| read_at(file, bytes, at))?;
+2026-09-18T15:29:35.5753754Z [0m[32m+        fill_at(&mut buffer[..take], position, |bytes, at| {
+2026-09-18T15:29:35.5753993Z [0m[32m+            read_at(file, bytes, at)
+2026-09-18T15:29:35.5754168Z [0m[32m+        })?;
+2026-09-18T15:29:35.5754333Z [0m         consume(&buffer[..take])?;
+2026-09-18T15:29:35.5754521Z          position = position
+2026-09-18T15:29:35.5754806Z              .checked_add(u64::try_from(take).map_err(|_| PoolError::Bounds)?)
+2026-09-18T15:29:35.5755083Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active\package.rs:578:
+2026-09-18T15:29:35.5755367Z              use std::os::unix::fs::DirBuilderExt;
+2026-09-18T15:29:35.5755577Z              builder.mode(0o700);
+2026-09-18T15:29:35.5755725Z          }
+2026-09-18T15:29:35.5756006Z [31m-        builder.create(target.path()).map_err(|_| PoolError::Storage)?;
+2026-09-18T15:29:35.5756238Z [0m[32m+        builder
+2026-09-18T15:29:35.5756407Z [0m[32m+            .create(target.path())
+2026-09-18T15:29:35.5756634Z [0m[32m+            .map_err(|_| PoolError::Storage)?;
+2026-09-18T15:29:35.5756900Z [0m         let location = namespace::Directory::open(target.path())?;
+2026-09-18T15:29:35.5757196Z          let mut genesis = create_file(&target.path().join(GENESIS))?;
+2026-09-18T15:29:35.5757478Z          genesis.try_lock().map_err(|_| PoolError::Locked)?;
+2026-09-18T15:29:35.5811170Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active.rs:214:
+2026-09-18T15:29:35.5811408Z      let mut begin = header_length;
+2026-09-18T15:29:35.5811581Z      let mut previous = None;
+2026-09-18T15:29:35.5811753Z      for segment_length in segment_lengths {
+2026-09-18T15:29:35.5811942Z [31m-        let limit = begin
+2026-09-18T15:29:35.5812128Z [0m[31m-            .checked_add(segment_length)
+2026-09-18T15:29:35.5812451Z [0m[31m-            .ok_or(PoolError::Bounds)?;
+2026-09-18T15:29:35.5812747Z [0m[32m+        let limit = begin.checked_add(segment_length).ok_or(PoolError::Bounds)?;
+2026-09-18T15:29:35.5812992Z [0m         if start < limit {
+2026-09-18T15:29:35.5813158Z              if end > limit
+2026-09-18T15:29:35.5813342Z                  || (start == begin
+2026-09-18T15:29:35.5875077Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\active_flow_tests.rs:289:
+2026-09-18T15:29:35.5875317Z      drop(package);
+2026-09-18T15:29:35.5875446Z      drop(later);
+2026-09-18T15:29:35.5896295Z      assert!(fs::read(&package_path).unwrap() == expected);
+2026-09-18T15:29:35.5896634Z [31m-    let mut package =
+2026-09-18T15:29:35.5897085Z [0m[31m-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.5897772Z [0m[32m+    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.5898171Z [0m     assert_eq!(
+2026-09-18T15:29:35.5898395Z          package.restore_new(&mut base, &restored_path).unwrap(),
+2026-09-18T15:29:35.5898601Z          later_pin
+2026-09-18T15:29:35.6024523Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:212:
+2026-09-18T15:29:35.6024976Z  #[test]
+2026-09-18T15:29:35.6025337Z  fn independently_encoded_packages_restore_exact_bytes_without_a_later_directory() {
+2026-09-18T15:29:35.6025978Z      let d = Dir::new();
+2026-09-18T15:29:35.6026450Z [31m-    for (number, (base_height, later_height)) in [(0, 0), (0, 3), (2, 2), (2, 5)]
+2026-09-18T15:29:35.6026981Z [0m[31m-        .into_iter()
+2026-09-18T15:29:35.6027237Z [0m[31m-        .enumerate()
+2026-09-18T15:29:35.6027542Z [0m[32m+    for (number, (base_height, later_height)) in
+2026-09-18T15:29:35.6027944Z [0m[32m+        [(0, 0), (0, 3), (2, 2), (2, 5)].into_iter().enumerate()
+2026-09-18T15:29:35.6028239Z [0m     {
+2026-09-18T15:29:35.6028559Z          let base_path = d.path(&format!("base-{number}"));
+2026-09-18T15:29:35.6028985Z          let later_path = d.path(&format!("later-{number}"));
+2026-09-18T15:29:35.6029449Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:244:
+2026-09-18T15:29:35.6030000Z          assert_plan(&package, base_pin, later_pin, &ranges);
+2026-09-18T15:29:35.6030367Z          package.verify(&mut base).unwrap();
+2026-09-18T15:29:35.6030700Z          let restored = d.path(&format!("restored-{number}"));
+2026-09-18T15:29:35.6031000Z [31m-        assert_eq!(package.restore_new(&mut base, &restored).unwrap(), later_pin);
+2026-09-18T15:29:35.6031254Z [0m[32m+        assert_eq!(
+2026-09-18T15:29:35.6031456Z [0m[32m+            package.restore_new(&mut base, &restored).unwrap(),
+2026-09-18T15:29:35.6031661Z [0m[32m+            later_pin
+2026-09-18T15:29:35.6031806Z [0m[32m+        );
+2026-09-18T15:29:35.6032003Z [0m         assert_eq!(directory_bytes(&restored), original_later);
+2026-09-18T15:29:35.6032319Z          // restore_new returns no owning writer or hidden pending reservation.
+2026-09-18T15:29:35.6032624Z          let mut pool = open_store(&restored).unwrap();
+2026-09-18T15:29:35.6032893Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:369:
+2026-09-18T15:29:35.6033262Z          // These PRIVATE calls cannot publish an object to production callers.
+2026-09-18T15:29:35.6033615Z          // Prove the genuine base, strict metadata, complete payload and repinned
+2026-09-18T15:29:35.6033947Z          // combined layout all pass before exercising the actual replay gate.
+2026-09-18T15:29:35.6034182Z [31m-        let mut unchecked =
+2026-09-18T15:29:35.6034498Z [0m[31m-            ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
+2026-09-18T15:29:35.6034916Z [0m[32m+        let mut unchecked = ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
+2026-09-18T15:29:35.6035311Z [0m         unchecked.check_bytes(&base).unwrap();
+2026-09-18T15:29:35.6035510Z          if ranges.len() > 1 {
+2026-09-18T15:29:35.6035783Z              // Both segment indices and individual offsets remain in bounds.
+2026-09-18T15:29:35.6036088Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:378:
+2026-09-18T15:29:35.6036478Z              // strict table ordering rather than an out-of-range segment index.
+2026-09-18T15:29:35.6036742Z              let mut reversed = ranges.clone();
+2026-09-18T15:29:35.6036934Z              reversed.reverse();
+2026-09-18T15:29:35.6037129Z [31m-            let reordered = encode_fixture(
+2026-09-18T15:29:35.6037321Z [0m[31m-                base_pin,
+2026-09-18T15:29:35.6037485Z [0m[31m-                pin,
+2026-09-18T15:29:35.6037644Z [0m[31m-                &reversed,
+2026-09-18T15:29:35.6037850Z [0m[31m-                &payload(&changed, &reversed),
+2026-09-18T15:29:35.6038036Z [0m[31m-            );
+2026-09-18T15:29:35.6038322Z [0m[32m+            let reordered = encode_fixture(base_pin, pin, &reversed, &payload(&changed, &reversed));
+2026-09-18T15:29:35.6038656Z [0m             let reordered_path = d.path("out-of-order.incremental");
+2026-09-18T15:29:35.6038950Z              fs::write(&reordered_path, &reordered).unwrap();
+2026-09-18T15:29:35.6039154Z              assert!(matches!(
+2026-09-18T15:29:35.6039450Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:430:
+2026-09-18T15:29:35.6039780Z      let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
+2026-09-18T15:29:35.6040074Z      let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
+2026-09-18T15:29:35.6040320Z      let package_path = d.path("good.incremental");
+2026-09-18T15:29:35.6040604Z [31m-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+2026-09-18T15:29:35.6040863Z [0m[32m+    let mut package = base
+2026-09-18T15:29:35.6041077Z [0m[32m+        .pack_incremental_new(&mut later, &package_path)
+2026-09-18T15:29:35.6041295Z [0m[32m+        .unwrap();
+2026-09-18T15:29:35.6041481Z [0m     for (index, (height, variant, domain)) in [
+2026-09-18T15:29:35.6041664Z          (2, 1, DOMAIN),
+2026-09-18T15:29:35.6041806Z          (4, 1, DOMAIN),
+2026-09-18T15:29:35.6042034Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:460:
+2026-09-18T15:29:35.6042308Z      package.verify(&mut base).unwrap();
+2026-09-18T15:29:35.6042566Z      let mut same_base = ActiveArchive::open(&base_path, base_pin).unwrap();
+2026-09-18T15:29:35.6042823Z      let same_path = d.path("same-path.incremental");
+2026-09-18T15:29:35.6043109Z [31m-    let same = base.pack_incremental_new(&mut same_base, &same_path).unwrap();
+2026-09-18T15:29:35.6043345Z [0m[32m+    let same = base
+2026-09-18T15:29:35.6043551Z [0m[32m+        .pack_incremental_new(&mut same_base, &same_path)
+2026-09-18T15:29:35.6043755Z [0m[32m+        .unwrap();
+2026-09-18T15:29:35.6043948Z [0m     assert_plan(&same, base_pin, base_pin, &[]);
+2026-09-18T15:29:35.6044111Z  }
+2026-09-18T15:29:35.6044211Z  
+2026-09-18T15:29:35.6044416Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:474:
+2026-09-18T15:29:35.6044747Z      let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
+2026-09-18T15:29:35.6045035Z      let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
+2026-09-18T15:29:35.6045290Z      let package_path = d.path("package.incremental");
+2026-09-18T15:29:35.6045568Z [31m-    let package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+2026-09-18T15:29:35.6045820Z [0m[32m+    let package = base
+2026-09-18T15:29:35.6046031Z [0m[32m+        .pack_incremental_new(&mut later, &package_path)
+2026-09-18T15:29:35.6046236Z [0m[32m+        .unwrap();
+2026-09-18T15:29:35.6046389Z [0m     drop(package);
+2026-09-18T15:29:35.6046591Z      let original_package = fs::read(&package_path).unwrap();
+2026-09-18T15:29:35.6047572Z [31m-    let mut package =
+2026-09-18T15:29:35.6047868Z [0m[31m-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.6048293Z [0m[32m+    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.6048608Z [0m     let file = d.path("existing-file");
+2026-09-18T15:29:35.6048805Z      fs::write(&file, b"keep file").unwrap();
+2026-09-18T15:29:35.6049005Z      let directory = d.path("existing-directory");
+2026-09-18T15:29:35.6049269Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:506:
+2026-09-18T15:29:35.6049547Z          assert!(!target.exists());
+2026-09-18T15:29:35.6049693Z      }
+2026-09-18T15:29:35.6049859Z      assert_eq!(fs::read(&file).unwrap(), b"keep file");
+2026-09-18T15:29:35.6050044Z [31m-    assert_eq!(
+2026-09-18T15:29:35.6050250Z [0m[31m-        fs::read(directory.join("keep")).unwrap(),
+2026-09-18T15:29:35.6050448Z [0m[31m-        b"keep directory"
+2026-09-18T15:29:35.6050601Z [0m[31m-    );
+2026-09-18T15:29:35.6050839Z [0m[32m+    assert_eq!(fs::read(directory.join("keep")).unwrap(), b"keep directory");
+2026-09-18T15:29:35.6051158Z [0m     assert_eq!(fs::read(&package_path).unwrap(), original_package);
+2026-09-18T15:29:35.6051747Z      // A prior successful open and plan cannot authorize future base contents.
+2026-09-18T15:29:35.6051984Z      change_tail(&base_path).unwrap();
+2026-09-18T15:29:35.6052235Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:600:
+2026-09-18T15:29:35.6052488Z          drop(file);
+2026-09-18T15:29:35.6052606Z      }
+2026-09-18T15:29:35.6052766Z      let package_path = d.path("complete.incremental");
+2026-09-18T15:29:35.6053059Z [31m-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+2026-09-18T15:29:35.6053320Z [0m[32m+    let mut package = base
+2026-09-18T15:29:35.6053529Z [0m[32m+        .pack_incremental_new(&mut later, &package_path)
+2026-09-18T15:29:35.6053727Z [0m[32m+        .unwrap();
+2026-09-18T15:29:35.6053887Z [0m     for fault in 11..=14 {
+2026-09-18T15:29:35.6054125Z          let target = d.path(&format!("partial-restore-{fault}"));
+2026-09-18T15:29:35.6054334Z          package.fault = fault;
+2026-09-18T15:29:35.6054567Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:776:
+2026-09-18T15:29:35.6054814Z              }
+2026-09-18T15:29:35.6055111Z              assert!(ActiveIncrementalPackage::open(&path, &mut base, later_pin).is_err());
+2026-09-18T15:29:35.6055348Z          } else {
+2026-09-18T15:29:35.6055490Z [31m-            let mut package =
+2026-09-18T15:29:35.6055786Z [0m[31m-                ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.6056193Z [0m[32m+            let mut package = ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+2026-09-18T15:29:35.6056484Z [0m             if kind == "replacement" {
+2026-09-18T15:29:35.6056722Z                  fs::rename(&path, &other).unwrap();
+2026-09-18T15:29:35.6056964Z                  fs::write(&path, &raw).unwrap();
+2026-09-18T15:29:35.6057216Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package\tests.rs:804:
+2026-09-18T15:29:35.6057552Z      fs::write(&path, &raw).unwrap();
+2026-09-18T15:29:35.6057883Z      assert_eq!(package.verify(&mut base), Err(PoolError::Corrupt));
+2026-09-18T15:29:35.6058237Z      assert_eq!(fs::read(&path).unwrap(), raw);
+2026-09-18T15:29:35.6058492Z [31m-    assert_eq!(
+2026-09-18T15:29:35.6058798Z [0m[31m-        fs::read(moved.join("package.incremental")).unwrap(),
+2026-09-18T15:29:35.6059089Z [0m[31m-        raw
+2026-09-18T15:29:35.6059276Z [0m[31m-    );
+2026-09-18T15:29:35.6059621Z [0m[32m+    assert_eq!(fs::read(moved.join("package.incremental")).unwrap(), raw);
+2026-09-18T15:29:35.6060018Z [0m }
+2026-09-18T15:29:35.6060157Z  
+2026-09-18T15:29:35.6060263Z  #[cfg(windows)]
+2026-09-18T15:29:35.6060476Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package.rs:92:
+2026-09-18T15:29:35.6060756Z          .map_err(|_| PoolError::Storage)?;
+2026-09-18T15:29:35.6060934Z      for range in ranges {
+2026-09-18T15:29:35.6061101Z          if range.segment_index < count {
+2026-09-18T15:29:35.6061393Z [31m-            if range.segment_index.checked_add(1).ok_or(PoolError::Bounds)? != count
+2026-09-18T15:29:35.6061636Z [0m[32m+            if range
+2026-09-18T15:29:35.6061802Z [0m[32m+                .segment_index
+2026-09-18T15:29:35.6061974Z [0m[32m+                .checked_add(1)
+2026-09-18T15:29:35.6062188Z [0m[32m+                .ok_or(PoolError::Bounds)?
+2026-09-18T15:29:35.6062370Z [0m[32m+                != count
+2026-09-18T15:29:35.6062539Z [0m                 || range.offset != tail
+2026-09-18T15:29:35.6062730Z                  || tail == 0
+2026-09-18T15:29:35.6062869Z              {
+2026-09-18T15:29:35.6063074Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package.rs:154:
+2026-09-18T15:29:35.6063372Z              return Err(PoolError::Stale);
+2026-09-18T15:29:35.6063532Z          }
+2026-09-18T15:29:35.6063715Z          let count = usize::try_from(u32::from_be_bytes(
+2026-09-18T15:29:35.6063911Z [31m-            fixed[264..268]
+2026-09-18T15:29:35.6064137Z [0m[31m-                .try_into()
+2026-09-18T15:29:35.6064359Z [0m[31m-                .map_err(|_| PoolError::Corrupt)?,
+2026-09-18T15:29:35.6064648Z [0m[32m+            fixed[264..268].try_into().map_err(|_| PoolError::Corrupt)?,
+2026-09-18T15:29:35.6064859Z [0m         ))
+2026-09-18T15:29:35.6065023Z          .map_err(|_| PoolError::Bounds)?;
+2026-09-18T15:29:35.6065228Z          let size = metadata_length(count)?;
+2026-09-18T15:29:35.6065471Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package.rs:187:
+2026-09-18T15:29:35.6065789Z                  segment_index: u32::from_be_bytes(
+2026-09-18T15:29:35.6066124Z                      bytes[..4].try_into().map_err(|_| PoolError::Corrupt)?,
+2026-09-18T15:29:35.6066331Z                  ),
+2026-09-18T15:29:35.6066511Z [31m-                offset: u32::from_be_bytes(
+2026-09-18T15:29:35.6066785Z [0m[31m-                    bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?,
+2026-09-18T15:29:35.6067194Z [0m[31m-                ),
+2026-09-18T15:29:35.6067512Z [0m[32m+                offset: u32::from_be_bytes(bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?),
+2026-09-18T15:29:35.6067814Z [0m                 length: u32::from_be_bytes(
+2026-09-18T15:29:35.6068156Z                      bytes[8..12].try_into().map_err(|_| PoolError::Corrupt)?,
+2026-09-18T15:29:35.6068358Z                  ),
+2026-09-18T15:29:35.6068570Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\src\pool\recovery\active\package.rs:371:
+2026-09-18T15:29:35.6068857Z          let plan = self.incremental_plan(later)?;
+2026-09-18T15:29:35.6069057Z          let metadata = encode(&plan)?;
+2026-09-18T15:29:35.6069254Z          let ranges = physical_ranges(&plan)?;
+2026-09-18T15:29:35.6069487Z [31m-        let file = RetainedPackage::create_new(
+2026-09-18T15:29:35.6069671Z [0m[31m-            target,
+2026-09-18T15:29:35.6069826Z [0m[31m-            &metadata,
+2026-09-18T15:29:35.6069986Z [0m[31m-            &ranges,
+2026-09-18T15:29:35.6070156Z [0m[31m-            &later.journal,
+2026-09-18T15:29:35.6070322Z [0m[31m-            &later.file,
+2026-09-18T15:29:35.6070472Z [0m[31m-        )?;
+2026-09-18T15:29:35.6070614Z [0m[32m+        let file =
+2026-09-18T15:29:35.6070924Z [0m[32m+            RetainedPackage::create_new(target, &metadata, &ranges, &later.journal, &later.file)?;
+2026-09-18T15:29:35.6071239Z [0m         let mut package = ActiveIncrementalPackage {
+2026-09-18T15:29:35.6071428Z              file,
+2026-09-18T15:29:35.6071633Z              metadata,
+2026-09-18T15:29:35.8446076Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\tests\active_incremental_package_cli.rs:34:
+2026-09-18T15:29:35.8446495Z      fn new() -> Self {
+2026-09-18T15:29:35.8446737Z          let mut nonce = [0; 16];
+2026-09-18T15:29:35.8447014Z          OsRng.fill_bytes(&mut nonce);
+2026-09-18T15:29:35.8447611Z [31m-        let path = std::env::temp_dir()
+2026-09-18T15:29:35.8448139Z [0m[31m-            .join(format!("zevune-active-incremental-package-cli-{}", hex(&nonce)));
+2026-09-18T15:29:35.8448664Z [0m[32m+        let path = std::env::temp_dir().join(format!(
+2026-09-18T15:29:35.8449059Z [0m[32m+            "zevune-active-incremental-package-cli-{}",
+2026-09-18T15:29:35.8449386Z [0m[32m+            hex(&nonce)
+2026-09-18T15:29:35.8449610Z [0m[32m+        ));
+2026-09-18T15:29:35.8449885Z [0m         fs::create_dir(&path).unwrap();
+2026-09-18T15:29:35.8450150Z          Self(path)
+2026-09-18T15:29:35.8450336Z      }
+2026-09-18T15:29:35.8450676Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\tests\active_incremental_package_cli.rs:418:
+2026-09-18T15:29:35.8451186Z          (&f.base, &f.base, f.base.path.as_path(), vec![]),
+2026-09-18T15:29:35.8451584Z          (&f.later, &f.later, f.later.path.as_path(), vec![]),
+2026-09-18T15:29:35.8451956Z          (&f.later, &f.later, copy.as_path(), vec![]),
+2026-09-18T15:29:35.8452230Z [31m-        (
+2026-09-18T15:29:35.8452630Z [0m[31m-            &f.base,
+2026-09-18T15:29:35.8452873Z [0m[31m-            &f.later,
+2026-09-18T15:29:35.8453151Z [0m[31m-            f.later.path.as_path(),
+2026-09-18T15:29:35.8453429Z [0m[31m-            vec![(0, 0, 450)],
+2026-09-18T15:29:35.8453679Z [0m[31m-        ),
+2026-09-18T15:29:35.8454032Z [0m[32m+        (&f.base, &f.later, f.later.path.as_path(), vec![(0, 0, 450)]),
+2026-09-18T15:29:35.8454385Z [0m     ];
+2026-09-18T15:29:35.8454738Z      for (number, (base, later, source, ranges)) in cases.into_iter().enumerate() {
+2026-09-18T15:29:35.8455240Z          let package = f.dir.path(&format!("package-{number}"));
+2026-09-18T15:29:35.8455697Z Diff in \\?\D:\a\Zevune\Zevune\integration\orchard\tests\active_incremental_package_cli.rs:439:
+2026-09-18T15:29:35.8456099Z          ] {
+2026-09-18T15:29:35.8456297Z              success(
+2026-09-18T15:29:35.8456573Z                  &call(&package_args(
+2026-09-18T15:29:35.8456843Z [31m-                    mode,
+2026-09-18T15:29:35.8457099Z [0m[31m-                    &base.path,
+2026-09-18T15:29:35.8457865Z [0m[31m-                    base.pin,
+2026-09-18T15:29:35.8458129Z [0m[31m-                    input,
+2026-09-18T15:29:35.8458318Z [0m[31m-                    later.pin,
+2026-09-18T15:29:35.8458491Z [0m[31m-                    output,
+2026-09-18T15:29:35.8458737Z [0m[32m+                    mode, &base.path, base.pin, input, later.pin, output,
+2026-09-18T15:29:35.8458962Z [0m                 )),
+2026-09-18T15:29:35.8459220Z                  &expected_json(mode, base.pin, later.pin, &ranges),
+2026-09-18T15:29:35.8459421Z              );
+2026-09-18T15:29:36.2062381Z ##[error]Process completed with exit code 1.
+2026-09-18T15:29:36.2236594Z Post job cleanup.
+2026-09-18T15:29:36.3202265Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-09-18T15:29:36.3380499Z git version 2.55.0.windows.5
+2026-09-18T15:29:36.3421048Z Temporarily overriding HOME='D:\a\_temp\9ef46269-7d91-4896-a0ca-9a215d3f2ccd' before making global git config changes
+2026-09-18T15:29:36.3421443Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:29:36.3427016Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Zevune\Zevune
+2026-09-18T15:29:36.3611767Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:29:36.3790693Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-09-18T15:29:36.7301066Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:29:36.7491855Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-09-18T15:29:37.0971006Z Cleaning up orphan processes
+2026-09-18T15:29:37.0997958Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

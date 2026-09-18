@@ -1,0 +1,289 @@
+﻿2026-09-18T15:35:12.7116922Z Current runner version: '2.337.0'
+2026-09-18T15:35:12.7141764Z ##[group]Runner Image Provisioner
+2026-09-18T15:35:12.7142648Z Hosted Compute Agent
+2026-09-18T15:35:12.7143343Z Version: 20260828.587
+2026-09-18T15:35:12.7143997Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-18T15:35:12.7144964Z Build Date: 2026-08-28T16:44:25Z
+2026-09-18T15:35:12.7145825Z Worker ID: {6b5fe89c-d632-45aa-8412-4dc7aa7ac95e}
+2026-09-18T15:35:12.7146556Z Azure Region: westus3
+2026-09-18T15:35:12.7147184Z ##[endgroup]
+2026-09-18T15:35:12.7148646Z ##[group]Operating System
+2026-09-18T15:35:12.7149292Z Ubuntu
+2026-09-18T15:35:12.7149954Z 24.04.5
+2026-09-18T15:35:12.7150468Z LTS
+2026-09-18T15:35:12.7151020Z ##[endgroup]
+2026-09-18T15:35:12.7151595Z ##[group]Runner Image
+2026-09-18T15:35:12.7152203Z Image: ubuntu-24.04
+2026-09-18T15:35:12.7152887Z Version: 20260907.300.1
+2026-09-18T15:35:12.7154109Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-18T15:35:12.7155939Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-18T15:35:12.7156925Z ##[endgroup]
+2026-09-18T15:35:12.7158131Z ##[group]GITHUB_TOKEN Permissions
+2026-09-18T15:35:12.7159985Z Contents: read
+2026-09-18T15:35:12.7160718Z Metadata: read
+2026-09-18T15:35:12.7161286Z ##[endgroup]
+2026-09-18T15:35:12.7163377Z Secret source: Actions
+2026-09-18T15:35:12.7164346Z Cache mode: write
+2026-09-18T15:35:12.7165405Z Prepare workflow directory
+2026-09-18T15:35:12.7545693Z Prepare all required actions
+2026-09-18T15:35:12.7592125Z Getting action download info
+2026-09-18T15:35:13.0779486Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-18T15:35:13.2108137Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-18T15:35:14.1032860Z Complete job name: source
+2026-09-18T15:35:14.1833788Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-18T15:35:14.1835215Z with:
+2026-09-18T15:35:14.1835737Z   persist-credentials: false
+2026-09-18T15:35:14.1836344Z   repository: youq616/Zevune
+2026-09-18T15:35:14.1840436Z   token: ***
+2026-09-18T15:35:14.1840931Z   ssh-strict: true
+2026-09-18T15:35:14.1841443Z   ssh-user: git
+2026-09-18T15:35:14.1841933Z   clean: true
+2026-09-18T15:35:14.1842445Z   sparse-checkout-cone-mode: true
+2026-09-18T15:35:14.1843041Z   fetch-depth: 1
+2026-09-18T15:35:14.1843586Z   fetch-tags: false
+2026-09-18T15:35:14.1844090Z   show-progress: true
+2026-09-18T15:35:14.1844773Z   lfs: false
+2026-09-18T15:35:14.1845266Z   submodules: false
+2026-09-18T15:35:14.1845789Z   set-safe-directory: true
+2026-09-18T15:35:14.1846617Z ##[endgroup]
+2026-09-18T15:35:14.2865430Z Syncing repository: youq616/Zevune
+2026-09-18T15:35:14.2868074Z ##[group]Getting Git version info
+2026-09-18T15:35:14.2869386Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-18T15:35:14.2871267Z [command]/usr/bin/git version
+2026-09-18T15:35:14.2933359Z git version 2.55.0
+2026-09-18T15:35:14.2955244Z ##[endgroup]
+2026-09-18T15:35:14.2970151Z Temporarily overriding HOME='/home/runner/work/_temp/50061cba-5a14-42d5-b78a-daf413ecbf1e' before making global git config changes
+2026-09-18T15:35:14.2972953Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:35:14.2975388Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-18T15:35:14.3030557Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-18T15:35:14.3035157Z ##[group]Initializing the repository
+2026-09-18T15:35:14.3039810Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-18T15:35:14.3170573Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-18T15:35:14.3172416Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-18T15:35:14.3173637Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-18T15:35:14.3175287Z hint: call:
+2026-09-18T15:35:14.3175785Z hint:
+2026-09-18T15:35:14.3176410Z hint: 	git config --global init.defaultBranch <name>
+2026-09-18T15:35:14.3177144Z hint:
+2026-09-18T15:35:14.3177837Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-18T15:35:14.3178970Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-18T15:35:14.3179858Z hint:
+2026-09-18T15:35:14.3180351Z hint: 	git branch -m <name>
+2026-09-18T15:35:14.3180974Z hint:
+2026-09-18T15:35:14.3181708Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-18T15:35:14.3188427Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-18T15:35:14.3202298Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-18T15:35:14.3262397Z ##[endgroup]
+2026-09-18T15:35:14.3264042Z ##[group]Disabling automatic garbage collection
+2026-09-18T15:35:14.3267072Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-18T15:35:14.3305230Z ##[endgroup]
+2026-09-18T15:35:14.3306674Z ##[group]Setting up auth
+2026-09-18T15:35:14.3311563Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:35:14.3346534Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:35:14.3749291Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:35:14.3787893Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:35:14.4016765Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-18T15:35:14.4056128Z ##[endgroup]
+2026-09-18T15:35:14.4057373Z ##[group]Fetching the repository
+2026-09-18T15:35:14.4066388Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +aad3cfbb99350b2e8db1ac7abe718b5684a5ab1f:refs/remotes/pull/17/merge
+2026-09-18T15:35:16.5570817Z From https://github.com/youq616/Zevune
+2026-09-18T15:35:16.5572927Z  * [new ref]         aad3cfbb99350b2e8db1ac7abe718b5684a5ab1f -> pull/17/merge
+2026-09-18T15:35:16.5578426Z ##[endgroup]
+2026-09-18T15:35:16.5580620Z ##[group]Determining the checkout info
+2026-09-18T15:35:16.5582919Z ##[endgroup]
+2026-09-18T15:35:16.5585664Z [command]/usr/bin/git sparse-checkout disable
+2026-09-18T15:35:16.5641222Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-18T15:35:16.5672661Z ##[group]Checking out the ref
+2026-09-18T15:35:16.5676635Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/17/merge
+2026-09-18T15:35:16.6727923Z Note: switching to 'refs/remotes/pull/17/merge'.
+2026-09-18T15:35:16.6729380Z 
+2026-09-18T15:35:16.6730520Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-18T15:35:16.6733291Z changes and commit them, and you can discard any commits you make in this
+2026-09-18T15:35:16.6736224Z state without impacting any branches by switching back to a branch.
+2026-09-18T15:35:16.6737895Z 
+2026-09-18T15:35:16.6739066Z If you want to create a new branch to retain commits you create, you may
+2026-09-18T15:35:16.6741581Z do so (now or later) by using -c with the switch command. Example:
+2026-09-18T15:35:16.6743021Z 
+2026-09-18T15:35:16.6743648Z   git switch -c <new-branch-name>
+2026-09-18T15:35:16.6744847Z 
+2026-09-18T15:35:16.6745524Z Or undo this operation with:
+2026-09-18T15:35:16.6746392Z 
+2026-09-18T15:35:16.6746946Z   git switch -
+2026-09-18T15:35:16.6747633Z 
+2026-09-18T15:35:16.6748607Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-18T15:35:16.6750445Z 
+2026-09-18T15:35:16.6752509Z HEAD is now at aad3cfb Merge f51c8db240933256870ff03c07bc68915b4ac4a1 into 2cc87a2207d502ac5cfe00ea52e525c1516917e5
+2026-09-18T15:35:16.6758554Z ##[endgroup]
+2026-09-18T15:35:16.6810709Z [command]/usr/bin/git log -1 --format=%H
+2026-09-18T15:35:16.6838434Z aad3cfbb99350b2e8db1ac7abe718b5684a5ab1f
+2026-09-18T15:35:16.6850686Z ##[group]Removing auth
+2026-09-18T15:35:16.6855297Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:35:16.6891576Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:35:16.7113743Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:35:16.7143102Z http.https://github.com/.extraheader
+2026-09-18T15:35:16.7152461Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-18T15:35:16.7191393Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:35:16.7409120Z ##[endgroup]
+2026-09-18T15:35:16.7762205Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-18T15:35:16.7768859Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-18T15:35:16.7770534Z with:
+2026-09-18T15:35:16.7771443Z   go-version: 1.27.1
+2026-09-18T15:35:16.7772662Z   cache-dependency-path: integration/cometbft/go.sum
+2026-09-18T15:35:16.7774107Z   check-latest: false
+2026-09-18T15:35:16.7783745Z   token: ***
+2026-09-18T15:35:16.7784803Z   cache: true
+2026-09-18T15:35:16.7785760Z ##[endgroup]
+2026-09-18T15:35:16.9197165Z Setup go version spec 1.27.1
+2026-09-18T15:35:16.9210009Z Attempting to download 1.27.1...
+2026-09-18T15:35:16.9318802Z (node:2251) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-18T15:35:16.9323129Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-18T15:35:17.8938975Z matching 1.27.1...
+2026-09-18T15:35:17.8963689Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-linux-x64.tar.gz
+2026-09-18T15:35:18.4669920Z Extracting Go...
+2026-09-18T15:35:18.4791140Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/9a3ad947-4def-4b92-99ee-7cb4f4eef38a -f /home/runner/work/_temp/6270d8b7-0748-4d00-b095-c95b98cb04e2
+2026-09-18T15:35:20.1777875Z Successfully extracted go to /home/runner/work/_temp/9a3ad947-4def-4b92-99ee-7cb4f4eef38a
+2026-09-18T15:35:20.1779009Z Adding to the cache ...
+2026-09-18T15:35:26.5279428Z Successfully cached go to /opt/hostedtoolcache/go/1.27.1/x64
+2026-09-18T15:35:26.5282416Z Added go to the path
+2026-09-18T15:35:26.5284906Z Successfully set up Go version 1.27.1
+2026-09-18T15:35:26.5545592Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-18T15:35:26.5587849Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-18T15:35:26.5630383Z /home/runner/go/pkg/mod
+2026-09-18T15:35:26.5647617Z /home/runner/.cache/go-build
+2026-09-18T15:35:26.7732552Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:35:26.7856370Z (node:2251) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-18T15:35:28.0026453Z Received 33554432 of 484452015 (6.9%), 32.0 MBs/sec
+2026-09-18T15:35:29.0031858Z Received 201326592 of 484452015 (41.6%), 96.0 MBs/sec
+2026-09-18T15:35:30.0038414Z Received 364904448 of 484452015 (75.3%), 116.0 MBs/sec
+2026-09-18T15:35:30.7258608Z Received 484452015 of 484452015 (100.0%), 124.1 MBs/sec
+2026-09-18T15:35:30.7260355Z Cache Size: ~462 MB (484452015 B)
+2026-09-18T15:35:30.7298050Z [command]/usr/bin/tar -xf /home/runner/work/_temp/5f6f987c-b404-4b1e-92c7-eaaa0b0c8fe6/cache.tzst -P -C /home/runner/work/Zevune/Zevune --use-compress-program unzstd
+2026-09-18T15:35:33.4158984Z Cache restored successfully
+2026-09-18T15:35:33.4389987Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:35:33.4414325Z go version go1.27.1 linux/amd64
+2026-09-18T15:35:33.4415024Z 
+2026-09-18T15:35:33.4415566Z ##[group]go env
+2026-09-18T15:35:33.4768995Z AR='ar'
+2026-09-18T15:35:33.4769560Z CC='gcc'
+2026-09-18T15:35:33.4770200Z CGO_CFLAGS='-O2 -g'
+2026-09-18T15:35:33.4770952Z CGO_CPPFLAGS=''
+2026-09-18T15:35:33.4771629Z CGO_CXXFLAGS='-O2 -g'
+2026-09-18T15:35:33.4772306Z CGO_ENABLED='1'
+2026-09-18T15:35:33.4772841Z CGO_FFLAGS='-O2 -g'
+2026-09-18T15:35:33.4773384Z CGO_LDFLAGS='-O2 -g'
+2026-09-18T15:35:33.4773918Z CXX='g++'
+2026-09-18T15:35:33.4774952Z GCCGO='gccgo'
+2026-09-18T15:35:33.4775553Z GO111MODULE=''
+2026-09-18T15:35:33.4776067Z GOAMD64='v1'
+2026-09-18T15:35:33.4776587Z GOARCH='amd64'
+2026-09-18T15:35:33.4777089Z GOAUTH='netrc'
+2026-09-18T15:35:33.4777626Z GOBIN='/home/runner/go/bin'
+2026-09-18T15:35:33.4778270Z GOCACHE='/home/runner/.cache/go-build'
+2026-09-18T15:35:33.4778967Z GOCACHEPROG=''
+2026-09-18T15:35:33.4779481Z GODEBUG=''
+2026-09-18T15:35:33.4780019Z GOENV='/home/runner/.config/go/env'
+2026-09-18T15:35:33.4780642Z GOEXE=''
+2026-09-18T15:35:33.4781146Z GOEXPERIMENT=''
+2026-09-18T15:35:33.4781676Z GOFIPS140='off'
+2026-09-18T15:35:33.4782197Z GOFLAGS=''
+2026-09-18T15:35:33.4783501Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build1035351488=/tmp/go-build -gno-record-gcc-switches'
+2026-09-18T15:35:33.4785228Z GOHOSTARCH='amd64'
+2026-09-18T15:35:33.4785778Z GOHOSTOS='linux'
+2026-09-18T15:35:33.4786327Z GOINSECURE=''
+2026-09-18T15:35:33.4786974Z GOMOD='/home/runner/work/Zevune/Zevune/go.mod'
+2026-09-18T15:35:33.4787699Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-09-18T15:35:33.4788345Z GONOPROXY=''
+2026-09-18T15:35:33.4788969Z GONOSUMDB=''
+2026-09-18T15:35:33.4789500Z GOOS='linux'
+2026-09-18T15:35:33.4790024Z GOPACKAGESDRIVER=''
+2026-09-18T15:35:33.4790588Z GOPATH='/home/runner/go'
+2026-09-18T15:35:33.4791159Z GOPRIVATE=''
+2026-09-18T15:35:33.4791799Z GOPROXY='https://proxy.golang.org,direct'
+2026-09-18T15:35:33.4792554Z GOROOT='/opt/hostedtoolcache/go/1.27.1/x64'
+2026-09-18T15:35:33.4793251Z GOSUMDB='sum.golang.org'
+2026-09-18T15:35:33.4793839Z GOTELEMETRY='local'
+2026-09-18T15:35:33.4794726Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-09-18T15:35:33.4795508Z GOTMPDIR=''
+2026-09-18T15:35:33.4796046Z GOTOOLCHAIN='local'
+2026-09-18T15:35:33.4796865Z GOTOOLDIR='/opt/hostedtoolcache/go/1.27.1/x64/pkg/tool/linux_amd64'
+2026-09-18T15:35:33.4797706Z GOVCS=''
+2026-09-18T15:35:33.4798222Z GOVERSION='go1.27.1'
+2026-09-18T15:35:33.4798767Z GOWORK=''
+2026-09-18T15:35:33.4799307Z PKG_CONFIG='pkg-config'
+2026-09-18T15:35:33.4799738Z 
+2026-09-18T15:35:33.4800389Z ##[endgroup]
+2026-09-18T15:35:33.5027031Z ##[group]Run rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+2026-09-18T15:35:33.5027699Z [36;1mrustup toolchain install 1.98.1 --profile minimal --component rustfmt[0m
+2026-09-18T15:35:33.5071190Z shell: /usr/bin/bash -e {0}
+2026-09-18T15:35:33.5071455Z env:
+2026-09-18T15:35:33.5071654Z   GOTOOLCHAIN: local
+2026-09-18T15:35:33.5071879Z ##[endgroup]
+2026-09-18T15:35:33.7750539Z info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+2026-09-18T15:35:33.9842978Z info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+2026-09-18T15:35:33.9843790Z info: downloading 4 components
+2026-09-18T15:35:41.4844513Z 
+2026-09-18T15:35:41.4914055Z   1.98.1-x86_64-unknown-linux-gnu installed - rustc 1.98.1 (48a229cea 2026-09-01)
+2026-09-18T15:35:41.4914890Z 
+2026-09-18T15:35:41.5002316Z ##[group]Run python - <<'PY'
+2026-09-18T15:35:41.5002667Z [36;1mpython - <<'PY'[0m
+2026-09-18T15:35:41.5002917Z [36;1mimport subprocess[0m
+2026-09-18T15:35:41.5003281Z [36;1mpaths = ['internal/poolbridge', 'integration/cometbft/poolapp',[0m
+2026-09-18T15:35:41.5003833Z [36;1m         'integration/cometbft/labnet', 'integration/cometbft/cmd/zevune-network'][0m
+2026-09-18T15:35:41.5004377Z [36;1mresult = subprocess.run(['gofmt', '-l', *paths], check=True,[0m
+2026-09-18T15:35:41.5005136Z [36;1m                        stdout=subprocess.PIPE, text=True)[0m
+2026-09-18T15:35:41.5005472Z [36;1mgo_diff_code = 0[0m
+2026-09-18T15:35:41.5005731Z [36;1mif result.stdout.strip():[0m
+2026-09-18T15:35:41.5006108Z [36;1m    go_diff_code = subprocess.run(['gofmt', '-d', *paths]).returncode[0m
+2026-09-18T15:35:41.5006614Z [36;1mrust = subprocess.run(['cargo', '+1.98.1', 'fmt', '--manifest-path',[0m
+2026-09-18T15:35:41.5007140Z [36;1m                       'integration/orchard/Cargo.toml', '--all', '--', '--check'])[0m
+2026-09-18T15:35:41.5007725Z [36;1mraise SystemExit(bool(result.stdout.strip()) or go_diff_code != 0 or rust.returncode != 0)[0m
+2026-09-18T15:35:41.5008186Z [36;1mPY[0m
+2026-09-18T15:35:41.5045368Z shell: /usr/bin/bash -e {0}
+2026-09-18T15:35:41.5045622Z env:
+2026-09-18T15:35:41.5045825Z   GOTOOLCHAIN: local
+2026-09-18T15:35:41.5046048Z ##[endgroup]
+2026-09-18T15:35:41.8492200Z ##[group]Run go test -mod=readonly ./... -run '^$'
+2026-09-18T15:35:41.8492917Z [36;1mgo test -mod=readonly ./... -run '^$'[0m
+2026-09-18T15:35:41.8493489Z [36;1mcd integration/cometbft[0m
+2026-09-18T15:35:41.8494163Z [36;1mgo test -mod=readonly -tags=pool_e2e,funded_e2e ./... -run '^$'[0m
+2026-09-18T15:35:41.8495227Z [36;1mgit diff --exit-code[0m
+2026-09-18T15:35:41.8546777Z shell: /usr/bin/bash -e {0}
+2026-09-18T15:35:41.8547247Z env:
+2026-09-18T15:35:41.8547600Z   GOTOOLCHAIN: local
+2026-09-18T15:35:41.8547999Z ##[endgroup]
+2026-09-18T15:35:42.1273343Z ?   	github.com/youq616/Zevune/cmd/latency-report	[no test files]
+2026-09-18T15:35:42.2901299Z ?   	github.com/youq616/Zevune/cmd/zevuned	[no test files]
+2026-09-18T15:35:42.7916601Z ok  	github.com/youq616/Zevune/internal/api	0.012s [no tests to run]
+2026-09-18T15:35:42.7935537Z ok  	github.com/youq616/Zevune/internal/latency	0.013s [no tests to run]
+2026-09-18T15:35:42.8036469Z ok  	github.com/youq616/Zevune/internal/ledger	0.009s [no tests to run]
+2026-09-18T15:35:42.8091576Z ok  	github.com/youq616/Zevune/internal/merkle	0.003s [no tests to run]
+2026-09-18T15:35:42.9720324Z ok  	github.com/youq616/Zevune/internal/orchardbridge	0.003s [no tests to run]
+2026-09-18T15:35:43.0670309Z ok  	github.com/youq616/Zevune/internal/poolbridge	0.002s [no tests to run]
+2026-09-18T15:35:43.0675310Z ok  	github.com/youq616/Zevune/internal/protocol	0.002s [no tests to run]
+2026-09-18T15:35:57.4945678Z ok  	github.com/youq616/Zevune/integration/cometbft/app	0.016s [no tests to run]
+2026-09-18T15:36:04.1510454Z ?   	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet	[no test files]
+2026-09-18T15:36:05.5238372Z ok  	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-network	0.020s [no tests to run]
+2026-09-18T15:36:05.5249967Z ok  	github.com/youq616/Zevune/integration/cometbft/devnet	0.021s [no tests to run]
+2026-09-18T15:36:05.9603132Z ok  	github.com/youq616/Zevune/integration/cometbft/labnet	0.014s [no tests to run]
+2026-09-18T15:36:05.9604269Z ok  	github.com/youq616/Zevune/integration/cometbft/poolapp	0.012s [no tests to run]
+2026-09-18T15:36:06.1421001Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-18T15:36:06.1422455Z Post job cleanup.
+2026-09-18T15:36:06.2635406Z (node:6783) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-18T15:36:06.2636407Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-18T15:36:06.2722730Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-18T15:36:06.2772217Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-18T15:36:06.2800321Z /home/runner/go/pkg/mod
+2026-09-18T15:36:06.2819298Z /home/runner/.cache/go-build
+2026-09-18T15:36:06.2827498Z Cache hit occurred on the primary key setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938, not saving cache.
+2026-09-18T15:36:06.3006129Z Post job cleanup.
+2026-09-18T15:36:06.3856633Z [command]/usr/bin/git version
+2026-09-18T15:36:06.3899558Z git version 2.55.0
+2026-09-18T15:36:06.3939992Z Temporarily overriding HOME='/home/runner/work/_temp/6783e91e-9313-4815-88a5-e493463235e4' before making global git config changes
+2026-09-18T15:36:06.3941385Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:36:06.3946615Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-18T15:36:06.3985533Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:36:06.4022417Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:36:06.4276026Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:36:06.4316098Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:36:06.4851230Z Cleaning up orphan processes
+2026-09-18T15:36:06.5238363Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

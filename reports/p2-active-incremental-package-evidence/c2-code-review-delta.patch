@@ -1,0 +1,603 @@
+diff --git a/integration/orchard/src/pool/active.rs b/integration/orchard/src/pool/active.rs
+index 96558ed..b015b98 100644
+--- a/integration/orchard/src/pool/active.rs
++++ b/integration/orchard/src/pool/active.rs
+@@ -210,17 +210,15 @@ fn validate_physical_frame(
+     frame_size(frame_length)?;
+     if start < header_length || end > length {
+         return Err(PoolError::Corrupt);
+     }
+     let mut begin = header_length;
+     let mut previous = None;
+     for segment_length in segment_lengths {
+-        let limit = begin
+-            .checked_add(segment_length)
+-            .ok_or(PoolError::Bounds)?;
++        let limit = begin.checked_add(segment_length).ok_or(PoolError::Bounds)?;
+         if start < limit {
+             if end > limit
+                 || (start == begin
+                     && previous.is_some_and(|prior: u64| prior + frame_length <= SEGMENT_BYTES))
+             {
+                 return Err(PoolError::Corrupt);
+             }
+diff --git a/integration/orchard/src/pool/active/package.rs b/integration/orchard/src/pool/active/package.rs
+index 4f6e5eb..a079861 100644
+--- a/integration/orchard/src/pool/active/package.rs
++++ b/integration/orchard/src/pool/active/package.rs
+@@ -1,14 +1,14 @@
+ //! Private physical transport for ZVAIPK01. This module never authenticates a
+ //! record or returns state. Its caller must replay the base and reconstruction,
+ //! bind both trusted pins, and repeat complete byte/namespace checks at the end.
+ use super::{
+     check_file, create_file, name, namespace, open_file_access, read_at, regular,
+-    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment,
+-    COPY_CHUNK, GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
++    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment, COPY_CHUNK,
++    GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
+ };
+ use sha2::{Digest, Sha256};
+ use std::fs;
+ use std::io::{self, Read, Write};
+ use std::path::{Path, PathBuf};
+ 
+ const FIXED_BYTES: usize = 268;
+@@ -112,15 +112,17 @@ fn visit_span(
+ ) -> Result<(), PoolError> {
+     let end = offset.checked_add(length).ok_or(PoolError::Bounds)?;
+     let mut position = offset;
+     let mut buffer = [0; COPY_CHUNK];
+     while position < end {
+         let take = usize::try_from((end - position).min(COPY_CHUNK as u64))
+             .map_err(|_| PoolError::Bounds)?;
+-        fill_at(&mut buffer[..take], position, |bytes, at| read_at(file, bytes, at))?;
++        fill_at(&mut buffer[..take], position, |bytes, at| {
++            read_at(file, bytes, at)
++        })?;
+         consume(&buffer[..take])?;
+         position = position
+             .checked_add(u64::try_from(take).map_err(|_| PoolError::Bounds)?)
+             .ok_or(PoolError::Bounds)?;
+     }
+     Ok(())
+ }
+@@ -574,15 +576,17 @@ impl<'a> JoinedJournal<'a> {
+         let mut builder = fs::DirBuilder::new();
+         builder.recursive(false);
+         #[cfg(unix)]
+         {
+             use std::os::unix::fs::DirBuilderExt;
+             builder.mode(0o700);
+         }
+-        builder.create(target.path()).map_err(|_| PoolError::Storage)?;
++        builder
++            .create(target.path())
++            .map_err(|_| PoolError::Storage)?;
+         let location = namespace::Directory::open(target.path())?;
+         let mut genesis = create_file(&target.path().join(GENESIS))?;
+         genesis.try_lock().map_err(|_| PoolError::Locked)?;
+         visit_file(self.genesis, self.base.header_length, |bytes| {
+             #[cfg(test)]
+             if target.fault == 11 {
+                 write_all_checked(&mut genesis, &bytes[..bytes.len() / 2])?;
+diff --git a/integration/orchard/src/pool/active/package/tests.rs b/integration/orchard/src/pool/active/package/tests.rs
+index d7312bb..fcad06b 100644
+--- a/integration/orchard/src/pool/active/package/tests.rs
++++ b/integration/orchard/src/pool/active/package/tests.rs
+@@ -166,18 +166,15 @@ fn checked_io_retries_short_reads_writes_and_interruptions_without_skipping_byte
+                 1 => return Ok(0),
+                 2 => return Ok(bytes.len() + 1),
+                 _ => {}
+             }
+             if self.raw.len() >= self.limit {
+                 return Err(io::ErrorKind::PermissionDenied.into());
+             }
+-            let count = bytes
+-                .len()
+-                .min(self.chunk)
+-                .min(self.limit - self.raw.len());
++            let count = bytes.len().min(self.chunk).min(self.limit - self.raw.len());
+             self.raw.extend_from_slice(&bytes[..count]);
+             Ok(count)
+         }
+ 
+         fn flush(&mut self) -> io::Result<()> {
+             Ok(())
+         }
+@@ -279,26 +276,32 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
+             fill_at(&mut bytes, u64::from(range.offset), |bytes, offset| {
+                 read_at(&segment.file, bytes, offset)
+             })
+             .unwrap();
+             encoded.extend_from_slice(&bytes);
+         }
+         assert_eq!(package_bytes(&package), encoded);
+-        assert_eq!(package.length(), metadata.len() as u64 + later.length() - base.length());
++        assert_eq!(
++            package.length(),
++            metadata.len() as u64 + later.length() - base.length()
++        );
+         let joined = JoinedJournal::new(
+             &base,
+             &base_genesis,
+             &package,
+             &metadata,
+             &ranges,
+             later.capacity().1,
+             later.length(),
+         )
+         .unwrap();
+-        assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
++        assert_eq!(
++            joined.layout_hash().unwrap(),
++            later.layout_hash(&later_genesis).unwrap()
++        );
+         let mut reader = joined.reader().unwrap();
+         let mut actual = Vec::new();
+         let mut buffer = [0; 8191];
+         loop {
+             let count = reader.read(&mut buffer).unwrap();
+             if count == 0 {
+                 break;
+@@ -326,15 +329,18 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
+             assert_eq!(segment.length, later.segments[index].length);
+             assert_eq!(
+                 file_bytes(&segment.file, segment.length),
+                 file_bytes(&later.segments[index].file, later.segments[index].length)
+             );
+         }
+         assert_eq!(logical(&restored, &restored_genesis), expected);
+-        assert_eq!(restored.layout_hash(&restored_genesis).unwrap(), joined.layout_hash().unwrap());
++        assert_eq!(
++            restored.layout_hash(&restored_genesis).unwrap(),
++            joined.layout_hash().unwrap()
++        );
+         assert!(matches!(
+             ActiveJournal::open(&restored_path, &[0; 76]),
+             Err(PoolError::Locked)
+         ));
+         assert!(NewTarget::prepare(&restored_path, &[]).is_err());
+         assert!(NewTarget::prepare(&package_path, &[]).is_err());
+         assert_eq!(logical(&base, &base_genesis), before_base);
+@@ -514,15 +520,18 @@ fn interrupted_package_writes_retain_partial_or_complete_new_files_without_retry
+                 &package,
+                 &metadata,
+                 &ranges,
+                 1,
+                 later.length(),
+             )
+             .unwrap();
+-            assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
++            assert_eq!(
++                joined.layout_hash().unwrap(),
++                later.layout_hash(&later_genesis).unwrap()
++            );
+         }
+     }
+     assert_eq!(logical(&base, &base_genesis), before_base);
+     assert_eq!(logical(&later, &later_genesis), before_later);
+ }
+ 
+ #[test]
+@@ -560,22 +569,28 @@ fn interrupted_reconstruction_keeps_created_files_and_never_overwrites_them() {
+         assert!(matches!(joined.copy_new(&target), Err(PoolError::Storage)));
+         let retained = output_bytes(&path);
+         assert_eq!(retained[GENESIS].len(), if fault == 11 { 38 } else { 76 });
+         if fault == 11 {
+             assert_eq!(retained.len(), 1);
+         } else {
+             assert_eq!(retained.len(), 2);
+-            assert_eq!(retained[&name(0)].len(), if fault == 12 { 200 } else { 1000 });
++            assert_eq!(
++                retained[&name(0)].len(),
++                if fault == 12 { 200 } else { 1000 }
++            );
+         }
+         assert!(joined.copy_new(&target).is_err());
+         assert_eq!(output_bytes(&path), retained);
+         if fault >= 13 {
+             let (genesis, restored) = ActiveJournal::open(&path, &[0; 76]).unwrap();
+             assert_eq!(logical(&restored, &genesis), before_later);
+-            assert_eq!(restored.layout_hash(&genesis).unwrap(), joined.layout_hash().unwrap());
++            assert_eq!(
++                restored.layout_hash(&genesis).unwrap(),
++                joined.layout_hash().unwrap()
++            );
+         }
+     }
+     assert_eq!(logical(&base, &base_genesis), before_base);
+     assert_eq!(logical(&later, &later_genesis), before_later);
+     assert_eq!(package_bytes(&package), before_package);
+ }
+ 
+diff --git a/integration/orchard/src/pool/active_flow_tests.rs b/integration/orchard/src/pool/active_flow_tests.rs
+index b261e0d..e15a674 100644
+--- a/integration/orchard/src/pool/active_flow_tests.rs
++++ b/integration/orchard/src/pool/active_flow_tests.rs
+@@ -285,16 +285,15 @@ fn incremental_package_and_restore(
+         .collect();
+     assert_eq!(actual, ranges);
+     // The creating object holds an exclusive package lock on both platforms.
+     // Drop it before inspecting bytes or independently opening that file.
+     drop(package);
+     drop(later);
+     assert!(fs::read(&package_path).unwrap() == expected);
+-    let mut package =
+-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
++    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+     assert_eq!(
+         package.restore_new(&mut base, &restored_path).unwrap(),
+         later_pin
+     );
+     drop(package);
+     drop(base);
+     assert!(directory_bytes(base_path) == original_base);
+diff --git a/integration/orchard/src/pool/recovery/active/package.rs b/integration/orchard/src/pool/recovery/active/package.rs
+index bea29bc..9671346 100644
+--- a/integration/orchard/src/pool/recovery/active/package.rs
++++ b/integration/orchard/src/pool/recovery/active/package.rs
+@@ -88,15 +88,19 @@ fn checked_plan(
+     let mut unchanged = count;
+     let mut decoded = Vec::new();
+     decoded
+         .try_reserve_exact(ranges.len())
+         .map_err(|_| PoolError::Storage)?;
+     for range in ranges {
+         if range.segment_index < count {
+-            if range.segment_index.checked_add(1).ok_or(PoolError::Bounds)? != count
++            if range
++                .segment_index
++                .checked_add(1)
++                .ok_or(PoolError::Bounds)?
++                != count
+                 || range.offset != tail
+                 || tail == 0
+             {
+                 return Err(PoolError::Corrupt);
+             }
+             unchanged = unchanged.checked_sub(1).ok_or(PoolError::Bounds)?;
+         }
+@@ -150,17 +154,15 @@ impl ActiveIncrementalPackage {
+         if &fixed[..8] != MAGIC {
+             return Err(PoolError::Corrupt);
+         }
+         if fixed[8..136] != base.pin.to_bytes() || fixed[136..264] != later.to_bytes() {
+             return Err(PoolError::Stale);
+         }
+         let count = usize::try_from(u32::from_be_bytes(
+-            fixed[264..268]
+-                .try_into()
+-                .map_err(|_| PoolError::Corrupt)?,
++            fixed[264..268].try_into().map_err(|_| PoolError::Corrupt)?,
+         ))
+         .map_err(|_| PoolError::Bounds)?;
+         let size = metadata_length(count)?;
+         let payload = later
+             .length
+             .checked_sub(base.pin.length)
+             .ok_or(PoolError::Stale)?;
+@@ -183,17 +185,15 @@ impl ActiveIncrementalPackage {
+             .try_reserve_exact(count)
+             .map_err(|_| PoolError::Storage)?;
+         for bytes in metadata[FIXED_BYTES..].as_chunks::<RANGE_BYTES>().0 {
+             ranges.push(RangeSpec {
+                 segment_index: u32::from_be_bytes(
+                     bytes[..4].try_into().map_err(|_| PoolError::Corrupt)?,
+                 ),
+-                offset: u32::from_be_bytes(
+-                    bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?,
+-                ),
++                offset: u32::from_be_bytes(bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?),
+                 length: u32::from_be_bytes(
+                     bytes[8..12].try_into().map_err(|_| PoolError::Corrupt)?,
+                 ),
+             });
+         }
+         let plan = checked_plan(base, later, &ranges)?;
+         Ok(Self {
+@@ -367,21 +367,16 @@ impl ActiveArchive {
+                 target.fault = self.fault - 19;
+             }
+             target
+         };
+         let plan = self.incremental_plan(later)?;
+         let metadata = encode(&plan)?;
+         let ranges = physical_ranges(&plan)?;
+-        let file = RetainedPackage::create_new(
+-            target,
+-            &metadata,
+-            &ranges,
+-            &later.journal,
+-            &later.file,
+-        )?;
++        let file =
++            RetainedPackage::create_new(target, &metadata, &ranges, &later.journal, &later.file)?;
+         let mut package = ActiveIncrementalPackage {
+             file,
+             metadata,
+             ranges,
+             plan,
+             #[cfg(test)]
+             fault: 0,
+diff --git a/integration/orchard/src/pool/recovery/active/package/tests.rs b/integration/orchard/src/pool/recovery/active/package/tests.rs
+index 8071d13..e905879 100644
+--- a/integration/orchard/src/pool/recovery/active/package/tests.rs
++++ b/integration/orchard/src/pool/recovery/active/package/tests.rs
+@@ -208,17 +208,16 @@ pub(super) fn change_tail(path: &Path) -> Result<(), PoolError> {
+     file.write_all(&byte).map_err(|_| PoolError::Storage)?;
+     file.sync_all().map_err(|_| PoolError::Storage)
+ }
+ 
+ #[test]
+ fn independently_encoded_packages_restore_exact_bytes_without_a_later_directory() {
+     let d = Dir::new();
+-    for (number, (base_height, later_height)) in [(0, 0), (0, 3), (2, 2), (2, 5)]
+-        .into_iter()
+-        .enumerate()
++    for (number, (base_height, later_height)) in
++        [(0, 0), (0, 3), (2, 2), (2, 5)].into_iter().enumerate()
+     {
+         let base_path = d.path(&format!("base-{number}"));
+         let later_path = d.path(&format!("later-{number}"));
+         let base_pin = fixture(&base_path, base_height, 0, DOMAIN);
+         let later_pin = fixture(&later_path, later_height, 0, DOMAIN);
+         let original_base = directory_bytes(&base_path);
+         let original_later = directory_bytes(&later_path);
+@@ -240,15 +239,18 @@ fn independently_encoded_packages_restore_exact_bytes_without_a_later_directory(
+         // The completed writer has been dropped. Subsequent public operations
+         // receive only the base, package, and independently retained later pin.
+         fs::remove_dir_all(&later_path).unwrap();
+         let mut package = ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+         assert_plan(&package, base_pin, later_pin, &ranges);
+         package.verify(&mut base).unwrap();
+         let restored = d.path(&format!("restored-{number}"));
+-        assert_eq!(package.restore_new(&mut base, &restored).unwrap(), later_pin);
++        assert_eq!(
++            package.restore_new(&mut base, &restored).unwrap(),
++            later_pin
++        );
+         assert_eq!(directory_bytes(&restored), original_later);
+         // restore_new returns no owning writer or hidden pending reservation.
+         let mut pool = open_store(&restored).unwrap();
+         pool.check_checkpoint(later_pin.height(), later_pin.app_hash())
+             .unwrap();
+         let block = pool.prepare(later_height + 1, [93; 32], &[]).unwrap();
+         assert_eq!(pool.commit(block).unwrap().height, later_height + 1);
+@@ -365,29 +367,23 @@ fn repinned_early_rotation_and_split_frames_reach_the_joined_replay_gate() {
+         let raw = encode_fixture(base_pin, pin, &ranges, &payload(&changed, &ranges));
+         assert_eq!(raw.len(), 268 + 12 * ranges.len() + 300);
+         let path = d.path(&format!("{label}.incremental"));
+         fs::write(&path, &raw).unwrap();
+         // These PRIVATE calls cannot publish an object to production callers.
+         // Prove the genuine base, strict metadata, complete payload and repinned
+         // combined layout all pass before exercising the actual replay gate.
+-        let mut unchecked =
+-            ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
++        let mut unchecked = ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
+         unchecked.check_bytes(&base).unwrap();
+         if ranges.len() > 1 {
+             // Both segment indices and individual offsets remain in bounds.
+             // Reorder payload with its descriptors so this specifically tests
+             // strict table ordering rather than an out-of-range segment index.
+             let mut reversed = ranges.clone();
+             reversed.reverse();
+-            let reordered = encode_fixture(
+-                base_pin,
+-                pin,
+-                &reversed,
+-                &payload(&changed, &reversed),
+-            );
++            let reordered = encode_fixture(base_pin, pin, &reversed, &payload(&changed, &reversed));
+             let reordered_path = d.path("out-of-order.incremental");
+             fs::write(&reordered_path, &reordered).unwrap();
+             assert!(matches!(
+                 ActiveIncrementalPackage::open_unverified(&reordered_path, &base, pin),
+                 Err(PoolError::Corrupt)
+             ));
+             assert_eq!(fs::read(reordered_path).unwrap(), reordered);
+@@ -426,15 +422,17 @@ fn independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_o
+     let base_path = d.path("base");
+     let later_path = d.path("later");
+     let base_pin = fixture(&base_path, 2, 0, DOMAIN);
+     let later_pin = fixture(&later_path, 4, 0, DOMAIN);
+     let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
+     let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
+     let package_path = d.path("good.incremental");
+-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
++    let mut package = base
++        .pack_incremental_new(&mut later, &package_path)
++        .unwrap();
+     for (index, (height, variant, domain)) in [
+         (2, 1, DOMAIN),
+         (4, 1, DOMAIN),
+         (1, 0, DOMAIN),
+         (4, 0, [62; 32]),
+     ]
+     .into_iter()
+@@ -456,33 +454,36 @@ fn independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_o
+         );
+         assert!(!target.exists());
+         assert_eq!(directory_bytes(&path), original);
+     }
+     package.verify(&mut base).unwrap();
+     let mut same_base = ActiveArchive::open(&base_path, base_pin).unwrap();
+     let same_path = d.path("same-path.incremental");
+-    let same = base.pack_incremental_new(&mut same_base, &same_path).unwrap();
++    let same = base
++        .pack_incremental_new(&mut same_base, &same_path)
++        .unwrap();
+     assert_plan(&same, base_pin, base_pin, &[]);
+ }
+ 
+ #[test]
+ fn new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation() {
+     let d = Dir::new();
+     let base_path = d.path("base");
+     let later_path = d.path("later");
+     let base_pin = fixture(&base_path, 1, 0, DOMAIN);
+     let later_pin = fixture(&later_path, 3, 0, DOMAIN);
+     let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
+     let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
+     let package_path = d.path("package.incremental");
+-    let package = base.pack_incremental_new(&mut later, &package_path).unwrap();
++    let package = base
++        .pack_incremental_new(&mut later, &package_path)
++        .unwrap();
+     drop(package);
+     let original_package = fs::read(&package_path).unwrap();
+-    let mut package =
+-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
++    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+     let file = d.path("existing-file");
+     fs::write(&file, b"keep file").unwrap();
+     let directory = d.path("existing-directory");
+     fs::create_dir(&directory).unwrap();
+     fs::write(directory.join("keep"), b"keep directory").unwrap();
+     for target in [&base_path, &later_path, &package_path, &file, &directory] {
+         assert!(base.pack_incremental_new(&mut later, target).is_err());
+@@ -502,18 +503,15 @@ fn new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation()
+         d.path("missing-parent/new"),
+         PathBuf::from("relative"),
+     ] {
+         assert!(package.restore_new(&mut base, &target).is_err());
+         assert!(!target.exists());
+     }
+     assert_eq!(fs::read(&file).unwrap(), b"keep file");
+-    assert_eq!(
+-        fs::read(directory.join("keep")).unwrap(),
+-        b"keep directory"
+-    );
++    assert_eq!(fs::read(directory.join("keep")).unwrap(), b"keep directory");
+     assert_eq!(fs::read(&package_path).unwrap(), original_package);
+     // A prior successful open and plan cannot authorize future base contents.
+     change_tail(&base_path).unwrap();
+     let changed = directory_bytes(&base_path);
+     let target = d.path("changed-base-must-not-create");
+     assert!(package.restore_new(&mut base, &target).is_err());
+     assert!(!target.exists());
+@@ -596,15 +594,17 @@ fn partial_package_and_restore_failures_keep_exact_targets_and_release_creation_
+             .write(true)
+             .open(&path)
+             .unwrap();
+         file.try_lock().unwrap();
+         drop(file);
+     }
+     let package_path = d.path("complete.incremental");
+-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
++    let mut package = base
++        .pack_incremental_new(&mut later, &package_path)
++        .unwrap();
+     for fault in 11..=14 {
+         let target = d.path(&format!("partial-restore-{fault}"));
+         package.fault = fault;
+         assert_eq!(
+             package.restore_new(&mut base, &target),
+             Err(PoolError::Storage)
+         );
+@@ -772,16 +772,15 @@ fn package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_reject
+             if kind == "symlink" {
+                 symlink(&other, &path).unwrap();
+             } else {
+                 fs::hard_link(&other, &path).unwrap();
+             }
+             assert!(ActiveIncrementalPackage::open(&path, &mut base, later_pin).is_err());
+         } else {
+-            let mut package =
+-                ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
++            let mut package = ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+             if kind == "replacement" {
+                 fs::rename(&path, &other).unwrap();
+                 fs::write(&path, &raw).unwrap();
+             } else {
+                 fs::hard_link(&path, &other).unwrap();
+                 assert_eq!(fs::metadata(&path).unwrap().nlink(), 2);
+             }
+@@ -800,18 +799,15 @@ fn package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_reject
+     let mut package = ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+     let moved = d.path("old-package-parent");
+     fs::rename(&parent, &moved).unwrap();
+     fs::create_dir(&parent).unwrap();
+     fs::write(&path, &raw).unwrap();
+     assert_eq!(package.verify(&mut base), Err(PoolError::Corrupt));
+     assert_eq!(fs::read(&path).unwrap(), raw);
+-    assert_eq!(
+-        fs::read(moved.join("package.incremental")).unwrap(),
+-        raw
+-    );
++    assert_eq!(fs::read(moved.join("package.incremental")).unwrap(), raw);
+ }
+ 
+ #[cfg(windows)]
+ #[test]
+ fn windows_retained_package_and_parent_names_cannot_be_deleted_or_renamed() {
+     let d = Dir::new();
+     let base_path = d.path("base");
+diff --git a/integration/orchard/tests/active_incremental_package_cli.rs b/integration/orchard/tests/active_incremental_package_cli.rs
+index cd5314f..602aa83 100644
+--- a/integration/orchard/tests/active_incremental_package_cli.rs
++++ b/integration/orchard/tests/active_incremental_package_cli.rs
+@@ -30,16 +30,18 @@ enum TreeEntry {
+ }
+ 
+ struct Dir(PathBuf);
+ impl Dir {
+     fn new() -> Self {
+         let mut nonce = [0; 16];
+         OsRng.fill_bytes(&mut nonce);
+-        let path = std::env::temp_dir()
+-            .join(format!("zevune-active-incremental-package-cli-{}", hex(&nonce)));
++        let path = std::env::temp_dir().join(format!(
++            "zevune-active-incremental-package-cli-{}",
++            hex(&nonce)
++        ));
+         fs::create_dir(&path).unwrap();
+         Self(path)
+     }
+ 
+     fn path(&self, name: &str) -> PathBuf {
+         self.0.join(name)
+     }
+@@ -414,20 +416,15 @@ fn package_cli_genesis_same_content_and_new_segment_have_exact_schema() {
+     write_fixture(&copy, &f.later.bytes);
+     assert_eq!(f.base.bytes.len(), 1);
+     assert_eq!(f.base.pin.height(), 0);
+     let cases = [
+         (&f.base, &f.base, f.base.path.as_path(), vec![]),
+         (&f.later, &f.later, f.later.path.as_path(), vec![]),
+         (&f.later, &f.later, copy.as_path(), vec![]),
+-        (
+-            &f.base,
+-            &f.later,
+-            f.later.path.as_path(),
+-            vec![(0, 0, 450)],
+-        ),
++        (&f.base, &f.later, f.later.path.as_path(), vec![(0, 0, 450)]),
+     ];
+     for (number, (base, later, source, ranges)) in cases.into_iter().enumerate() {
+         let package = f.dir.path(&format!("package-{number}"));
+         let restored = f.dir.path(&format!("restored-{number}"));
+         let wire = expected_package(base.pin, later.pin, &ranges, &later.bytes);
+         if ranges.is_empty() {
+             assert_eq!(wire.len(), 268);
+@@ -435,20 +432,15 @@ fn package_cli_genesis_same_content_and_new_segment_have_exact_schema() {
+         for (mode, input, output) in [
+             (PACK, source, Some(package.as_path())),
+             (VERIFY, package.as_path(), None),
+             (RESTORE, package.as_path(), Some(restored.as_path())),
+         ] {
+             success(
+                 &call(&package_args(
+-                    mode,
+-                    &base.path,
+-                    base.pin,
+-                    input,
+-                    later.pin,
+-                    output,
++                    mode, &base.path, base.pin, input, later.pin, output,
+                 )),
+                 &expected_json(mode, base.pin, later.pin, &ranges),
+             );
+             assert!(fs::read(&package).unwrap() == wire);
+             unchanged(&base.path, &base.bytes);
+             unchanged(source, &later.bytes);
+         }

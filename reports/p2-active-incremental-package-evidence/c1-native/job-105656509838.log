@@ -1,0 +1,511 @@
+﻿2026-09-18T15:26:09.0196419Z Current runner version: '2.337.0'
+2026-09-18T15:26:09.0221365Z ##[group]Runner Image Provisioner
+2026-09-18T15:26:09.0222663Z Hosted Compute Agent
+2026-09-18T15:26:09.0223255Z Version: 20260828.587
+2026-09-18T15:26:09.0224003Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-18T15:26:09.0224746Z Build Date: 2026-08-28T16:44:25Z
+2026-09-18T15:26:09.0225433Z Worker ID: {4285859d-c4bd-421d-9412-555b518aad59}
+2026-09-18T15:26:09.0226194Z Azure Region: westus
+2026-09-18T15:26:09.0226784Z ##[endgroup]
+2026-09-18T15:26:09.0228768Z ##[group]Operating System
+2026-09-18T15:26:09.0229619Z Ubuntu
+2026-09-18T15:26:09.0230283Z 24.04.5
+2026-09-18T15:26:09.0230939Z LTS
+2026-09-18T15:26:09.0231592Z ##[endgroup]
+2026-09-18T15:26:09.0232562Z ##[group]Runner Image
+2026-09-18T15:26:09.0233287Z Image: ubuntu-24.04
+2026-09-18T15:26:09.0234105Z Version: 20260907.300.1
+2026-09-18T15:26:09.0235876Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-18T15:26:09.0238374Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-18T15:26:09.0239903Z ##[endgroup]
+2026-09-18T15:26:09.0241269Z ##[group]GITHUB_TOKEN Permissions
+2026-09-18T15:26:09.0243773Z Contents: read
+2026-09-18T15:26:09.0244420Z Metadata: read
+2026-09-18T15:26:09.0245059Z ##[endgroup]
+2026-09-18T15:26:09.0247275Z Secret source: Actions
+2026-09-18T15:26:09.0248323Z Cache mode: write
+2026-09-18T15:26:09.0249078Z Prepare workflow directory
+2026-09-18T15:26:09.0721484Z Prepare all required actions
+2026-09-18T15:26:09.0769386Z Getting action download info
+2026-09-18T15:26:09.4367186Z Download action repository 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' (SHA:08c6903cd8c0fde910a37f88322edcfb5dd907a8)
+2026-09-18T15:26:09.5790875Z Download action repository 'actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00' (SHA:44694675825211faa026b3c33043df3e48a5fa00)
+2026-09-18T15:26:10.0756822Z Complete job name: integration (ubuntu-latest)
+2026-09-18T15:26:10.1561141Z ##[group]Run actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+2026-09-18T15:26:10.1562579Z with:
+2026-09-18T15:26:10.1563030Z   persist-credentials: false
+2026-09-18T15:26:10.1563556Z   repository: youq616/Zevune
+2026-09-18T15:26:10.1567551Z   token: ***
+2026-09-18T15:26:10.1567978Z   ssh-strict: true
+2026-09-18T15:26:10.1568410Z   ssh-user: git
+2026-09-18T15:26:10.1568817Z   clean: true
+2026-09-18T15:26:10.1569255Z   sparse-checkout-cone-mode: true
+2026-09-18T15:26:10.1569783Z   fetch-depth: 1
+2026-09-18T15:26:10.1570210Z   fetch-tags: false
+2026-09-18T15:26:10.1570653Z   show-progress: true
+2026-09-18T15:26:10.1571102Z   lfs: false
+2026-09-18T15:26:10.1571504Z   submodules: false
+2026-09-18T15:26:10.1572111Z   set-safe-directory: true
+2026-09-18T15:26:10.1572861Z ##[endgroup]
+2026-09-18T15:26:10.2625330Z Syncing repository: youq616/Zevune
+2026-09-18T15:26:10.2627992Z ##[group]Getting Git version info
+2026-09-18T15:26:10.2628832Z Working directory is '/home/runner/work/Zevune/Zevune'
+2026-09-18T15:26:10.2629815Z [command]/usr/bin/git version
+2026-09-18T15:26:10.2728610Z git version 2.55.0
+2026-09-18T15:26:10.2756992Z ##[endgroup]
+2026-09-18T15:26:10.2775592Z Temporarily overriding HOME='/home/runner/work/_temp/918c74ec-22e8-49b1-8e0e-4c72b391de4e' before making global git config changes
+2026-09-18T15:26:10.2777844Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:26:10.2780903Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-18T15:26:10.2843180Z Deleting the contents of '/home/runner/work/Zevune/Zevune'
+2026-09-18T15:26:10.2848674Z ##[group]Initializing the repository
+2026-09-18T15:26:10.2854388Z [command]/usr/bin/git init /home/runner/work/Zevune/Zevune
+2026-09-18T15:26:10.2995994Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-18T15:26:10.2997953Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-18T15:26:10.2999999Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-18T15:26:10.3001289Z hint: call:
+2026-09-18T15:26:10.3002358Z hint:
+2026-09-18T15:26:10.3003785Z hint: 	git config --global init.defaultBranch <name>
+2026-09-18T15:26:10.3004881Z hint:
+2026-09-18T15:26:10.3006065Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-18T15:26:10.3007503Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-18T15:26:10.3008589Z hint:
+2026-09-18T15:26:10.3009467Z hint: 	git branch -m <name>
+2026-09-18T15:26:10.3010338Z hint:
+2026-09-18T15:26:10.3011467Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-18T15:26:10.3016652Z Initialized empty Git repository in /home/runner/work/Zevune/Zevune/.git/
+2026-09-18T15:26:10.3037348Z [command]/usr/bin/git remote add origin https://github.com/youq616/Zevune
+2026-09-18T15:26:10.3153881Z ##[endgroup]
+2026-09-18T15:26:10.3154739Z ##[group]Disabling automatic garbage collection
+2026-09-18T15:26:10.3160487Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-18T15:26:10.3201582Z ##[endgroup]
+2026-09-18T15:26:10.3203176Z ##[group]Setting up auth
+2026-09-18T15:26:10.3210518Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:26:10.3252407Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:26:10.4337712Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:26:10.4376791Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:26:10.4608493Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-18T15:26:10.4649271Z ##[endgroup]
+2026-09-18T15:26:10.4650127Z ##[group]Fetching the repository
+2026-09-18T15:26:10.4659551Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +bd710cf4c985012ca23e86c333567ce116de72bb:refs/remotes/pull/17/merge
+2026-09-18T15:26:12.1695246Z From https://github.com/youq616/Zevune
+2026-09-18T15:26:12.1696149Z  * [new ref]         bd710cf4c985012ca23e86c333567ce116de72bb -> pull/17/merge
+2026-09-18T15:26:12.1715822Z ##[endgroup]
+2026-09-18T15:26:12.1716697Z ##[group]Determining the checkout info
+2026-09-18T15:26:12.1717572Z ##[endgroup]
+2026-09-18T15:26:12.1718106Z [command]/usr/bin/git sparse-checkout disable
+2026-09-18T15:26:12.1826414Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-18T15:26:12.1863571Z ##[group]Checking out the ref
+2026-09-18T15:26:12.1869409Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/17/merge
+2026-09-18T15:26:12.2934771Z Note: switching to 'refs/remotes/pull/17/merge'.
+2026-09-18T15:26:12.2935483Z 
+2026-09-18T15:26:12.2935961Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-18T15:26:12.2937111Z changes and commit them, and you can discard any commits you make in this
+2026-09-18T15:26:12.2938156Z state without impacting any branches by switching back to a branch.
+2026-09-18T15:26:12.2938770Z 
+2026-09-18T15:26:12.2939289Z If you want to create a new branch to retain commits you create, you may
+2026-09-18T15:26:12.2940205Z do so (now or later) by using -c with the switch command. Example:
+2026-09-18T15:26:12.2940752Z 
+2026-09-18T15:26:12.2941006Z   git switch -c <new-branch-name>
+2026-09-18T15:26:12.2941387Z 
+2026-09-18T15:26:12.2941623Z Or undo this operation with:
+2026-09-18T15:26:12.2942380Z 
+2026-09-18T15:26:12.2942587Z   git switch -
+2026-09-18T15:26:12.2942898Z 
+2026-09-18T15:26:12.2943367Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-18T15:26:12.2944294Z 
+2026-09-18T15:26:12.2945034Z HEAD is now at bd710cf Merge 61c691270b91aece076177cb757e51e0e63fe310 into 2cc87a2207d502ac5cfe00ea52e525c1516917e5
+2026-09-18T15:26:12.2955541Z ##[endgroup]
+2026-09-18T15:26:12.3013462Z [command]/usr/bin/git log -1 --format=%H
+2026-09-18T15:26:12.3040088Z bd710cf4c985012ca23e86c333567ce116de72bb
+2026-09-18T15:26:12.3050417Z ##[group]Removing auth
+2026-09-18T15:26:12.3055593Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:26:12.3088842Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:26:12.3315346Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:26:12.3345965Z http.https://github.com/.extraheader
+2026-09-18T15:26:12.3352917Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-18T15:26:12.3389291Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:26:12.3613164Z ##[endgroup]
+2026-09-18T15:26:12.3947665Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-18T15:26:12.3950496Z ##[group]Run actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+2026-09-18T15:26:12.3950983Z with:
+2026-09-18T15:26:12.3951262Z   go-version: 1.27.1
+2026-09-18T15:26:12.3951562Z   cache: true
+2026-09-18T15:26:12.3952185Z   cache-dependency-path: integration/cometbft/go.sum
+2026-09-18T15:26:12.3952605Z   check-latest: false
+2026-09-18T15:26:12.3955724Z   token: ***
+2026-09-18T15:26:12.3955972Z ##[endgroup]
+2026-09-18T15:26:12.5296153Z Setup go version spec 1.27.1
+2026-09-18T15:26:12.5306096Z Attempting to download 1.27.1...
+2026-09-18T15:26:12.5419807Z (node:2225) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-18T15:26:12.5421330Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-18T15:26:13.1611014Z matching 1.27.1...
+2026-09-18T15:26:13.1639063Z Acquiring 1.27.1 from https://github.com/actions/go-versions/releases/download/1.27.1-33583469715/go-1.27.1-linux-x64.tar.gz
+2026-09-18T15:26:13.7394399Z Extracting Go...
+2026-09-18T15:26:13.7512119Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/ba07e165-231f-4821-ace9-22870e8ac6b5 -f /home/runner/work/_temp/a413eaf0-727e-45a8-afeb-fa708ddff01d
+2026-09-18T15:26:15.4814522Z Successfully extracted go to /home/runner/work/_temp/ba07e165-231f-4821-ace9-22870e8ac6b5
+2026-09-18T15:26:15.4815332Z Adding to the cache ...
+2026-09-18T15:26:21.4441153Z Successfully cached go to /opt/hostedtoolcache/go/1.27.1/x64
+2026-09-18T15:26:21.4444860Z Added go to the path
+2026-09-18T15:26:21.4447785Z Successfully set up Go version 1.27.1
+2026-09-18T15:26:21.4731405Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-18T15:26:21.4786476Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-18T15:26:21.4839765Z /home/runner/go/pkg/mod
+2026-09-18T15:26:21.4859905Z /home/runner/.cache/go-build
+2026-09-18T15:26:21.7686035Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:26:21.7813582Z (node:2225) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-18T15:26:23.0734586Z Received 0 of 484452015 (0.0%), 0.0 MBs/sec
+2026-09-18T15:26:24.0758217Z Received 113246208 of 484452015 (23.4%), 53.9 MBs/sec
+2026-09-18T15:26:25.0763484Z Received 209715200 of 484452015 (43.3%), 66.6 MBs/sec
+2026-09-18T15:26:26.0772952Z Received 310378496 of 484452015 (64.1%), 73.9 MBs/sec
+2026-09-18T15:26:27.0759648Z Received 427819008 of 484452015 (88.3%), 81.6 MBs/sec
+2026-09-18T15:26:27.8475940Z Received 484452015 of 484452015 (100.0%), 80.0 MBs/sec
+2026-09-18T15:26:27.8476841Z Cache Size: ~462 MB (484452015 B)
+2026-09-18T15:26:27.8615802Z [command]/usr/bin/tar -xf /home/runner/work/_temp/157d8d0f-3191-4c77-82c6-43b2682681aa/cache.tzst -P -C /home/runner/work/Zevune/Zevune --use-compress-program unzstd
+2026-09-18T15:26:30.3432590Z Cache restored successfully
+2026-09-18T15:26:30.3646975Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938
+2026-09-18T15:26:30.3674720Z go version go1.27.1 linux/amd64
+2026-09-18T15:26:30.3675058Z 
+2026-09-18T15:26:30.3675555Z ##[group]go env
+2026-09-18T15:26:30.4526125Z AR='ar'
+2026-09-18T15:26:30.4526607Z CC='gcc'
+2026-09-18T15:26:30.4527009Z CGO_CFLAGS='-O2 -g'
+2026-09-18T15:26:30.4527517Z CGO_CPPFLAGS=''
+2026-09-18T15:26:30.4527954Z CGO_CXXFLAGS='-O2 -g'
+2026-09-18T15:26:30.4528396Z CGO_ENABLED='1'
+2026-09-18T15:26:30.4529149Z CGO_FFLAGS='-O2 -g'
+2026-09-18T15:26:30.4529554Z CGO_LDFLAGS='-O2 -g'
+2026-09-18T15:26:30.4529931Z CXX='g++'
+2026-09-18T15:26:30.4530270Z GCCGO='gccgo'
+2026-09-18T15:26:30.4530621Z GO111MODULE=''
+2026-09-18T15:26:30.4530979Z GOAMD64='v1'
+2026-09-18T15:26:30.4531344Z GOARCH='amd64'
+2026-09-18T15:26:30.4532009Z GOAUTH='netrc'
+2026-09-18T15:26:30.4532410Z GOBIN='/home/runner/go/bin'
+2026-09-18T15:26:30.4532958Z GOCACHE='/home/runner/.cache/go-build'
+2026-09-18T15:26:30.4533458Z GOCACHEPROG=''
+2026-09-18T15:26:30.4533828Z GODEBUG=''
+2026-09-18T15:26:30.4534223Z GOENV='/home/runner/.config/go/env'
+2026-09-18T15:26:30.4534709Z GOEXE=''
+2026-09-18T15:26:30.4535063Z GOEXPERIMENT=''
+2026-09-18T15:26:30.4535665Z GOFIPS140='off'
+2026-09-18T15:26:30.4536039Z GOFLAGS=''
+2026-09-18T15:26:30.4537446Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build3409973186=/tmp/go-build -gno-record-gcc-switches'
+2026-09-18T15:26:30.4538607Z GOHOSTARCH='amd64'
+2026-09-18T15:26:30.4538965Z GOHOSTOS='linux'
+2026-09-18T15:26:30.4539298Z GOINSECURE=''
+2026-09-18T15:26:30.4539747Z GOMOD='/home/runner/work/Zevune/Zevune/go.mod'
+2026-09-18T15:26:30.4540278Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-09-18T15:26:30.4540722Z GONOPROXY=''
+2026-09-18T15:26:30.4541040Z GONOSUMDB=''
+2026-09-18T15:26:30.4541346Z GOOS='linux'
+2026-09-18T15:26:30.4541685Z GOPACKAGESDRIVER=''
+2026-09-18T15:26:30.4542311Z GOPATH='/home/runner/go'
+2026-09-18T15:26:30.4542693Z GOPRIVATE=''
+2026-09-18T15:26:30.4543139Z GOPROXY='https://proxy.golang.org,direct'
+2026-09-18T15:26:30.4543690Z GOROOT='/opt/hostedtoolcache/go/1.27.1/x64'
+2026-09-18T15:26:30.4544180Z GOSUMDB='sum.golang.org'
+2026-09-18T15:26:30.4544563Z GOTELEMETRY='local'
+2026-09-18T15:26:30.4545018Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-09-18T15:26:30.4545530Z GOTMPDIR=''
+2026-09-18T15:26:30.4545844Z GOTOOLCHAIN='local'
+2026-09-18T15:26:30.4546365Z GOTOOLDIR='/opt/hostedtoolcache/go/1.27.1/x64/pkg/tool/linux_amd64'
+2026-09-18T15:26:30.4546986Z GOVCS=''
+2026-09-18T15:26:30.4547377Z GOVERSION='go1.27.1'
+2026-09-18T15:26:30.4547743Z GOWORK=''
+2026-09-18T15:26:30.4548081Z PKG_CONFIG='pkg-config'
+2026-09-18T15:26:30.4548340Z 
+2026-09-18T15:26:30.4548865Z ##[endgroup]
+2026-09-18T15:26:30.4759020Z ##[group]Run go version
+2026-09-18T15:26:30.4759358Z [36;1mgo version[0m
+2026-09-18T15:26:30.4759593Z [36;1mgo mod download[0m
+2026-09-18T15:26:30.4759832Z [36;1mgo mod verify[0m
+2026-09-18T15:26:30.4760067Z [36;1mgo mod tidy -diff[0m
+2026-09-18T15:26:30.4760318Z [36;1mtest -z "$(gofmt -l .)"[0m
+2026-09-18T15:26:30.4804664Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:26:30.4805031Z env:
+2026-09-18T15:26:30.4805226Z   GOTOOLCHAIN: local
+2026-09-18T15:26:30.4805684Z ##[endgroup]
+2026-09-18T15:26:30.4916648Z go version go1.27.1 linux/amd64
+2026-09-18T15:26:31.8114264Z all modules verified
+2026-09-18T15:26:31.9786278Z ##[group]Run go test -mod=readonly ./... -count=1 -timeout=8m -v
+2026-09-18T15:26:31.9786824Z [36;1mgo test -mod=readonly ./... -count=1 -timeout=8m -v[0m
+2026-09-18T15:26:31.9824982Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:26:31.9825340Z env:
+2026-09-18T15:26:31.9825533Z   GOTOOLCHAIN: local
+2026-09-18T15:26:31.9825753Z ##[endgroup]
+2026-09-18T15:26:32.9683059Z === RUN   TestGenesisValidation
+2026-09-18T15:26:32.9684144Z --- PASS: TestGenesisValidation (0.03s)
+2026-09-18T15:26:32.9712984Z === RUN   TestFinalizeIsNotDurableAndCommitIs
+2026-09-18T15:26:32.9752739Z --- PASS: TestFinalizeIsNotDurableAndCommitIs (0.00s)
+2026-09-18T15:26:32.9766251Z === RUN   TestProposalChecksNeverWrite
+2026-09-18T15:26:32.9812456Z --- PASS: TestProposalChecksNeverWrite (0.00s)
+2026-09-18T15:26:32.9822720Z === RUN   TestEveryTransactionEntryRemainsClosed
+2026-09-18T15:26:32.9844532Z --- PASS: TestEveryTransactionEntryRemainsClosed (0.00s)
+2026-09-18T15:26:32.9882466Z === RUN   TestRepeatedFinalizeCopiesAndBindsHash
+2026-09-18T15:26:32.9883522Z --- PASS: TestRepeatedFinalizeCopiesAndBindsHash (0.00s)
+2026-09-18T15:26:32.9884567Z === RUN   TestQueryOnlyCommittedStateAndNoProofClaims
+2026-09-18T15:26:32.9885337Z --- PASS: TestQueryOnlyCommittedStateAndNoProofClaims (0.00s)
+2026-09-18T15:26:32.9886308Z === RUN   TestSnapshotsAndExtensionsFailClosed
+2026-09-18T15:26:32.9886969Z --- PASS: TestSnapshotsAndExtensionsFailClosed (0.00s)
+2026-09-18T15:26:32.9887847Z === RUN   TestConcurrentInfoAndFinalize
+2026-09-18T15:26:32.9888424Z --- PASS: TestConcurrentInfoAndFinalize (0.00s)
+2026-09-18T15:26:32.9889231Z === RUN   TestClosedApplicationFails
+2026-09-18T15:26:32.9889785Z --- PASS: TestClosedApplicationFails (0.00s)
+2026-09-18T15:26:32.9890273Z PASS
+2026-09-18T15:26:32.9890999Z ok  	github.com/youq616/Zevune/integration/cometbft/app	0.068s
+2026-09-18T15:26:32.9892276Z ?   	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-devnet	[no test files]
+2026-09-18T15:26:34.0933186Z === RUN   TestMalformedCommandsNeverCreateOrOverwrite
+2026-09-18T15:26:34.0934479Z --- PASS: TestMalformedCommandsNeverCreateOrOverwrite (0.00s)
+2026-09-18T15:26:34.0935280Z === RUN   TestBoundedPublicTransactionFiles
+2026-09-18T15:26:34.0936202Z --- PASS: TestBoundedPublicTransactionFiles (0.00s)
+2026-09-18T15:26:34.0937153Z === RUN   TestStorageCommandRejectsNetworkAndMutationFlags
+2026-09-18T15:26:34.0939127Z --- PASS: TestStorageCommandRejectsNetworkAndMutationFlags (0.00s)
+2026-09-18T15:26:34.0941251Z === RUN   TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput
+2026-09-18T15:26:34.0964971Z --- PASS: TestSyncSubmitRejectInvalidCheckpointBeforeOtherInput (0.00s)
+2026-09-18T15:26:34.0966795Z === RUN   TestStorageCheckpointFlagPair
+2026-09-18T15:26:34.0967475Z --- PASS: TestStorageCheckpointFlagPair (0.00s)
+2026-09-18T15:26:34.0968328Z === RUN   TestCheckpointSyntaxDoesNotSelectAStorageProfile
+2026-09-18T15:26:34.0969274Z --- PASS: TestCheckpointSyntaxDoesNotSelectAStorageProfile (0.00s)
+2026-09-18T15:26:34.0970296Z === RUN   TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands
+2026-09-18T15:26:34.0971486Z --- PASS: TestStorageCheckpointCLIRejectsPartialDuplicateAndWrongCommands (0.00s)
+2026-09-18T15:26:34.0972878Z === RUN   TestExplicitEmptyStorageCheckpointDoesNotDisableCheck
+2026-09-18T15:26:34.0973839Z --- PASS: TestExplicitEmptyStorageCheckpointDoesNotDisableCheck (0.00s)
+2026-09-18T15:26:34.0974793Z === RUN   TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths
+2026-09-18T15:26:34.0975804Z --- PASS: TestStorageCopyRequiresExplicitCheckpointAndOfflinePaths (0.00s)
+2026-09-18T15:26:34.0976653Z PASS
+2026-09-18T15:26:34.0977320Z ok  	github.com/youq616/Zevune/integration/cometbft/cmd/zevune-network	0.019s
+2026-09-18T15:27:11.0088498Z === RUN   TestNodeProcessHelper
+2026-09-18T15:27:11.0089028Z --- PASS: TestNodeProcessHelper (0.00s)
+2026-09-18T15:27:11.0090005Z === RUN   TestFourProcessConsensusAndRecovery
+2026-09-18T15:27:11.0092206Z     devnet_test.go:214: four processes verified common height=4; equal block/app hashes; >2/3 signatures verified
+2026-09-18T15:27:11.0093800Z     devnet_test.go:221: payment admission rejected by real CometBFT RPC/mempool path
+2026-09-18T15:27:11.0095166Z     devnet_test.go:225: one validator offline: remaining 3/4 continued committing
+2026-09-18T15:27:11.0096506Z     devnet_test.go:233: two validators offline: height remained 7 over observation window
+2026-09-18T15:27:11.0097808Z     devnet_test.go:239: restored quorum and lagging validator catch-up succeeded
+2026-09-18T15:27:11.0099186Z     devnet_test.go:245: abrupt process termination recovered without resetting validator state
+2026-09-18T15:27:11.0100677Z     devnet_test.go:256: full four-process restart resumed from durable application/consensus state
+2026-09-18T15:27:11.0101957Z --- PASS: TestFourProcessConsensusAndRecovery (30.67s)
+2026-09-18T15:27:11.0102663Z === RUN   TestInitAndManifestFailClosed
+2026-09-18T15:27:11.0103193Z --- PASS: TestInitAndManifestFailClosed (0.01s)
+2026-09-18T15:27:11.0103942Z === RUN   TestFullRestartAdvancesBeyondDurableHeight
+2026-09-18T15:27:11.0105002Z     restart_test.go:53: restart advanced every node beyond highest recovered height 3 to at least 6
+2026-09-18T15:27:11.0105581Z --- PASS: TestFullRestartAdvancesBeyondDurableHeight (6.24s)
+2026-09-18T15:27:11.0105989Z === RUN   TestMissingSigningStateIsNotRecreated
+2026-09-18T15:27:11.0106365Z --- PASS: TestMissingSigningStateIsNotRecreated (0.01s)
+2026-09-18T15:27:11.0106686Z PASS
+2026-09-18T15:27:11.0106995Z ok  	github.com/youq616/Zevune/integration/cometbft/devnet	36.937s
+2026-09-18T15:27:11.0107394Z === RUN   TestQuorumAndAllHeaderBindings
+2026-09-18T15:27:11.0107731Z === RUN   TestQuorumAndAllHeaderBindings/version
+2026-09-18T15:27:11.0108096Z === RUN   TestQuorumAndAllHeaderBindings/validators
+2026-09-18T15:27:11.0108498Z === RUN   TestQuorumAndAllHeaderBindings/next-validators
+2026-09-18T15:27:11.0108894Z === RUN   TestQuorumAndAllHeaderBindings/state-length
+2026-09-18T15:27:11.0109260Z === RUN   TestQuorumAndAllHeaderBindings/height
+2026-09-18T15:27:11.0109603Z === RUN   TestQuorumAndAllHeaderBindings/chain
+2026-09-18T15:27:11.0109959Z === RUN   TestQuorumAndAllHeaderBindings/parameters
+2026-09-18T15:27:11.0110344Z === RUN   TestQuorumAndAllHeaderBindings/future
+2026-09-18T15:27:11.0110704Z === RUN   TestQuorumAndAllHeaderBindings/pre-genesis
+2026-09-18T15:27:11.0111066Z --- PASS: TestQuorumAndAllHeaderBindings (0.00s)
+2026-09-18T15:27:11.0111516Z     --- PASS: TestQuorumAndAllHeaderBindings/version (0.00s)
+2026-09-18T15:27:11.0112271Z     --- PASS: TestQuorumAndAllHeaderBindings/validators (0.00s)
+2026-09-18T15:27:11.0112804Z     --- PASS: TestQuorumAndAllHeaderBindings/next-validators (0.00s)
+2026-09-18T15:27:11.0113323Z     --- PASS: TestQuorumAndAllHeaderBindings/state-length (0.00s)
+2026-09-18T15:27:11.0113803Z     --- PASS: TestQuorumAndAllHeaderBindings/height (0.00s)
+2026-09-18T15:27:11.0114268Z     --- PASS: TestQuorumAndAllHeaderBindings/chain (0.00s)
+2026-09-18T15:27:11.0114760Z     --- PASS: TestQuorumAndAllHeaderBindings/parameters (0.00s)
+2026-09-18T15:27:11.0115229Z     --- PASS: TestQuorumAndAllHeaderBindings/future (0.00s)
+2026-09-18T15:27:11.0115703Z     --- PASS: TestQuorumAndAllHeaderBindings/pre-genesis (0.00s)
+2026-09-18T15:27:11.0116139Z === RUN   TestPinnedPublicConfigurationAndCompanionFiles
+2026-09-18T15:27:11.0116603Z --- PASS: TestPinnedPublicConfigurationAndCompanionFiles (0.00s)
+2026-09-18T15:27:11.0117017Z === RUN   TestCanonicalDecodingAndFileBounds
+2026-09-18T15:27:11.0117387Z --- PASS: TestCanonicalDecodingAndFileBounds (0.00s)
+2026-09-18T15:27:11.0117766Z === RUN   TestLoopbackEndpointAndStreamingLimits
+2026-09-18T15:27:11.0118165Z --- PASS: TestLoopbackEndpointAndStreamingLimits (0.00s)
+2026-09-18T15:27:11.0118589Z === RUN   TestRPCRejectsRedirectCompressionAndOversize
+2026-09-18T15:27:11.0119026Z === RUN   TestRPCRejectsRedirectCompressionAndOversize/redirect
+2026-09-18T15:27:11.0119675Z === RUN   TestRPCRejectsRedirectCompressionAndOversize/encoding
+2026-09-18T15:27:11.0120247Z === RUN   TestRPCRejectsRedirectCompressionAndOversize/length
+2026-09-18T15:27:11.0120691Z === RUN   TestRPCRejectsRedirectCompressionAndOversize/stream
+2026-09-18T15:27:11.0121152Z --- PASS: TestRPCRejectsRedirectCompressionAndOversize (0.01s)
+2026-09-18T15:27:11.0121960Z     --- PASS: TestRPCRejectsRedirectCompressionAndOversize/redirect (0.00s)
+2026-09-18T15:27:11.0122607Z     --- PASS: TestRPCRejectsRedirectCompressionAndOversize/encoding (0.00s)
+2026-09-18T15:27:11.0123213Z     --- PASS: TestRPCRejectsRedirectCompressionAndOversize/length (0.00s)
+2026-09-18T15:27:11.0123815Z     --- PASS: TestRPCRejectsRedirectCompressionAndOversize/stream (0.01s)
+2026-09-18T15:27:11.0124317Z === RUN   TestMalformedGenesisInitDoesNotCreatePrivateDirectory
+2026-09-18T15:27:11.0124834Z --- PASS: TestMalformedGenesisInitDoesNotCreatePrivateDirectory (0.00s)
+2026-09-18T15:27:11.0125343Z === RUN   TestUnexpectedEngineExitIsNotSuccessfulShutdown
+2026-09-18T15:27:11.0125808Z --- PASS: TestUnexpectedEngineExitIsNotSuccessfulShutdown (0.00s)
+2026-09-18T15:27:11.0126248Z === RUN   TestRequestedShutdownDoesNotNeedEngineExit
+2026-09-18T15:27:11.0126660Z --- PASS: TestRequestedShutdownDoesNotNeedEngineExit (0.00s)
+2026-09-18T15:27:11.0127127Z === RUN   TestConcurrentCancellationAndEngineExitRemainRequested
+2026-09-18T15:27:11.0127647Z --- PASS: TestConcurrentCancellationAndEngineExitRemainRequested (0.00s)
+2026-09-18T15:27:11.0128115Z === RUN   TestEngineExitReleasesWaitingSupervisor
+2026-09-18T15:27:11.0128536Z --- PASS: TestEngineExitReleasesWaitingSupervisor (0.00s)
+2026-09-18T15:27:11.0129024Z === RUN   TestLifecycleRejectsMissingContext
+2026-09-18T15:27:11.0129376Z --- PASS: TestLifecycleRejectsMissingContext (0.00s)
+2026-09-18T15:27:11.0129842Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion
+2026-09-18T15:27:11.0130452Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/1/2
+2026-09-18T15:27:11.0131121Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/1/3
+2026-09-18T15:27:11.0131990Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/2/2
+2026-09-18T15:27:11.0132650Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/2/3
+2026-09-18T15:27:11.0133303Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/1/2
+2026-09-18T15:27:11.0133954Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/1/3
+2026-09-18T15:27:11.0134608Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/2/2
+2026-09-18T15:27:11.0135262Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/2/3
+2026-09-18T15:27:11.0135905Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/1/2
+2026-09-18T15:27:11.0136545Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/1/3
+2026-09-18T15:27:11.0137194Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/2/2
+2026-09-18T15:27:11.0137863Z === RUN   TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/2/3
+2026-09-18T15:27:11.0138529Z --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion (0.02s)
+2026-09-18T15:27:11.0139330Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/1/2 (0.00s)
+2026-09-18T15:27:11.0140170Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/1/3 (0.00s)
+2026-09-18T15:27:11.0140983Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/2/2 (0.00s)
+2026-09-18T15:27:11.0142021Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN01/2/3 (0.00s)
+2026-09-18T15:27:11.0142853Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/1/2 (0.00s)
+2026-09-18T15:27:11.0143825Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/1/3 (0.00s)
+2026-09-18T15:27:11.0144755Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/2/2 (0.00s)
+2026-09-18T15:27:11.0145575Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN02/2/3 (0.00s)
+2026-09-18T15:27:11.0146386Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/1/2 (0.00s)
+2026-09-18T15:27:11.0147205Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/1/3 (0.00s)
+2026-09-18T15:27:11.0148019Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/2/2 (0.00s)
+2026-09-18T15:27:11.0149005Z     --- PASS: TestPinnedNetworkProfileCannotChangeConfigurationOrAppVersion/ZVTGEN03/2/3 (0.00s)
+2026-09-18T15:27:11.0149642Z === RUN   TestSignedHeadersUseAuthenticatedProfileHeightAndVersion
+2026-09-18T15:27:11.0150194Z --- PASS: TestSignedHeadersUseAuthenticatedProfileHeightAndVersion (0.00s)
+2026-09-18T15:27:11.0150768Z === RUN   TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds
+2026-09-18T15:27:11.0151354Z --- PASS: TestActiveCheckpointUsesPinnedNetworkAndRetainsLegacyBounds (0.00s)
+2026-09-18T15:27:11.0152130Z === RUN   TestActiveCapacityReportsLogicalBytesAndExactCheckpoint
+2026-09-18T15:27:11.0152666Z --- PASS: TestActiveCapacityReportsLogicalBytesAndExactCheckpoint (0.00s)
+2026-09-18T15:27:11.0153224Z === RUN   TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath
+2026-09-18T15:27:11.0153787Z --- PASS: TestActiveStorageCopyRefusesBeforeReadingOrCreatingAnyPath (0.00s)
+2026-09-18T15:27:11.0154316Z === RUN   TestReferenceCheckpointRequestBoundsBeforeAccess
+2026-09-18T15:27:11.0154785Z --- PASS: TestReferenceCheckpointRequestBoundsBeforeAccess (0.00s)
+2026-09-18T15:27:11.0155254Z === RUN   TestReferenceCheckpointMissingContextAndNetwork
+2026-09-18T15:27:11.0155726Z --- PASS: TestReferenceCheckpointMissingContextAndNetwork (0.00s)
+2026-09-18T15:27:11.0156188Z === RUN   TestUnpinnedResultsNeverClaimRetainedCheckpoint
+2026-09-18T15:27:11.0156647Z --- PASS: TestUnpinnedResultsNeverClaimRetainedCheckpoint (0.00s)
+2026-09-18T15:27:11.0157070Z === RUN   TestStorageCheckpointCanonicalInputs
+2026-09-18T15:27:11.0157457Z --- PASS: TestStorageCheckpointCanonicalInputs (0.00s)
+2026-09-18T15:27:11.0157901Z === RUN   TestStorageCheckpointExactTipNotMinimumHeightOrFinality
+2026-09-18T15:27:11.0158434Z --- PASS: TestStorageCheckpointExactTipNotMinimumHeightOrFinality (0.00s)
+2026-09-18T15:27:11.0158948Z === RUN   TestInvalidStorageCheckpointFailsBeforeFileAccess
+2026-09-18T15:27:11.0159435Z --- PASS: TestInvalidStorageCheckpointFailsBeforeFileAccess (0.00s)
+2026-09-18T15:27:11.0159909Z === RUN   TestBoundedCopyRejectsShortLongAndCancelledInput
+2026-09-18T15:27:11.0160377Z --- PASS: TestBoundedCopyRejectsShortLongAndCancelledInput (0.00s)
+2026-09-18T15:27:11.0160856Z === RUN   TestCopyIOFailureAndMidstreamCancelNeverYieldDigest
+2026-09-18T15:27:11.0161366Z --- PASS: TestCopyIOFailureAndMidstreamCancelNeverYieldDigest (0.00s)
+2026-09-18T15:27:11.0162052Z === RUN   TestCopyPathsAndPublicEntryRejectBeforeWorker
+2026-09-18T15:27:11.0162563Z --- PASS: TestCopyPathsAndPublicEntryRejectBeforeWorker (0.00s)
+2026-09-18T15:27:11.0163028Z === RUN   TestPublishCopyIsCreateOnlyAndDoesNotLinkSource
+2026-09-18T15:27:11.0163491Z --- PASS: TestPublishCopyIsCreateOnlyAndDoesNotLinkSource (0.00s)
+2026-09-18T15:27:11.0163970Z === RUN   TestPublicationFailureAfterLinkIsExplicitlyUncertain
+2026-09-18T15:27:11.0164470Z --- PASS: TestPublicationFailureAfterLinkIsExplicitlyUncertain (0.00s)
+2026-09-18T15:27:11.0165016Z === RUN   TestPublicationCancellationAndExistingSymlinkDoNotOverwrite
+2026-09-18T15:27:11.0165599Z --- PASS: TestPublicationCancellationAndExistingSymlinkDoNotOverwrite (0.00s)
+2026-09-18T15:27:11.0166119Z === RUN   TestCopyReportDoesNotClaimConsensusOrFunds
+2026-09-18T15:27:11.0166545Z --- PASS: TestCopyReportDoesNotClaimConsensusOrFunds (0.00s)
+2026-09-18T15:27:11.0167122Z === RUN   TestJournalDigestDetectsChangedAndReplacedFile
+2026-09-18T15:27:11.0167579Z --- PASS: TestJournalDigestDetectsChangedAndReplacedFile (0.00s)
+2026-09-18T15:27:11.0168202Z === RUN   TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult
+2026-09-18T15:27:11.0168790Z --- PASS: TestCancelAfterPublishRetainsCompleteCopyWithUncertainResult (0.00s)
+2026-09-18T15:27:11.0169323Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims
+2026-09-18T15:27:11.0169759Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/normal
+2026-09-18T15:27:11.0170242Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/exact-empty
+2026-09-18T15:27:11.0170735Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/one-short
+2026-09-18T15:27:11.0171226Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/byte-limit
+2026-09-18T15:27:11.0171925Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/record-limit
+2026-09-18T15:27:11.0172458Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/record-warning
+2026-09-18T15:27:11.0173020Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/record-before-warning
+2026-09-18T15:27:11.0173590Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/one-output-slot
+2026-09-18T15:27:11.0174129Z === RUN   TestStorageReportBoundariesAndNoFinalityClaims/two-output-slots
+2026-09-18T15:27:11.0174646Z --- PASS: TestStorageReportBoundariesAndNoFinalityClaims (0.00s)
+2026-09-18T15:27:11.0175241Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/normal (0.00s)
+2026-09-18T15:27:11.0175890Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/exact-empty (0.00s)
+2026-09-18T15:27:11.0176539Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/one-short (0.00s)
+2026-09-18T15:27:11.0177181Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/byte-limit (0.00s)
+2026-09-18T15:27:11.0177842Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/record-limit (0.00s)
+2026-09-18T15:27:11.0178517Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/record-warning (0.00s)
+2026-09-18T15:27:11.0179251Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/record-before-warning (0.00s)
+2026-09-18T15:27:11.0179974Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/one-output-slot (0.00s)
+2026-09-18T15:27:11.0180678Z     --- PASS: TestStorageReportBoundariesAndNoFinalityClaims/two-output-slots (0.00s)
+2026-09-18T15:27:11.0181191Z === RUN   TestStorageReportRejectsContradictoryCounts
+2026-09-18T15:27:11.0181622Z --- PASS: TestStorageReportRejectsContradictoryCounts (0.00s)
+2026-09-18T15:27:11.0182326Z === RUN   TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges
+2026-09-18T15:27:11.0182858Z --- PASS: TestJournalMetadataIsReadOnlyAndDetectsOrdinaryChanges (0.00s)
+2026-09-18T15:27:11.0183344Z === RUN   TestStorageMissingInvalidPathsNeverCreateData
+2026-09-18T15:27:11.0183787Z --- PASS: TestStorageMissingInvalidPathsNeverCreateData (0.00s)
+2026-09-18T15:27:11.0184194Z === RUN   FuzzCanonicalPublicConfiguration
+2026-09-18T15:27:11.0184555Z === RUN   FuzzCanonicalPublicConfiguration/seed#0
+2026-09-18T15:27:11.0184914Z === RUN   FuzzCanonicalPublicConfiguration/seed#1
+2026-09-18T15:27:11.0185281Z --- PASS: FuzzCanonicalPublicConfiguration (0.00s)
+2026-09-18T15:27:11.0185738Z     --- PASS: FuzzCanonicalPublicConfiguration/seed#0 (0.00s)
+2026-09-18T15:27:11.0186220Z     --- PASS: FuzzCanonicalPublicConfiguration/seed#1 (0.00s)
+2026-09-18T15:27:11.0186590Z === RUN   FuzzNumericLoopbackEndpoint
+2026-09-18T15:27:11.0186908Z === RUN   FuzzNumericLoopbackEndpoint/seed#0
+2026-09-18T15:27:11.0187271Z === RUN   FuzzNumericLoopbackEndpoint/seed#1
+2026-09-18T15:27:11.0187624Z --- PASS: FuzzNumericLoopbackEndpoint (0.00s)
+2026-09-18T15:27:11.0188222Z     --- PASS: FuzzNumericLoopbackEndpoint/seed#0 (0.00s)
+2026-09-18T15:27:11.0188666Z     --- PASS: FuzzNumericLoopbackEndpoint/seed#1 (0.00s)
+2026-09-18T15:27:11.0189014Z === RUN   FuzzStorageCheckpointInputs
+2026-09-18T15:27:11.0189333Z === RUN   FuzzStorageCheckpointInputs/seed#0
+2026-09-18T15:27:11.0189809Z === RUN   FuzzStorageCheckpointInputs/seed#1
+2026-09-18T15:27:11.0190136Z === RUN   FuzzStorageCheckpointInputs/seed#2
+2026-09-18T15:27:11.0190572Z --- PASS: FuzzStorageCheckpointInputs (0.00s)
+2026-09-18T15:27:11.0190991Z     --- PASS: FuzzStorageCheckpointInputs/seed#0 (0.00s)
+2026-09-18T15:27:11.0191414Z     --- PASS: FuzzStorageCheckpointInputs/seed#1 (0.00s)
+2026-09-18T15:27:11.0192083Z     --- PASS: FuzzStorageCheckpointInputs/seed#2 (0.00s)
+2026-09-18T15:27:11.0192423Z === RUN   FuzzStorageAccounting
+2026-09-18T15:27:11.0192701Z === RUN   FuzzStorageAccounting/seed#0
+2026-09-18T15:27:11.0192993Z === RUN   FuzzStorageAccounting/seed#1
+2026-09-18T15:27:11.0193288Z --- PASS: FuzzStorageAccounting (0.00s)
+2026-09-18T15:27:11.0193681Z     --- PASS: FuzzStorageAccounting/seed#0 (0.00s)
+2026-09-18T15:27:11.0194081Z     --- PASS: FuzzStorageAccounting/seed#1 (0.00s)
+2026-09-18T15:27:11.0194364Z PASS
+2026-09-18T15:27:11.0194656Z ok  	github.com/youq616/Zevune/integration/cometbft/labnet	0.062s
+2026-09-18T15:27:11.0195108Z === RUN   TestGenesisBindingRejectsAmbiguityAndMismatch
+2026-09-18T15:27:11.0195563Z --- PASS: TestGenesisBindingRejectsAmbiguityAndMismatch (0.00s)
+2026-09-18T15:27:11.0195918Z PASS
+2026-09-18T15:27:11.0196209Z ok  	github.com/youq616/Zevune/integration/cometbft/poolapp	0.009s
+2026-09-18T15:27:11.2077198Z ##[group]Run go vet -mod=readonly ./...
+2026-09-18T15:27:11.2077569Z [36;1mgo vet -mod=readonly ./...[0m
+2026-09-18T15:27:11.2114811Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:27:11.2115163Z env:
+2026-09-18T15:27:11.2115353Z   GOTOOLCHAIN: local
+2026-09-18T15:27:11.2115575Z ##[endgroup]
+2026-09-18T15:27:17.4302485Z ##[group]Run go test -mod=readonly -race ./app -count=1 -timeout=3m
+2026-09-18T15:27:17.4303057Z [36;1mgo test -mod=readonly -race ./app -count=1 -timeout=3m[0m
+2026-09-18T15:27:17.4340448Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:27:17.4340818Z env:
+2026-09-18T15:27:17.4341014Z   GOTOOLCHAIN: local
+2026-09-18T15:27:17.4341253Z ##[endgroup]
+2026-09-18T15:27:53.0574151Z ok  	github.com/youq616/Zevune/integration/cometbft/app	1.061s
+2026-09-18T15:27:53.1653150Z ##[group]Run go build -mod=readonly ./cmd/zevune-devnet
+2026-09-18T15:27:53.1653603Z [36;1mgo build -mod=readonly ./cmd/zevune-devnet[0m
+2026-09-18T15:27:53.1689835Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:27:53.1690176Z env:
+2026-09-18T15:27:53.1690371Z   GOTOOLCHAIN: local
+2026-09-18T15:27:53.1690587Z ##[endgroup]
+2026-09-18T15:27:54.4960482Z ##[group]Run git diff --exit-code
+2026-09-18T15:27:54.4960816Z [36;1mgit diff --exit-code[0m
+2026-09-18T15:27:54.4996648Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-18T15:27:54.4997003Z env:
+2026-09-18T15:27:54.4997201Z   GOTOOLCHAIN: local
+2026-09-18T15:27:54.4997416Z ##[endgroup]
+2026-09-18T15:27:54.5179968Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-18T15:27:54.5181272Z Post job cleanup.
+2026-09-18T15:27:54.6424586Z (node:11024) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-18T15:27:54.6426124Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-18T15:27:54.6507624Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOMODCACHE
+2026-09-18T15:27:54.6559455Z [command]/opt/hostedtoolcache/go/1.27.1/x64/bin/go env GOCACHE
+2026-09-18T15:27:54.6589535Z /home/runner/go/pkg/mod
+2026-09-18T15:27:54.6610229Z /home/runner/.cache/go-build
+2026-09-18T15:27:54.6618875Z Cache hit occurred on the primary key setup-go-Linux-x64-ubuntu24-go-1.27.1-ef6b0fbca0a8d0b6206b16c85f11c4a6c772908ae2660ca86a6b7ee95979c938, not saving cache.
+2026-09-18T15:27:54.6838237Z Post job cleanup.
+2026-09-18T15:27:54.7707696Z [command]/usr/bin/git version
+2026-09-18T15:27:54.7750349Z git version 2.55.0
+2026-09-18T15:27:54.7792206Z Temporarily overriding HOME='/home/runner/work/_temp/8b877245-3ab3-426c-b35b-993aafe11337' before making global git config changes
+2026-09-18T15:27:54.7793702Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-18T15:27:54.7797728Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Zevune/Zevune
+2026-09-18T15:27:54.7839928Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-18T15:27:54.7877491Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-18T15:27:54.8189300Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-18T15:27:54.8235422Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-18T15:27:54.8754448Z Cleaning up orphan processes
+2026-09-18T15:27:54.9096108Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

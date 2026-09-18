@@ -1,0 +1,229 @@
+{
+  "candidate": "61c691270b91aece076177cb757e51e0e63fe310",
+  "base": "2cc87a2207d502ac5cfe00ea52e525c1516917e5",
+  "scope": "source inventory only; definitions are not executed tests",
+  "changed_workflow_scheduler_resource_growth_paths": [],
+  "inventories": [
+    {
+      "path": "integration/orchard/src/pool/active/package/tests.rs",
+      "bytes": 22487,
+      "sha256": "b81fb39e0be2e4f021b68ff3bf40135007cc528b69f64cc2d6cd414c075190fa",
+      "git_blob": "d7312bbeb65ae5165a6e416ac7f1aa95072998d3",
+      "file_feature_gate": null,
+      "tests": [
+        {
+          "name": "checked_io_retries_short_reads_writes_and_interruptions_without_skipping_bytes",
+          "line": 111,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "transport_view_and_original_creation_handles_preserve_exact_physical_layouts",
+          "line": 215,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "low_level_shape_binds_real_tail_and_source_range_end_before_creating_output",
+          "line": 357,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "mutations_are_detected_and_a_failed_joined_reader_cannot_resume",
+          "line": 415,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "interrupted_package_writes_retain_partial_or_complete_new_files_without_retry",
+          "line": 475,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "interrupted_reconstruction_keeps_created_files_and_never_overwrites_them",
+          "line": 529,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "prepared_parent_replacement_is_rejected_before_any_output_creation",
+          "line": 584,
+          "attributes": [
+            "#[cfg(unix)]",
+            "#[test]"
+          ]
+        },
+        {
+          "name": "prepared_parent_cannot_be_renamed_before_the_retained_owner_drops",
+          "line": 604,
+          "attributes": [
+            "#[cfg(windows)]",
+            "#[test]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "integration/orchard/src/pool/recovery/active/package/tests.rs",
+      "bytes": 34919,
+      "sha256": "936c8092f1d798e4c9be87315475808a1051b957da608ca6fbab1439ac57e5e8",
+      "git_blob": "8071d1334c4034c2397b40c3034dc389798047ef",
+      "file_feature_gate": null,
+      "tests": [
+        {
+          "name": "independently_encoded_packages_restore_exact_bytes_without_a_later_directory",
+          "line": 213,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "strict_package_metadata_pins_offsets_lengths_and_eof_reject_without_writing",
+          "line": 263,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "repinned_early_rotation_and_split_frames_reach_the_joined_replay_gate",
+          "line": 339,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_output",
+          "line": 424,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation",
+          "line": 468,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "final_verify_byte_changes_do_not_reuse_previous_success_or_repair_inputs",
+          "line": 527,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "partial_package_and_restore_failures_keep_exact_targets_and_release_creation_handles",
+          "line": 569,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "final_pack_and_restored_target_changes_cannot_publish_success",
+          "line": 637,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "shared_package_readers_keep_locks_until_last_drop_and_allow_sibling_restores",
+          "line": 716,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_rejected",
+          "line": 751,
+          "attributes": [
+            "#[cfg(unix)]",
+            "#[test]"
+          ]
+        },
+        {
+          "name": "windows_retained_package_and_parent_names_cannot_be_deleted_or_renamed",
+          "line": 815,
+          "attributes": [
+            "#[cfg(windows)]",
+            "#[test]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "integration/orchard/tests/active_incremental_package_cli.rs",
+      "bytes": 36527,
+      "sha256": "914165fb58851df2da8435742848e0be6a865a8b5d67bed99768d267ff9143ce",
+      "git_blob": "cd5314f1b2e83bf609d6e20d5e0d9e6177b18a3e",
+      "file_feature_gate": "#![cfg(feature = \"local-funding-lab\")]",
+      "tests": [
+        {
+          "name": "package_cli_exact_tail_bytes_restore_without_later_and_continue",
+          "line": 337,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_genesis_same_content_and_new_segment_have_exact_schema",
+          "line": 411,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_options_profiles_and_two_independent_pins_are_required",
+          "line": 463,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_corrupt_header_ranges_payload_and_eof_are_retained",
+          "line": 598,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_existing_nested_and_missing_parent_targets_are_not_changed",
+          "line": 655,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_writer_locks_reject_and_shared_readers_coexist",
+          "line": 741,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_stdout_failure_retains_complete_outputs_for_explicit_verify",
+          "line": 840,
+          "attributes": [
+            "#[test]"
+          ]
+        },
+        {
+          "name": "package_cli_symlink_sources_and_source_parent_alias_targets_are_refused",
+          "line": 952,
+          "attributes": [
+            "#[cfg(unix)]",
+            "#[test]"
+          ]
+        }
+      ]
+    }
+  ]
+}
