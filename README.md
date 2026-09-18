@@ -8,7 +8,8 @@
 [P2活动账本验收记录](reports/p2-active-ledger-validation.md)。固定32+1笔真实付款、恢复及进程资源观测另见
 [P2付款资源基线验收](reports/p2-payment-resource-validation.md)。活动目录归档的冻结合同、已验收实现及证据另见
 [P2活动归档与完整恢复](reports/p2-active-archive-validation.md)。双检查点活动归档的只读追加核验与范围计划见
-[P2活动归档追加计划](reports/p2-active-incremental-plan-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
+[P2活动归档追加计划](reports/p2-active-incremental-plan-validation.md)。新增公开字节的持久包、完整验证及新目录恢复见
+[P2活动增量包与新目录恢复](reports/p2-active-incremental-package-validation.md)。此前接手基线、PR #7独立审核及构建修复保留在
 [2026-09-16接手记录](reports/project-handoff-2026-09-16.md)。
 统一开发入口仍是 `dev/m12-genesis-domain`；整体交付范围见
 [八工作包计划](docs/DELIVERY_PLAN.zh-CN.md)。
@@ -126,7 +127,7 @@ P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完
 历史索引由完整区块记录派生，支持记录跨越分段边界，不接受外部索引作为状态或授权。
 
 这些旧单文件备份/索引接口仍受原64 MiB日志、10000条记录等限制；每次CLI索引调用都重新完整校验，明确拒绝活动profile。
-活动节点分段存储已作为独立增量实现；活动目录的完整归档使用独立合同和验收记录，旧命令不自动扩宽。迁移、快照和增量备份仍未完成，P2继续保持开发中。
+活动节点分段存储已作为独立增量实现；活动目录的完整归档使用独立合同和验收记录，旧命令不自动扩宽。迁移和快照状态导入仍未完成；活动profile的持久增量包与新目录恢复见下节，旧命令的范围不变。P2继续保持开发中。
 [分段备份](docs/SEGMENTED_BACKUP.zh-CN.md) · [重放派生索引](docs/REPLAY_DERIVED_INDEX.zh-CN.md)。
 
 
@@ -153,7 +154,7 @@ P7仍为开发中，完整负载、隐私路径和端到端延迟验收尚未完
 
 State复用从真实承诺树推导的当前根，减少空块和完整重放的重复根计算；缓存不落盘，
 不改变摘要、授权或anchor规则，等价性由优化前完整摘要算法核对。见[派生根复用](docs/DERIVED_COMMITMENT_ROOT.zh-CN.md)。
-固定32+1笔的内存与恢复历史成本基线已验收；活动归档的单独实现和验证见下节。持续真实交易增长、容量边界、快照、增量备份、真实断电和长期多机运行仍需验收。
+固定32+1笔的内存与恢复历史成本基线已验收；活动归档的单独实现和验证见下节。持续真实交易增长、容量边界、快照状态导入、真实断电和长期多机运行仍需验收；持久增量包与新目录恢复的独立验收另见下节。
 2048是分段数上限，完整读取器还会复制整组文件句柄；峰值资源并非限制在2048个句柄。
 Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-ledger-validation.md)。
 
@@ -167,7 +168,7 @@ Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-l
 
 ## P2 活动目录归档与完整恢复
 
-本运行阶段已验收并通过 [PR #13](https://github.com/youq616/Zevune/pull/13) 合入。准确 C7 经过两路非作者完整代码审核及独立原生审核，10 个 PR 工作流、23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致。默认／funded 测试、平台条件跳过、历史失败及精确 source/tree/merge 身份见[本阶段记录](reports/p2-active-archive-validation.md)。最终文档的独立复核及合入记录见 PR #13 所链接的文档 PR。
+活动完整归档阶段已验收并通过 [PR #13](https://github.com/youq616/Zevune/pull/13) 合入。准确 C7 经过两路非作者完整代码审核及独立原生审核，10 个 PR 工作流、23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致。默认／funded 测试、平台条件跳过、历史失败及精确 source/tree/merge 身份见[本阶段记录](reports/p2-active-archive-validation.md)。最终文档的独立复核及合入记录见 PR #13 所链接的文档 PR。
 
 活动归档保留活动目录的原 `genesis`、连续完整记录段及逐文件精确字节，不增加 MANIFEST 或重新分片。独立保留的 `ZVARCP01` 检查点固定128字节，命令行使用256个小写hex字符，绑定可信高度、AppHash及完整物理布局；随不可信归档一起收到的未认证pin不证明来源，也不证明最新状态。
 
@@ -175,7 +176,7 @@ Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-l
 
 新增的[固定公共验证密钥合同](docs/FIXED_VERIFYING_KEY.zh-CN.md)已通过两路独立设计审核：`wire::AuthorizationVerifier` 只将编译期固定电路的不可变公共密钥保留在进程私有 `OnceLock`，每个新实例仍新建独立空授权缓存。复制中的源、目标和末次源三次完整真实重放、原测试与时间预算全部保留；密钥常驻至进程退出，不能导入或选择外部密钥。新增真实证明回归检查并发使用与缓存隔离，不宣称冷首次初始化竞争、构建panic或归档资源峰值已经测量；实现及完整双平台原生证据已按准确 C7 核对，范围见本阶段记录。
 
-创建后失败可能留下部分或完整目标，不能自动清除或覆盖；完整副本可以按原pin另行验证。归档不含钱包、密钥、共识数据库/WAL或最后签名状态，成功也明确 `validator_ready:false`，不能直接当成可启动的完整验证者备份。Windows目录持久化、真实断电、磁盘满、快照、增量备份和长期全容量仍需后续验收；本阶段没有新增归档资源测量。
+创建后失败可能留下部分或完整目标，不能自动清除或覆盖；完整副本可以按原pin另行验证。归档不含钱包、密钥、共识数据库/WAL或最后签名状态，成功也明确 `validator_ready:false`，不能直接当成可启动的完整验证者备份。Windows目录持久化、真实断电、磁盘满、快照状态导入和长期全容量仍需后续验收；该归档阶段没有新增归档资源测量。该历史验收不包含随后单独接受的持久增量包，新能力见下节。
 
 [冻结合同](docs/ACTIVE_ARCHIVE_V1.zh-CN.md) · [实现、原生CI与独立审核记录](reports/p2-active-archive-validation.md)。P2保持开发中。
 
@@ -196,6 +197,45 @@ cargo +1.98.1 run --manifest-path integration/orchard/Cargo.toml --locked --rele
 
 库接口为 `base.incremental_plan(&mut later)`，返回字段私有的 `ActiveIncrementalPlan` 和只读范围。两份归档保持共享锁；成功 CLI 的两次打开与方法内两次核验合计四次完整真实重放，每次使用独立空授权缓存。对两个已打开实例单独调用方法则新增两次重放。全部复用字节比较后还会再次核对两端完整字节、布局和目录身份。计划只描述本次已核验的历史，不能认证以后路径中的文件，也不证明最新状态或共识最终性。
 
-本运行阶段已通过两路非作者完整代码审核和独立原生审核，并经 [PR #15](https://github.com/youq616/Zevune/pull/15) 合入。准确 C2 的 10 个 PR 工作流／23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致，最终文档复核与合入记录见 PR #15 所链接的文档 PR。持久增量包、应用增量的恢复入口、快照导入和生产存储仍待开发，P2 保持开发中。
+只读追加计划阶段已通过两路非作者完整代码审核和独立原生审核，并经 [PR #15](https://github.com/youq616/Zevune/pull/15) 合入。准确 C2 的 10 个 PR 工作流／23 个必需任务全部在 attempt 1 成功；实际合入树与验收源码一致，最终文档复核与合入记录见 PR #15 所链接的文档 PR。该只读阶段没有写包或应用增量，后续持久增量包与新目录恢复见下节。快照状态导入和生产存储仍待完成，P2 保持开发中。
 
 [冻结设计](docs/ACTIVE_INCREMENTAL_PLAN.zh-CN.md) · [准确源码、原生结果与独立审核](reports/p2-active-incremental-plan-validation.md)。
+
+## P2 活动账本持久增量包与新目录恢复
+
+准确 C3 已取得两路非作者代码审核，最终原生结果：10 个 PR 工作流／23 个任务均在 attempt 1 成功，274 个成功步骤与 9 个原有 Windows 条件跳过；完整独立原生审核为 `PASS_NATIVE_C3`，非 Rust 分项为 `PASS_NONRUST_NATIVE_C3`。本运行阶段已通过 [PR #17](https://github.com/youq616/Zevune/pull/17) 实际合入，合入树与准确 C3 验收源码一致。准确 source/tree/merge、原始失败、测试计数和未测范围见[本阶段验收记录](reports/p2-active-incremental-package-validation.md)，最终文档的独立复核与合入身份另见 [PR #17](https://github.com/youq616/Zevune/pull/17) 链接的文档 PR。
+
+`pack-active-incremental` 将两份独立可信检查点之间新增的公开账本字节写入一个新的 `ZVAIPK01` 包文件。`verify-active-incremental` 结合基线归档完整验证包；`restore-active-incremental` 从同一基线与包恢复完整的新活动目录。验证和恢复无需保留原较后归档。三个命令仅接受 NO-FUNDS LAB2／ZVTGEN03／ActiveSegmentsV1；包不包含独立基线的旧历史，必须一起保留基线归档以及两份独立可信检查点。
+
+先停止相关写入进程，并分别准备可信保存的 base／later `ZVARCP01` pin（各 128 字节，命令行编码为 256 个小写 hex 字符）。包内两 pin 只与这些可信值比对，不能自行证明来源，也不证明最新状态或共识最终性。输出父目录须已存在且可信；包与恢复目录只能使用全新绝对路径，不能位于输入归档内部。以下 Bash 示例从仓库根目录执行；先设置两个实际可信 pin，并替换示例绝对路径：
+
+```bash
+cargo +1.98.1 run --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-pool-recovery -- \
+  pack-active-incremental --no-real-funds \
+  --base /srv/zevune/archive-earlier --base-checkpoint "${BASE_CHECKPOINT:?请先设置基线归档的可信检查点}" \
+  --source /srv/zevune/archive-later --checkpoint "${LATER_CHECKPOINT:?请先设置较后归档的可信检查点}" \
+  --output /srv/zevune/recovery/later.zvaipk
+
+cargo +1.98.1 run --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-pool-recovery -- \
+  verify-active-incremental --no-real-funds \
+  --base /srv/zevune/archive-earlier --base-checkpoint "${BASE_CHECKPOINT:?请先设置基线归档的可信检查点}" \
+  --source /srv/zevune/recovery/later.zvaipk --checkpoint "${LATER_CHECKPOINT:?请先设置较后归档的可信检查点}"
+
+cargo +1.98.1 run --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-pool-recovery -- \
+  restore-active-incremental --no-real-funds \
+  --base /srv/zevune/archive-earlier --base-checkpoint "${BASE_CHECKPOINT:?请先设置基线归档的可信检查点}" \
+  --source /srv/zevune/recovery/later.zvaipk --checkpoint "${LATER_CHECKPOINT:?请先设置较后归档的可信检查点}" \
+  --output /srv/zevune/recovery/restored-later
+```
+
+成功回执为单行 ASCII JSON，`format` 为 `zevune-active-incremental-package-1`，`package_format` 为 `ZVAIPK01`。它同时返回两 pin、包字节数、重建账本字节数和严格的追加 `ranges`。只有 pack 的 `incremental_backup_written` 为 true，只有 restore 的 `archive_restored` 为 true；三者成功均为 `replay_verified:true`、`byte_prefix_verified:true`，同时保持 `snapshot_imported:false`、`finality_verified:false`、`validator_ready:false` 和 `real_funds_allowed:false`。必须同时检查进程退出状态；stdout 失败可能留下部分 JSON 和完整新目标，不能把退出失败解释为目标不存在。
+
+包保留原字节与原完整记录边界，不压缩、不重新切分旧段、不导入快照。范围按段索引严格递增，新段连续，旧尾追加偏移必须等于实际基线尾长；截断、尾随、错误 pin、payload 损坏和普通摘要重算不能绕过完整物理布局检查与真实授权重放。同内容、同 pin 的空包仍为可完整验证并恢复的 268 字节文件。范围最多 2048 条；重建账本仍受原 1 GiB／1000000 记录／2048 段／1 MiB 段限制。
+
+库入口为 `ActiveArchive::pack_incremental_new` 与 `ActiveIncrementalPackage::{open, verify, restore_new}`。创建时保留原文件句柄和排他锁；正常打开包持只读共享锁。每次 verify／restore 都重新验证，`plan()` 仅返回只读元数据，不能成为以后跳过认证的权限。成功 CLI 的完整真实重放次数分别为 pack 6 次、verify 3 次、restore 8 次，每次新验证器均有独立空授权缓存。包只携带新增公开字节与格式元数据，仍依赖基线及完整重放；本阶段没有测得新的恢复速度、总内存或文件句柄峰值。
+
+创建后失败可能保留部分或完整的新包／目录，包括持久化后确认丢失与最终核验失败；工具不自动删除、覆盖、截断、修复或重试。完整产物可按独立 pin 另行显式验证。协作锁、保留句柄和前后核验仍依赖可信父目录、操作系统与文件系统，不构成任意敌对改写下的原子快照。私有故障注入不等于真实断电、磁盘满或 Windows 目录持久化验收。
+
+已闭合的范围仅是活动公开账本的持久增量包与新目录完整恢复，`incremental_backup_implemented:true` 据此记录。P2 整体仍在开发中：快照状态导入、剪枝／迁移、持续真实付款与完整容量、长期多机及实际存储故障仍需完成。账本包不包含钱包、密钥、共识数据库／WAL 或最后签名状态，不能直接作为完整验证者恢复。`snapshot_state_import_implemented`、`production_storage_ready`、`audited` 和 `real_funds_allowed` 仍为 false。
+
+[冻结合同](docs/ACTIVE_INCREMENTAL_PACKAGE_V1.zh-CN.md) · [准确源码、原生 CI 与独立审核](reports/p2-active-incremental-package-validation.md)。既有 32+1 资源报告仍属于其原源码与测量范围，本阶段的回归结果不改写它为增量包资源测量。

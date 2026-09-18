@@ -1,0 +1,86 @@
+diff --git a/integration/orchard/src/pool/active/package/tests.rs b/integration/orchard/src/pool/active/package/tests.rs
+index fcad06b..ef24f03 100644
+--- a/integration/orchard/src/pool/active/package/tests.rs
++++ b/integration/orchard/src/pool/active/package/tests.rs
+@@ -314,81 +314,80 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
+         for length in later_frames {
+             joined.validate_frame(start, start + length).unwrap();
+             start += length;
+         }
+         assert_eq!(start, later.length());
+         fs::write(d.path(&format!("allowed-sibling-{index}")), b"unrelated").unwrap();
+         package.check().unwrap();
+         let restored_path = d.path(&format!("restored-{index}"));
+         let output = NewTarget::prepare(&restored_path, &[&base_path]).unwrap();
+         let (restored_genesis, restored) = joined.copy_new(&output).unwrap();
+         assert_eq!(
+             file_bytes(&restored_genesis, restored.header_length),
+             file_bytes(&later_genesis, later.header_length)
+         );
+         for (index, segment) in restored.segments.iter().enumerate() {
+             assert_eq!(segment.length, later.segments[index].length);
+             assert_eq!(
+                 file_bytes(&segment.file, segment.length),
+                 file_bytes(&later.segments[index].file, later.segments[index].length)
+             );
+         }
+         assert_eq!(logical(&restored, &restored_genesis), expected);
+         assert_eq!(
+             restored.layout_hash(&restored_genesis).unwrap(),
+             joined.layout_hash().unwrap()
+         );
+         assert!(matches!(
+             ActiveJournal::open(&restored_path, &[0; 76]),
+             Err(PoolError::Locked)
+         ));
+         assert!(NewTarget::prepare(&restored_path, &[]).is_err());
+         assert!(NewTarget::prepare(&package_path, &[]).is_err());
+         assert_eq!(logical(&base, &base_genesis), before_base);
+         assert_eq!(logical(&later, &later_genesis), expected);
+         assert_eq!(package_bytes(&package), encoded);
+         drop(restored);
+         drop(restored_genesis);
+         let (genesis_again, restored_again) =
+             ActiveJournal::open(&restored_path, &[0; 76]).unwrap();
+         assert_eq!(logical(&restored_again, &genesis_again), expected);
+-        drop(reader);
+         drop(joined);
+         drop(package);
+         let reopened = RetainedPackage::open(&package_path).unwrap();
+         assert_eq!(package_bytes(&reopened), encoded);
+     }
+ }
+ 
+ #[test]
+ fn low_level_shape_binds_real_tail_and_source_range_end_before_creating_output() {
+     let d = Dir::new();
+     let (base_genesis, base) = journal(&d.path("base"), &[400]);
+     let (later_genesis, later) = journal(&d.path("later"), &[400, 600]);
+     let ranges = ranges(&base, &base_genesis, &later, &later_genesis);
+     let metadata = metadata(&ranges);
+     let target = NewTarget::prepare(&d.path("package"), &[]).unwrap();
+     let package =
+         RetainedPackage::create_new(target, &metadata, &ranges, &later, &later_genesis).unwrap();
+     for (index, offset, length) in [
+         (0, 399, 600),
+         (0, 401, 600),
+         (0, 0, 600),
+         (1, 0, 600),
+         (0, 400, 0),
+     ] {
+         let changed = [RangeSpec {
+             segment_index: index,
+             offset,
+             length,
+         }];
+         assert!(JoinedJournal::new(
+             &base,
+             &base_genesis,
+             &package,
+             &metadata,
+             &changed,
+             1,
+             later.length(),
+         )
+         .is_err());
+         let path = d.path(&format!("must-not-create-{index}-{offset}-{length}"));

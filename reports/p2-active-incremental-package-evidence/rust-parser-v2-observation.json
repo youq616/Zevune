@@ -1,0 +1,964 @@
+{
+  "status": "REVIEWER_PARSER_CORRECTION / NOT_PRODUCT_TEST_EXECUTION",
+  "reason": "The two output streams can arrive in either order. Cargo target announcements and harness stdout each preserve execution order, so v2 verifies both complete ordered sequences then pairs by ordinal instead of requiring the announcement to have arrived already.",
+  "original": {
+    "path": "c3-native/job-105660991474.log",
+    "bytes": 66198,
+    "sha256": "4b746a5dc92dae413cf3ad4ae17cf6da6688a3979ca956b5a43b23dae5e29589",
+    "utf8_bom": true,
+    "crlf_count": 0
+  },
+  "source": "cb0804e7c921a456cbbafab313b3a4a4501b8f5e",
+  "v1_failure": {
+    "type": "AssertionError",
+    "message": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "original_parser_preserved": true
+  },
+  "actual_late_stdout_stderr_lines": [
+    {
+      "line": 581,
+      "text": ""
+    },
+    {
+      "line": 582,
+      "text": "running 0 tests"
+    },
+    {
+      "line": 583,
+      "text": ""
+    },
+    {
+      "line": 584,
+      "text": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "line": 585,
+      "text": ""
+    },
+    {
+      "line": 586,
+      "text": ""
+    },
+    {
+      "line": 587,
+      "text": "running 0 tests"
+    },
+    {
+      "line": 588,
+      "text": ""
+    },
+    {
+      "line": 589,
+      "text": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "line": 590,
+      "text": ""
+    },
+    {
+      "line": 591,
+      "text": ""
+    },
+    {
+      "line": 592,
+      "text": "running 0 tests"
+    },
+    {
+      "line": 593,
+      "text": ""
+    },
+    {
+      "line": 594,
+      "text": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    },
+    {
+      "line": 595,
+      "text": ""
+    },
+    {
+      "line": 596,
+      "text": "     Running tests/active_incremental_package_cli.rs (target/release/deps/active_incremental_package_cli-e33af610a4d724d8)"
+    },
+    {
+      "line": 597,
+      "text": "     Running tests/active_recovery_cli.rs (target/release/deps/active_recovery_cli-1f50c05fa40f1b0c)"
+    },
+    {
+      "line": 598,
+      "text": "     Running tests/authorization_cache.rs (target/release/deps/authorization_cache-d80d49074bec5de6)"
+    },
+    {
+      "line": 599,
+      "text": ""
+    }
+  ],
+  "v2_result": {
+    "harnesses": [
+      {
+        "kind": "unit",
+        "target": "src/lib.rs",
+        "announcement_line": 388,
+        "passed": 171,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 73.14,
+        "result_line": 563,
+        "named_passes": [
+          "pool::active::incremental::tests::allocation_callback_failure_cannot_return_a_partial_physical_plan",
+          "pool::active::incremental::tests::every_reused_byte_including_later_chunks_and_sealed_segments_is_compared",
+          "pool::active::incremental::tests::explicit_fill_handles_different_short_reads_and_interrupted_offsets",
+          "pool::active::incremental::tests::physical_genesis_eof_and_retained_segment_lengths_fail_closed",
+          "pool::active::incremental::tests::physical_ranges_cover_empty_tail_growth_and_full_size_rotation",
+          "pool::active::package::tests::checked_io_retries_short_reads_writes_and_interruptions_without_skipping_bytes",
+          "pool::active::package::tests::interrupted_package_writes_retain_partial_or_complete_new_files_without_retry",
+          "pool::active::package::tests::interrupted_reconstruction_keeps_created_files_and_never_overwrites_them",
+          "pool::active::package::tests::low_level_shape_binds_real_tail_and_source_range_end_before_creating_output",
+          "pool::active::package::tests::mutations_are_detected_and_a_failed_joined_reader_cannot_resume",
+          "pool::active::package::tests::prepared_parent_replacement_is_rejected_before_any_output_creation",
+          "pool::active::package::tests::transport_view_and_original_creation_handles_preserve_exact_physical_layouts",
+          "pool::active::tests::adding_a_hard_link_after_open_poison_checks_without_modifying_ledger_bytes",
+          "pool::active::tests::another_process_cannot_open_held_genesis_lock",
+          "pool::active::tests::budgets_include_framing_total_tail_and_the_independent_segment_cap",
+          "pool::active::tests::captured_reader_requires_each_real_eof_and_poisoned_readers_cannot_resume",
+          "pool::active::tests::create_is_exclusive_bounded_and_preserves_existing_bytes",
+          "pool::active::tests::early_rotation_and_split_frames_are_rejected_even_with_valid_checksums",
+          "pool::active::tests::failed_next_segment_publication_keeps_all_sealed_prefix_bytes_and_no_repair",
+          "pool::active::tests::full_segment_and_next_frame_rotate_canonically_without_crossing",
+          "pool::active::tests::interruption_leaves_metadata_unchanged_and_preserves_the_recoverable_prefix",
+          "pool::active::tests::malformed_frame_and_capacity_rejection_create_no_files_or_bytes",
+          "pool::active::tests::readers_retain_the_exclusive_root_lock_and_have_independent_positions",
+          "pool::active::tests::symlinks_hard_links_and_replaced_names_are_rejected",
+          "pool::active::tests::unknown_entry_after_open_is_not_ignored_or_removed",
+          "pool::active::tests::unknown_missing_empty_and_truncated_segments_fail_closed_without_repair",
+          "pool::capacity_tests::capacity_accounting_matches_the_actual_record_encoder",
+          "pool::capacity_tests::capacity_commit_rechecks_the_budget_and_preserves_the_source",
+          "pool::capacity_tests::capacity_exact_empty_frame_commits_reopens_and_stops_cleanly",
+          "pool::capacity_tests::capacity_invalid_instance_still_fails_closed",
+          "pool::capacity_tests::capacity_invalid_lengths_counts_and_overflow_are_rejected",
+          "pool::capacity_tests::capacity_prepare_rejects_before_unpersistable_empty_block",
+          "pool::capacity_tests::capacity_rejects_before_attempting_any_candidate_authorization",
+          "pool::capacity_tests::capacity_selection_requires_space_for_even_an_empty_record",
+          "pool::recovery::active::incremental::tests::every_call_rechecks_both_open_archives_after_successful_planning",
+          "pool::recovery::active::incremental::tests::final_full_digest_and_namespace_checks_reject_late_outside_modifications",
+          "pool::recovery::active::incremental::tests::missing_and_symlinked_retained_segments_fail_without_recreating_entries",
+          "pool::recovery::active::incremental::tests::real_empty_commits_produce_exact_appended_bytes_and_immutable_checkpoints",
+          "pool::recovery::active::incremental::tests::retained_name_replacement_and_new_hard_link_reject_without_repair",
+          "pool::recovery::active::incremental::tests::same_length_valid_replacement_after_open_cannot_reuse_an_old_success",
+          "pool::recovery::active::incremental::tests::same_path_and_distinct_copy_empty_plans_keep_shared_locks_until_drop",
+          "pool::recovery::active::incremental::tests::separately_verified_same_height_and_higher_forks_and_rollback_are_stale",
+          "pool::recovery::active::incremental::tests::wrong_network_legacy_and_wrong_pin_are_rejected_without_changes",
+          "pool::recovery::active::package::tests::final_pack_and_restored_target_changes_cannot_publish_success",
+          "pool::recovery::active::package::tests::final_verify_byte_changes_do_not_reuse_previous_success_or_repair_inputs",
+          "pool::recovery::active::package::tests::independently_encoded_packages_restore_exact_bytes_without_a_later_directory",
+          "pool::recovery::active::package::tests::independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_output",
+          "pool::recovery::active::package::tests::new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation",
+          "pool::recovery::active::package::tests::package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_rejected",
+          "pool::recovery::active::package::tests::partial_package_and_restore_failures_keep_exact_targets_and_release_creation_handles",
+          "pool::recovery::active::package::tests::repinned_early_rotation_and_split_frames_reach_the_joined_replay_gate",
+          "pool::recovery::active::package::tests::shared_package_readers_keep_locks_until_last_drop_and_allow_sibling_restores",
+          "pool::recovery::active::package::tests::strict_package_metadata_pins_offsets_lengths_and_eof_reject_without_writing",
+          "pool::recovery::active::tests::checkpoint_codec_has_exact_length_distinct_magic_and_bounded_arithmetic",
+          "pool::recovery::active::tests::checkpoint_export_preserves_prepared_work_and_never_certifies_uncommitted_bytes",
+          "pool::recovery::active::tests::checkpoint_export_replays_same_length_replacement_and_never_publishes_its_state",
+          "pool::recovery::active::tests::creating_a_target_is_exclusive_and_source_validation_precedes_creation",
+          "pool::recovery::active::tests::exported_genesis_checkpoint_matches_independent_fixed_layout_vector",
+          "pool::recovery::active::tests::final_source_and_target_namespace_changes_cannot_return_success",
+          "pool::recovery::active::tests::genesis_and_committed_archive_copies_preserve_every_file_and_continue_normally",
+          "pool::recovery::active::tests::incompatible_checkpoint_profiles_reject_without_poisoning_healthy_stores",
+          "pool::recovery::active::tests::namespace_tests::active_archive_locks_coordinate_real_processes",
+          "pool::recovery::active::tests::namespace_tests::failed_open_releases_all_acquired_file_and_directory_handles",
+          "pool::recovery::active::tests::namespace_tests::parent_aliases_and_replaced_directories_cannot_redirect_a_retained_archive",
+          "pool::recovery::active::tests::namespace_tests::persistent_entry_replacements_symlinks_and_hardlinks_are_not_certified",
+          "pool::recovery::active::tests::namespace_tests::readonly_source_files_copy_into_a_normally_writable_active_directory",
+          "pool::recovery::active::tests::namespace_tests::unknown_entry_after_open_prevents_verification_and_creates_no_target",
+          "pool::recovery::active::tests::partial_copies_and_lost_acknowledgements_preserve_targets_without_retry_or_repair",
+          "pool::recovery::active::tests::repinned_headers_are_bounded_inside_the_physical_genesis_file",
+          "pool::recovery::active::tests::repinned_layout_still_requires_complete_frames_canonical_rotation_and_real_state",
+          "pool::recovery::active::tests::retained_replay_binds_the_independently_expected_genesis_after_a_same_length_change",
+          "pool::recovery::segments::index::tests::all_records_locate_correctly_across_real_production_segment_boundaries",
+          "pool::recovery::segments::index::tests::both_profiles_have_exact_height_locations_and_unchanged_source",
+          "pool::recovery::segments::index::tests::changed_captured_length_and_wrong_pinned_tip_are_rejected",
+          "pool::recovery::segments::index::tests::exact_segment_end_is_not_attributed_to_a_nonexistent_next_segment",
+          "pool::recovery::segments::index::tests::genesis_only_has_no_phantom_record",
+          "pool::recovery::segments::index::tests::index_builder_rejects_gaps_overlaps_wrong_heights_hashes_and_bombs",
+          "pool::recovery::segments::index::tests::metadata_or_late_replay_failure_never_yields_a_prefix_index",
+          "pool::recovery::segments::index::tests::moved_named_archive_cannot_reuse_its_old_index_verdict",
+          "pool::recovery::segments::reader_tests::exact_payload_requires_last_segment_eof_check_before_success",
+          "pool::recovery::segments::reader_tests::hard_io_failure_at_each_boundary_permanently_invalidates_reader",
+          "pool::recovery::segments::reader_tests::inconsistent_private_reader_metadata_returns_error_instead_of_panicking",
+          "pool::recovery::segments::reader_tests::interrupted_short_reads_and_segment_end_checks_do_not_poison_reader",
+          "pool::recovery::segments::reader_tests::truncated_or_extended_segment_cannot_be_skipped_by_retry",
+          "pool::recovery::segments::tests::actual_multisegment_replay_crosses_record_boundary_and_restores_exact_bytes",
+          "pool::recovery::segments::tests::empty_read_does_not_advance_and_segment_eof_is_not_journal_eof",
+          "pool::recovery::segments::tests::every_publication_failure_preserves_source_and_cannot_be_retried_in_place",
+          "pool::recovery::segments::tests::links_and_nonregular_inputs_are_refused_and_late_corruption_precedes_output_creation",
+          "pool::recovery::segments::tests::manifest_is_exact_bounded_and_contains_no_supplied_paths",
+          "pool::recovery::segments::tests::missing_extra_swapped_truncated_or_changed_segments_are_rejected",
+          "pool::recovery::segments::tests::namespace_tests::extra_file_after_open_is_rejected_without_removal_or_output",
+          "pool::recovery::segments::tests::namespace_tests::failed_open_releases_directory_guard_and_all_acquired_file_locks",
+          "pool::recovery::segments::tests::namespace_tests::renamed_and_replaced_directory_cannot_be_verified_or_receive_restore_output",
+          "pool::recovery::segments::tests::namespace_tests::replaced_manifest_with_identical_bytes_is_not_the_retained_object",
+          "pool::recovery::segments::tests::namespace_tests::replaced_segment_symlink_is_rejected_even_when_it_targets_original_bytes",
+          "pool::recovery::segments::tests::namespace_tests::unchanged_archives_retain_multiple_readers_and_release_handles_on_drop",
+          "pool::recovery::segments::tests::pack_and_restore_are_create_only_and_archive_readers_keep_real_locks",
+          "pool::recovery::segments::tests::partial_restore_and_lost_ack_leave_explicitly_verifiable_targets",
+          "pool::recovery::segments::tests::persistent_segment_path_replacement_is_rejected_before_restore",
+          "pool::recovery::tests::recovery_checkpoint_codec_bounds_and_every_truncation",
+          "pool::recovery::tests::recovery_full_copy_matches_and_original_keeps_prepared_block",
+          "pool::recovery::tests::recovery_invalid_store_does_not_export_a_checkpoint",
+          "pool::recovery::tests::recovery_partial_write_and_lost_ack_never_replace_or_repair_source",
+          "pool::recovery::tests::recovery_readonly_archive_and_changed_source_are_checked_before_target_creation",
+          "pool::recovery::tests::recovery_refuses_overwrite_live_writers_links_and_unknown_paths",
+          "pool::recovery::tests::recovery_untrusted_header_sizes_are_bounded_even_with_a_matching_file_hash",
+          "pool::recovery::tests::recovery_wrong_state_domain_length_or_bytes_pin_rejected",
+          "pool::recovery::tests::replay_integration_tests::a_shorter_valid_archive_needs_its_own_pin_not_the_later_checkpoint",
+          "pool::recovery::tests::replay_integration_tests::checkpoint_export_and_archive_copy_discard_history_but_keep_the_exact_tip",
+          "pool::recovery::tests::replay_integration_tests::checkpoint_export_rejects_a_valid_same_length_alternate_history",
+          "pool::recovery::tests::replay_integration_tests::every_recovery_entry_uses_isolated_replay_without_per_block_state_copies",
+          "pool::recovery::tests::replay_integration_tests::injected_replay_failure_keeps_lock_and_blocks_prepared_commit_without_repair",
+          "pool::recovery::tests::replay_integration_tests::normal_append_handles_preserve_history_even_after_read_cursor_rewinds",
+          "pool::recovery::tests::replay_integration_tests::wrong_final_result_with_new_checksums_never_returns_a_verified_archive",
+          "pool::replay::tests::a_complete_shorter_prefix_still_requires_an_independent_checkpoint",
+          "pool::replay::tests::checksum_mutations_and_structural_corruption_do_not_replay",
+          "pool::replay::tests::declared_size_and_record_count_are_bounded_before_body_allocation",
+          "pool::replay::tests::every_truncated_frame_and_appended_byte_is_rejected",
+          "pool::replay::tests::finish_requires_verified_eof_and_errors_permanently_poison_replay",
+          "pool::replay::tests::fragmented_reads_and_interrupted_eof_are_retried_without_skipping",
+          "pool::replay::tests::input_failure_is_never_converted_to_a_successful_empty_history",
+          "pool::replay::tests::io_fault_at_every_record_byte_including_final_eof_drops_the_reconstruction",
+          "pool::replay::tests::maximum_record_window_is_replayed_without_copying_the_full_state_per_block",
+          "pool::replay::tests::reusable_buffer_does_not_decode_stale_tail_bytes_after_a_shorter_record",
+          "pool::replay::tests::shared_eof_does_not_swallow_read_errors_or_trailing_data",
+          "pool::replay::tests::shared_header_and_eof_retry_interrupted_and_short_reads",
+          "pool::replay::tests::shared_header_preserves_both_profiles_and_leaves_records_unread",
+          "pool::replay::tests::shared_header_rejects_bounds_before_reading_commitment_payload",
+          "pool::replay::tests::shared_header_rejects_unknown_network_domain_and_truncation",
+          "pool::replay::tests::startup_and_wallet_history_share_replay_and_preserve_journal_bytes",
+          "pool::tests::actual_two_hop_pool_commit_replay_and_corruption",
+          "pool::tests::empty_pool_lock_restart_and_no_overwrite",
+          "pool::tests::lost_sync_acknowledgement_remains_uncertain_until_replay",
+          "pool::tests::partial_write_poison_does_not_advance_memory_or_repair_disk",
+          "pool::tests::record_decoder_rejects_truncation_trailing_and_length_bombs",
+          "pool::tests::tampered_prepared_result_and_resource_limits",
+          "pool::wallet_flow_tests::durable_wallet_outbox_resumes_exact_real_payment_after_lost_acknowledgement",
+          "pool::wallet_flow_tests::wallet_history_replay_keeps_append_cursor_and_rejects_disk_drift",
+          "pool::wallet_flow_tests::wallet_nonzero_multinote_payment_change_expiry_backup_and_rescan",
+          "pool::wallet_flow_tests::wallet_rejects_changed_checkpoint_ancestry_without_mutation",
+          "signing_domain_vectors::every_context_component_changes_the_bound_signature_message",
+          "signing_domain_vectors::legacy_and_bound_transcripts_match_independent_sha256_vectors",
+          "wallet::tests::shared_witnesses_match_upstream_frontier_for_odd_and_even_trees",
+          "wallet::vault::independent_kdf_vector::argon2id_matches_independent_argon2_cffi_reference",
+          "wallet::vault::store::compact_tests::compacted_checkpoint_is_authenticated_but_requires_rescan_and_new_receipt",
+          "wallet::vault::store::compact_tests::compaction_requires_exact_current_pin_and_never_overwrites_targets",
+          "wallet::vault::store::compact_tests::corrupt_or_poisoned_source_cannot_be_compacted_into_a_fresh_looking_copy",
+          "wallet::vault::store::compact_tests::partial_and_lost_ack_compaction_preserve_source_and_do_not_repair_targets",
+          "wallet::vault::store::tests::authenticated_predecessor_rejects_rewritten_hash_chain_and_other_journal",
+          "wallet::vault::store::tests::bounds_padding_and_live_disk_drift_fail_closed",
+          "wallet::vault::store::tests::capacity_inspection_is_read_only_and_does_not_claim_synced_balance",
+          "wallet::vault::store::tests::create_sync_backup_reopen_and_exact_source_protection",
+          "wallet::vault::store::tests::legacy_snapshot_import_preserves_missing_outbox_reservation",
+          "wallet::vault::store::tests::lock_child",
+          "wallet::vault::store::tests::lock_is_enforced_across_processes",
+          "wallet::vault::store::tests::lost_acknowledgement_is_uncertain_and_reopen_reconciles_complete_record",
+          "wallet::vault::store::tests::missing_and_nonregular_files_are_not_created_or_repaired",
+          "wallet::vault::store::tests::partial_write_poison_preserves_failure_and_never_truncates_on_reopen",
+          "wallet::vault::store::tests::truncated_and_oversized_files_never_invoke_unbounded_reads",
+          "wallet::vault::store::tests::valid_prefix_needs_independent_receipt_for_rollback_detection",
+          "wallet::vault::tests::encrypted_roundtrip_randomization_and_wrong_password",
+          "wallet::vault::tests::rejects_lengths_versions_and_kdf_bombs_before_derivation",
+          "wallet::vault::tests::snapshot_rejects_noncanonical_flags_padding_and_duplicate_reservations",
+          "wire::cache::tests::concurrent_success_memoization_preserves_exact_entries_and_bounds",
+          "wire::cache::tests::exact_bytes_required_even_for_a_forced_digest_collision",
+          "wire::cache::tests::fifo_capacity_and_duplicate_insert_are_bounded",
+          "wire::cache::tests::invalid_sizes_cannot_fill_the_cache",
+          "wire::fixed_key_tests::concurrent_verifiers_share_only_the_fixed_key_and_keep_real_authorization_cold",
+          "worker::tests::bounded_frame_rejections",
+          "worker::tests::fingerprint_matches_go_vector",
+          "worker::tests::frame_roundtrip"
+        ]
+      },
+      {
+        "kind": "unit",
+        "target": "src/bin/zevune-orchard-worker.rs",
+        "announcement_line": 565,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 569,
+        "named_passes": []
+      },
+      {
+        "kind": "unit",
+        "target": "src/bin/zevune-pool-worker.rs",
+        "announcement_line": 570,
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 578,
+        "named_passes": [
+          "tests::block_decoder_bounds",
+          "tests::frame_truncation_and_bombs",
+          "tests::selection_frame_is_bounded_canonical_and_separate_from_blocks"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/active_incremental_cli.rs",
+        "announcement_line": 580,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 584,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/active_incremental_package_cli.rs",
+        "announcement_line": 596,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 589,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/active_recovery_cli.rs",
+        "announcement_line": 597,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 594,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/authorization_cache.rs",
+        "announcement_line": 598,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 8.76,
+        "result_line": 604,
+        "named_passes": [
+          "real_authorization_reuse_rejects_changed_bytes_and_restarts_cold"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/bridge.rs",
+        "announcement_line": 606,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 11.01,
+        "result_line": 611,
+        "named_passes": [
+          "real_wire_roundtrip_individual_authorization_and_rejections"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/cache_state_guards.rs",
+        "announcement_line": 613,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 617,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/default_worker_policy.rs",
+        "announcement_line": 619,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 624,
+        "named_passes": [
+          "default_worker_refuses_explicit_funding_arguments"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/genesis_domain.rs",
+        "announcement_line": 626,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 630,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/genesis_manifest_bounds.rs",
+        "announcement_line": 632,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 636,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/operator_cli.rs",
+        "announcement_line": 638,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 642,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/payment_preflight.rs",
+        "announcement_line": 644,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 648,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/pool_network.rs",
+        "announcement_line": 650,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 8.7,
+        "result_line": 655,
+        "named_passes": [
+          "zero_value_real_proof_for_consensus"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/real_bundle.rs",
+        "announcement_line": 657,
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 19.92,
+        "result_line": 672,
+        "named_passes": [
+          "builder_rejects_wrong_owner_and_nonmember_path",
+          "raw_key_reconstruction_preserves_local_receiver",
+          "real_proofs_two_hops_and_adversarial_cases",
+          "upstream_public_empty_root_vectors"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/recipient_domain.rs",
+        "announcement_line": 674,
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.07,
+        "result_line": 681,
+        "named_passes": [
+          "canonical_receiver_formats_preserve_legacy_without_domain_fallback",
+          "network_recipient_requires_a_verified_history_not_only_keys",
+          "recipient_parser_rejects_truncation_mutation_and_noncanonical_input"
+        ]
+      },
+      {
+        "kind": "integration",
+        "target": "tests/recovery_cli.rs",
+        "announcement_line": 683,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 687,
+        "named_passes": []
+      },
+      {
+        "kind": "integration",
+        "target": "tests/test_genesis.rs",
+        "announcement_line": 689,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 693,
+        "named_passes": []
+      },
+      {
+        "kind": "doc",
+        "target": "zevune_orchard_lab",
+        "announcement_line": 695,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered": 0,
+        "seconds": 0.0,
+        "result_line": 699,
+        "named_passes": []
+      }
+    ],
+    "funded_plans": [],
+    "funded_complete": []
+  },
+  "regression_comparison_logs": [
+    {
+      "path": "c1-native/job-105656509351.log",
+      "bytes": 45954,
+      "sha256": "0a6c710f600359f0c4f66ca65b1d274c6ffc8e9c39bc7e928d9e5d9dbcfd4485",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509376.log",
+      "bytes": 40584,
+      "sha256": "7930ecbc1507506e69565531f769ce8a8ea191aa3104cd083ae6a7a9daa35084",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509396.log",
+      "bytes": 43239,
+      "sha256": "cbfca20d2ce8c7577254920aa06016345d9f8310d966942d6ba6784ab8aee630",
+      "utf8_bom": true,
+      "crlf_count": 491,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509711.log",
+      "bytes": 41812,
+      "sha256": "a8eccc81976d7c59574e999ed1ee4827a6d31c832cac5d6aa21452f3b0337498",
+      "utf8_bom": true,
+      "crlf_count": 512,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509730.log",
+      "bytes": 48275,
+      "sha256": "39228b05b17265bbab3f6403df7a56845648f05b3a50f44a80e3c6e13b9f6550",
+      "utf8_bom": true,
+      "crlf_count": 594,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509836.log",
+      "bytes": 19234,
+      "sha256": "a608955927e85666d4e3333c9add4e5179918f3e7ebc24a6cd96d1f9a5c9dfad",
+      "utf8_bom": true,
+      "crlf_count": 232,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656509838.log",
+      "bytes": 42587,
+      "sha256": "ac25d34c9f951ed574c5c4786592ba592033eb0ea2b4ad8ca47f761088f6a174",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510037.log",
+      "bytes": 50109,
+      "sha256": "d48a22d37ca44585e2773dbe3ee78ccf8c17876e5834f162e285def1a2855e82",
+      "utf8_bom": true,
+      "crlf_count": 609,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510131.log",
+      "bytes": 40556,
+      "sha256": "247217a4771742d0e14f66222cc6e9657d1969e290c3052272a44c9e5a927080",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510132.log",
+      "bytes": 66544,
+      "sha256": "2388efcfcd0bfc78607fba5d9c14a566b3b5aede6babf2fd298c451b1e2c4375",
+      "utf8_bom": true,
+      "crlf_count": 722,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510186.log",
+      "bytes": 47473,
+      "sha256": "21347a7620e641f770320664b0018a2bb87fab63caf6597ecda5f951f7f8ff7e",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510328.log",
+      "bytes": 74151,
+      "sha256": "3dfaf90313ae146c20472c36e5f292216fca25e27900a92431132c30528ae1c3",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510465.log",
+      "bytes": 41784,
+      "sha256": "dd45d125b0f6a3232a7837596602afb448e68fa82db2ce96f0faaeff4c88c558",
+      "utf8_bom": true,
+      "crlf_count": 512,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510502.log",
+      "bytes": 64184,
+      "sha256": "ea973739feb41b917e877468dea34105a625e544a2cb6ffffe5c7ae0636f2773",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510503.log",
+      "bytes": 43350,
+      "sha256": "cfde13b922236bcaa04711a30dd1a7451f092929a6924f996d73f8fc9cb2683c",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510524.log",
+      "bytes": 76636,
+      "sha256": "901303df9fcd518c116d6797a1c4c0c0ce6928a37bc01c58255741697d8a6128",
+      "utf8_bom": true,
+      "crlf_count": 750,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510561.log",
+      "bytes": 47741,
+      "sha256": "74a477d3513d401c6fa4f32c92d780f7f99c3630d2e17f021dfbedd4763f5bbd",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510648.log",
+      "bytes": 21317,
+      "sha256": "4c3693b876a03ab63d156ddce13144e54e622fb42ac837c70d9743b0d37e3985",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510698.log",
+      "bytes": 76759,
+      "sha256": "39d76da1045af0e1715649a2e16968bf79fd5a4c155802c1294a776c6752222c",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510720.log",
+      "bytes": 44622,
+      "sha256": "e39aa067d4391b6110e68663ea8951fd672985d9403c7205f5ffe6769b345e68",
+      "utf8_bom": true,
+      "crlf_count": 535,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c1-native/job-105656510724.log",
+      "bytes": 79232,
+      "sha256": "ad97cf5d4a3d7c83e30aa74b18b041cf93a09545347469b6303e1fa7f1214db8",
+      "utf8_bom": true,
+      "crlf_count": 782,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658334955.log",
+      "bytes": 21316,
+      "sha256": "71eb42324c7883a552d94d5f1f4915902550567a8b4fedfdd54d033dc482c28c",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335115.log",
+      "bytes": 74293,
+      "sha256": "92eb4b561dde53f20dd5d3a5160d226314fed477d56a66652af31929b733b83a",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335135.log",
+      "bytes": 67053,
+      "sha256": "b8b147786cfb42b849192b6a7dc2596a1147db766b55962331d12538a406bddb",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335269.log",
+      "bytes": 67017,
+      "sha256": "9aac7e181fccf1c0e438d630a0c83f32fa74cfa143f47f8affadc3c3f92fbd7e",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335318.log",
+      "bytes": 19225,
+      "sha256": "039b4dfb0439d83ae57db50c379716060653c8844cc0ebd0b4992bba99865cbb",
+      "utf8_bom": true,
+      "crlf_count": 232,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335347.log",
+      "bytes": 74226,
+      "sha256": "8fb5b99b1f2a2730c102281e9079c23f94760c6624f6e6d89fdd6cfbfb95aee5",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335355.log",
+      "bytes": 95631,
+      "sha256": "499ded66e7bdd1bca14e2172d322fb066b4fda992957729ccc39514b8d8dec3b",
+      "utf8_bom": true,
+      "crlf_count": 1013,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335377.log",
+      "bytes": 56165,
+      "sha256": "21c24e361b08b9fc37d515b8530acd6591b0a1d566d297b77b694c07e2e9ffbf",
+      "utf8_bom": true,
+      "crlf_count": 649,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335392.log",
+      "bytes": 66447,
+      "sha256": "13b1703276bbb084bc191be8e1c2750db8c10e95acc47262b00069b90733310f",
+      "utf8_bom": true,
+      "crlf_count": 802,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335460.log",
+      "bytes": 43236,
+      "sha256": "a6eb115409765fcc9b9550a6e39524b23ad2b789a307d9b74ff95898e76200b8",
+      "utf8_bom": true,
+      "crlf_count": 491,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335468.log",
+      "bytes": 22942,
+      "sha256": "3bc6c25f892d5ec2b481ebff15cb7205a284a0dd5a39c998bb8ef80281229bad",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335552.log",
+      "bytes": 74670,
+      "sha256": "13a953beaf31483c91a9cf377bf9eb476309a5ece76e92c468c3d8908785a2f4",
+      "utf8_bom": true,
+      "crlf_count": 903,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335627.log",
+      "bytes": 74728,
+      "sha256": "d4976c966edc40794cb055a1c5c466682787eb74da3becd98372d02c7c88f4ce",
+      "utf8_bom": true,
+      "crlf_count": 908,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335664.log",
+      "bytes": 54926,
+      "sha256": "9ac689c3b7d37a8b75bc0434bd37c5682ad112fe87aecc684d9bc54d1142785b",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335678.log",
+      "bytes": 66411,
+      "sha256": "3289caf1ce89ef176b6b42ccd8127040e3574ce71ad3dbe8770aa118f2396aaa",
+      "utf8_bom": true,
+      "crlf_count": 802,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335759.log",
+      "bytes": 42432,
+      "sha256": "56a704f945278af9ea29c80547627ecc0410bd363e0e3a1610e27f6090fe94d4",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658335868.log",
+      "bytes": 63579,
+      "sha256": "8f2789b80a9fc338008f5e03a46b668326dcf366608d3f71d8730a47eedb7da7",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658336130.log",
+      "bytes": 65282,
+      "sha256": "b83892fae392315644d5550ebf268bcfa9fc027fd81678a422297a3fff08e3e6",
+      "utf8_bom": true,
+      "crlf_count": 669,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658336169.log",
+      "bytes": 55658,
+      "sha256": "b57a6ea3b4d670cb55390c6988387ff4adf9c4e6f00efa991d46e64889737a36",
+      "utf8_bom": true,
+      "crlf_count": 606,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658336250.log",
+      "bytes": 56532,
+      "sha256": "12872050b1e638c9d0daae4c81f4e7c62e4e151963e13cf455585f00a6cfbeae",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105658336559.log",
+      "bytes": 97564,
+      "sha256": "457e8a185a106ee19f8c4b6252c0dec91192cd12712b775d95fa69a00774af6b",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105659982062.log",
+      "bytes": 39795,
+      "sha256": "a4dca83dc848d6dd3ccd945eaca8e8704444f846de69cf18b5a934ae3c1f1f7d",
+      "utf8_bom": true,
+      "crlf_count": 521,
+      "v1_v2_parsed_objects_equal": true
+    },
+    {
+      "path": "c2-native/job-105659982100.log",
+      "bytes": 38380,
+      "sha256": "aa3906a7b9714d4c2d3ebd603b922ccdce2df7a8bab7f359e836134296ae1625",
+      "utf8_bom": true,
+      "crlf_count": 0,
+      "v1_v2_parsed_objects_equal": true
+    }
+  ],
+  "helper_identities": [
+    {
+      "path": "native_audit_rust_helpers.py",
+      "bytes": 4101,
+      "sha256": "a5ee1226de8ec8aba16c1d04954606927efe796a8d558ef7af04097c2beec02d",
+      "utf8_bom": false,
+      "crlf_count": 0
+    },
+    {
+      "path": "audit_native_structure.py",
+      "bytes": 3184,
+      "sha256": "a8a4a37698fef1c61dc13d53f599ed83ead1bb12f95124d5d42f281c0d0c2305",
+      "utf8_bom": false,
+      "crlf_count": 0
+    },
+    {
+      "path": "native_audit_rust_helpers_v2.py",
+      "bytes": 4320,
+      "sha256": "2fee2dff4a115049fed1023c2af12ad7435ca753c4c69171d925f45e4e3f554d",
+      "utf8_bom": false,
+      "crlf_count": 0
+    },
+    {
+      "path": "audit_native_structure_v2.py",
+      "bytes": 3187,
+      "sha256": "32640fb97a41fbb11fe4b50dbb32bdbb12a9bbac11efe5c86c6e70c00ec862dd",
+      "utf8_bom": false,
+      "crlf_count": 0
+    },
+    {
+      "path": "audit_complete_c2_native.py",
+      "bytes": 9038,
+      "sha256": "542048a1f48947908be0390c820314aa6bce8be93315c4f36db21c4c75a6ff10",
+      "utf8_bom": false,
+      "crlf_count": 0
+    },
+    {
+      "path": "audit_complete_native.py",
+      "bytes": 11772,
+      "sha256": "0bfc5b670c95a60a71ebeda8ca3421367148c33fe74600cd1df3ef69f706aaae",
+      "utf8_bom": false,
+      "crlf_count": 0
+    }
+  ],
+  "unchanged_gates": [
+    "Equal complete announcement/result counts; none left open.",
+    "Every result requires exact running N and distinct named-pass count.",
+    "Failure/ignored/measured/filtered counts remain exactly zero.",
+    "A zero-test target is retained as zero and supplies no execution credit.",
+    "Positive candidate checks exact expected package names, all platform default target/name sets, and full funded cohort plans."
+  ],
+  "not_claimed": [
+    "No source files/workflows/tests changed.",
+    "No candidate is accepted by this parser observation.",
+    "No C1/C2 execution is transferred to C3."
+  ]
+}
