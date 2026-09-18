@@ -351,7 +351,6 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
         let (genesis_again, restored_again) =
             ActiveJournal::open(&restored_path, &[0; 76]).unwrap();
         assert_eq!(logical(&restored_again, &genesis_again), expected);
-        drop(reader);
         drop(joined);
         drop(package);
         let reopened = RetainedPackage::open(&package_path).unwrap();
