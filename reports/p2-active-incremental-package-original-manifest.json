@@ -1,6 +1,14 @@
 {
   "acceptance": "not_evaluated_by_collector",
   "archive_state": "complete_frozen_inventory_not_acceptance",
+  "classification_authority": {
+    "correction": {
+      "bytes": 5539,
+      "path": "reports/p2-active-incremental-package-provenance-correction.json",
+      "sha256": "4043b2a1032a9607f73db1dbd5e9943e9797f1da891c42228e4a0fb70a710e8f"
+    },
+    "rule": "The current entries are authoritative provenance classifications. The explicitly corrected merge-tool serialization classification supersedes the preserved D1 spec/collector rule; all retained source bytes and all other classifications remain unchanged."
+  },
   "configuration_not_counted_as_retained_source": [
     {
       "bytes": 8,
@@ -2613,9 +2621,9 @@
     },
     {
       "bytes": 123,
-      "kind": "github_source_identity_api_capture",
+      "kind": "github_merge_tool_structured_result_serialization",
       "path": "source-identities/runtime-merge-result.json",
-      "representation": "connector_decoded_utf8_original",
+      "representation": "author_serialized_tool_structured_content",
       "sha256": "424e994a12e9539f6e5150e1b4cac17313414e615fcd13b604221eaab035805a",
       "source_absolute_at_capture": "/workspace/scratch/1753b04c9dbb/zevune-p2-incremental-package/source-identities/runtime-merge-result.json",
       "target": "reports/p2-active-incremental-package-evidence/source-identities/runtime-merge-result.json"
@@ -2759,6 +2767,14 @@
       "source_relative_to_scratch": "payloads/c3-operator-windows.zip"
     }
   ],
+  "provenance_revision": {
+    "affected_path": "source-identities/runtime-merge-result.json",
+    "finding": "D1-EVIDENCE-REPRESENTATION-01",
+    "freeze_source_interpretation": "The unchanged freeze_source binds the original D1 collection input and bytes. Preserved v1 spec/collector/freeze classification metadata is historical where explicitly superseded by classification_authority.",
+    "historical_candidate": "0d9eac398dd1e191a5eeb9ceb1facd10e2041889",
+    "publication_check_interpretation": "The preserved publication-check records the original D1 manifest hash, not the revised manifest hash.",
+    "scope": "Author correction of one kind/representation and derived counts; not a new collector run, source capture, native result or independent acceptance"
+  },
   "reference_closure": {
     "edges": [
       {
@@ -11815,7 +11831,8 @@
     "author_generated_derived_record": 4,
     "author_generated_inventory": 3,
     "author_generated_specification": 1,
-    "connector_decoded_utf8_original": 186,
+    "author_serialized_tool_structured_content": 1,
+    "connector_decoded_utf8_original": 185,
     "downloaded_artifact_original_bytes": 6,
     "extracted_member_original_bytes": 14,
     "reviewer_authored_derived_record": 30,

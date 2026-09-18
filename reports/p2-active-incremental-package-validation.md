@@ -80,7 +80,9 @@ root 已完整读取上述正式 Markdown，复核文件大小/SHA，并修复�
 
 [原件清单](p2-active-incremental-package-original-manifest.json)列出 292 个归档材料、11,043,577 B，分类保留 reviewer 原件、connector 解码 API/log、精确 resource ZIP/成员及派生校验。所有逐文件大小/SHA 与原始内容核对；清单和保持字节的 `.gitattributes` 本身单列，不计为原件。C1/C2 的失败记录完整保留，旧阶段报告逐字节不变。
 
-operator 完整 ZIP 及二进制已在临时工作区独立逐成员验证；仓库只归档原 manifest、API digest、下载观察和完整校验记录，不能称仓库含有这些完整 ZIP。API 日志是 connector 解码的原始 UTF-8 内容，保留 BOM/CRLF；部分 reviewer remote 包装 JSON 则明确标记其保存表示，不混称 HTTP 传输原字节。原报告内历史绝对路径不改写，清单提供原路径到仓库材料的映射。
+operator 完整 ZIP 及二进制已在临时工作区独立逐成员验证；仓库只归档原 manifest、API digest、下载观察和完整校验记录，不能称仓库含有这些完整 ZIP。github_fetch 返回的 API decoded-content 与 job 日志按 connector 解码的原始 UTF-8 内容保存，保留 BOM/CRLF；部分 reviewer remote 包装 JSON 则明确标记其保存表示，不混称 HTTP 传输原字节。原报告内历史绝对路径不改写，清单提供原路径到仓库材料的映射。
+
+当前总清单已按[来源表示类别纠正记录](p2-active-incremental-package-provenance-correction.json)修正 merge-tool result 的分类：该文件是完整 `structuredContent` 对象经格式化 JSON 序列化保存。归档中的 v1 spec 和 builder 保留 D1 的历史生成规则，其中这一处被明确纠正的分类以当前总清单为准；292 份来源材料的原始字节和身份保持不变。`freeze_source` 继续绑定原始收集输入，不表示未经修改的 v1 builder 生成了修订后的元数据；publication-check 中的旧清单 hash 仍是其 D1 历史观察的准确身份。D1 的独立文档拒绝原文与后续准确候选的复核及实际 CI 分别保留在文档 PR #18，本纠正记录本身不授予新候选通过。
 
 本次只将 `incremental_backup_implemented` 在 NO-FUNDS 活动归档持久包及新目录全重放恢复范围设为 true。P2 仍在开发，snapshot state import、生产存储、外部专业审计和真实资金状态保持 false。剪枝/迁移、验证者最后签名状态及 wallet/共识数据库协调恢复、真实断电/磁盘满、Windows 目录掉电持久化、1 GiB/百万记录/2,048 段全容量、长期多机与网络隐私均未完成。可信父目录、OS/文件系统及独立 pin 仍是前提；没有任意敌对瞬时修改再还原下的原子快照保证。
 
