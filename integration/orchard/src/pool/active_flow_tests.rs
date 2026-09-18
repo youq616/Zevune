@@ -289,8 +289,7 @@ fn incremental_package_and_restore(
     drop(package);
     drop(later);
     assert!(fs::read(&package_path).unwrap() == expected);
-    let mut package =
-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
     assert_eq!(
         package.restore_new(&mut base, &restored_path).unwrap(),
         later_pin

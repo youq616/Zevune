@@ -170,10 +170,7 @@ fn checked_io_retries_short_reads_writes_and_interruptions_without_skipping_byte
             if self.raw.len() >= self.limit {
                 return Err(io::ErrorKind::PermissionDenied.into());
             }
-            let count = bytes
-                .len()
-                .min(self.chunk)
-                .min(self.limit - self.raw.len());
+            let count = bytes.len().min(self.chunk).min(self.limit - self.raw.len());
             self.raw.extend_from_slice(&bytes[..count]);
             Ok(count)
         }
@@ -283,7 +280,10 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
             encoded.extend_from_slice(&bytes);
         }
         assert_eq!(package_bytes(&package), encoded);
-        assert_eq!(package.length(), metadata.len() as u64 + later.length() - base.length());
+        assert_eq!(
+            package.length(),
+            metadata.len() as u64 + later.length() - base.length()
+        );
         let joined = JoinedJournal::new(
             &base,
             &base_genesis,
@@ -294,7 +294,10 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
             later.length(),
         )
         .unwrap();
-        assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
+        assert_eq!(
+            joined.layout_hash().unwrap(),
+            later.layout_hash(&later_genesis).unwrap()
+        );
         let mut reader = joined.reader().unwrap();
         let mut actual = Vec::new();
         let mut buffer = [0; 8191];
@@ -330,7 +333,10 @@ fn transport_view_and_original_creation_handles_preserve_exact_physical_layouts(
             );
         }
         assert_eq!(logical(&restored, &restored_genesis), expected);
-        assert_eq!(restored.layout_hash(&restored_genesis).unwrap(), joined.layout_hash().unwrap());
+        assert_eq!(
+            restored.layout_hash(&restored_genesis).unwrap(),
+            joined.layout_hash().unwrap()
+        );
         assert!(matches!(
             ActiveJournal::open(&restored_path, &[0; 76]),
             Err(PoolError::Locked)
@@ -518,7 +524,10 @@ fn interrupted_package_writes_retain_partial_or_complete_new_files_without_retry
                 later.length(),
             )
             .unwrap();
-            assert_eq!(joined.layout_hash().unwrap(), later.layout_hash(&later_genesis).unwrap());
+            assert_eq!(
+                joined.layout_hash().unwrap(),
+                later.layout_hash(&later_genesis).unwrap()
+            );
         }
     }
     assert_eq!(logical(&base, &base_genesis), before_base);
@@ -564,14 +573,20 @@ fn interrupted_reconstruction_keeps_created_files_and_never_overwrites_them() {
             assert_eq!(retained.len(), 1);
         } else {
             assert_eq!(retained.len(), 2);
-            assert_eq!(retained[&name(0)].len(), if fault == 12 { 200 } else { 1000 });
+            assert_eq!(
+                retained[&name(0)].len(),
+                if fault == 12 { 200 } else { 1000 }
+            );
         }
         assert!(joined.copy_new(&target).is_err());
         assert_eq!(output_bytes(&path), retained);
         if fault >= 13 {
             let (genesis, restored) = ActiveJournal::open(&path, &[0; 76]).unwrap();
             assert_eq!(logical(&restored, &genesis), before_later);
-            assert_eq!(restored.layout_hash(&genesis).unwrap(), joined.layout_hash().unwrap());
+            assert_eq!(
+                restored.layout_hash(&genesis).unwrap(),
+                joined.layout_hash().unwrap()
+            );
         }
     }
     assert_eq!(logical(&base, &base_genesis), before_base);

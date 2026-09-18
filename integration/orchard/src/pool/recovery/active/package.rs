@@ -92,7 +92,11 @@ fn checked_plan(
         .map_err(|_| PoolError::Storage)?;
     for range in ranges {
         if range.segment_index < count {
-            if range.segment_index.checked_add(1).ok_or(PoolError::Bounds)? != count
+            if range
+                .segment_index
+                .checked_add(1)
+                .ok_or(PoolError::Bounds)?
+                != count
                 || range.offset != tail
                 || tail == 0
             {
@@ -154,9 +158,7 @@ impl ActiveIncrementalPackage {
             return Err(PoolError::Stale);
         }
         let count = usize::try_from(u32::from_be_bytes(
-            fixed[264..268]
-                .try_into()
-                .map_err(|_| PoolError::Corrupt)?,
+            fixed[264..268].try_into().map_err(|_| PoolError::Corrupt)?,
         ))
         .map_err(|_| PoolError::Bounds)?;
         let size = metadata_length(count)?;
@@ -187,9 +189,7 @@ impl ActiveIncrementalPackage {
                 segment_index: u32::from_be_bytes(
                     bytes[..4].try_into().map_err(|_| PoolError::Corrupt)?,
                 ),
-                offset: u32::from_be_bytes(
-                    bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?,
-                ),
+                offset: u32::from_be_bytes(bytes[4..8].try_into().map_err(|_| PoolError::Corrupt)?),
                 length: u32::from_be_bytes(
                     bytes[8..12].try_into().map_err(|_| PoolError::Corrupt)?,
                 ),
@@ -371,13 +371,8 @@ impl ActiveArchive {
         let plan = self.incremental_plan(later)?;
         let metadata = encode(&plan)?;
         let ranges = physical_ranges(&plan)?;
-        let file = RetainedPackage::create_new(
-            target,
-            &metadata,
-            &ranges,
-            &later.journal,
-            &later.file,
-        )?;
+        let file =
+            RetainedPackage::create_new(target, &metadata, &ranges, &later.journal, &later.file)?;
         let mut package = ActiveIncrementalPackage {
             file,
             metadata,

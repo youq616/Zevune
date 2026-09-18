@@ -214,9 +214,7 @@ fn validate_physical_frame(
     let mut begin = header_length;
     let mut previous = None;
     for segment_length in segment_lengths {
-        let limit = begin
-            .checked_add(segment_length)
-            .ok_or(PoolError::Bounds)?;
+        let limit = begin.checked_add(segment_length).ok_or(PoolError::Bounds)?;
         if start < limit {
             if end > limit
                 || (start == begin

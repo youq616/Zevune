@@ -3,8 +3,8 @@
 //! bind both trusted pins, and repeat complete byte/namespace checks at the end.
 use super::{
     check_file, create_file, name, namespace, open_file_access, read_at, regular,
-    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment,
-    COPY_CHUNK, GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
+    validate_physical_frame, visit_file, ActiveJournal, File, Hash, PoolError, Segment, COPY_CHUNK,
+    GENESIS, MAX_SEGMENTS, MIN_FRAME_BYTES, SEGMENT_BYTES, TOTAL_BYTES,
 };
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -116,7 +116,9 @@ fn visit_span(
     while position < end {
         let take = usize::try_from((end - position).min(COPY_CHUNK as u64))
             .map_err(|_| PoolError::Bounds)?;
-        fill_at(&mut buffer[..take], position, |bytes, at| read_at(file, bytes, at))?;
+        fill_at(&mut buffer[..take], position, |bytes, at| {
+            read_at(file, bytes, at)
+        })?;
         consume(&buffer[..take])?;
         position = position
             .checked_add(u64::try_from(take).map_err(|_| PoolError::Bounds)?)
@@ -578,7 +580,9 @@ impl<'a> JoinedJournal<'a> {
             use std::os::unix::fs::DirBuilderExt;
             builder.mode(0o700);
         }
-        builder.create(target.path()).map_err(|_| PoolError::Storage)?;
+        builder
+            .create(target.path())
+            .map_err(|_| PoolError::Storage)?;
         let location = namespace::Directory::open(target.path())?;
         let mut genesis = create_file(&target.path().join(GENESIS))?;
         genesis.try_lock().map_err(|_| PoolError::Locked)?;

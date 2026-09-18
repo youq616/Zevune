@@ -212,9 +212,8 @@ pub(super) fn change_tail(path: &Path) -> Result<(), PoolError> {
 #[test]
 fn independently_encoded_packages_restore_exact_bytes_without_a_later_directory() {
     let d = Dir::new();
-    for (number, (base_height, later_height)) in [(0, 0), (0, 3), (2, 2), (2, 5)]
-        .into_iter()
-        .enumerate()
+    for (number, (base_height, later_height)) in
+        [(0, 0), (0, 3), (2, 2), (2, 5)].into_iter().enumerate()
     {
         let base_path = d.path(&format!("base-{number}"));
         let later_path = d.path(&format!("later-{number}"));
@@ -244,7 +243,10 @@ fn independently_encoded_packages_restore_exact_bytes_without_a_later_directory(
         assert_plan(&package, base_pin, later_pin, &ranges);
         package.verify(&mut base).unwrap();
         let restored = d.path(&format!("restored-{number}"));
-        assert_eq!(package.restore_new(&mut base, &restored).unwrap(), later_pin);
+        assert_eq!(
+            package.restore_new(&mut base, &restored).unwrap(),
+            later_pin
+        );
         assert_eq!(directory_bytes(&restored), original_later);
         // restore_new returns no owning writer or hidden pending reservation.
         let mut pool = open_store(&restored).unwrap();
@@ -369,8 +371,7 @@ fn repinned_early_rotation_and_split_frames_reach_the_joined_replay_gate() {
         // These PRIVATE calls cannot publish an object to production callers.
         // Prove the genuine base, strict metadata, complete payload and repinned
         // combined layout all pass before exercising the actual replay gate.
-        let mut unchecked =
-            ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
+        let mut unchecked = ActiveIncrementalPackage::open_unverified(&path, &base, pin).unwrap();
         unchecked.check_bytes(&base).unwrap();
         if ranges.len() > 1 {
             // Both segment indices and individual offsets remain in bounds.
@@ -378,12 +379,7 @@ fn repinned_early_rotation_and_split_frames_reach_the_joined_replay_gate() {
             // strict table ordering rather than an out-of-range segment index.
             let mut reversed = ranges.clone();
             reversed.reverse();
-            let reordered = encode_fixture(
-                base_pin,
-                pin,
-                &reversed,
-                &payload(&changed, &reversed),
-            );
+            let reordered = encode_fixture(base_pin, pin, &reversed, &payload(&changed, &reversed));
             let reordered_path = d.path("out-of-order.incremental");
             fs::write(&reordered_path, &reordered).unwrap();
             assert!(matches!(
@@ -430,7 +426,9 @@ fn independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_o
     let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
     let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
     let package_path = d.path("good.incremental");
-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+    let mut package = base
+        .pack_incremental_new(&mut later, &package_path)
+        .unwrap();
     for (index, (height, variant, domain)) in [
         (2, 1, DOMAIN),
         (4, 1, DOMAIN),
@@ -460,7 +458,9 @@ fn independently_valid_forks_rollback_networks_and_wrong_base_cannot_authorize_o
     package.verify(&mut base).unwrap();
     let mut same_base = ActiveArchive::open(&base_path, base_pin).unwrap();
     let same_path = d.path("same-path.incremental");
-    let same = base.pack_incremental_new(&mut same_base, &same_path).unwrap();
+    let same = base
+        .pack_incremental_new(&mut same_base, &same_path)
+        .unwrap();
     assert_plan(&same, base_pin, base_pin, &[]);
 }
 
@@ -474,11 +474,12 @@ fn new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation() 
     let mut base = ActiveArchive::open(&base_path, base_pin).unwrap();
     let mut later = ActiveArchive::open(&later_path, later_pin).unwrap();
     let package_path = d.path("package.incremental");
-    let package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+    let package = base
+        .pack_incremental_new(&mut later, &package_path)
+        .unwrap();
     drop(package);
     let original_package = fs::read(&package_path).unwrap();
-    let mut package =
-        ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
+    let mut package = ActiveIncrementalPackage::open(&package_path, &mut base, later_pin).unwrap();
     let file = d.path("existing-file");
     fs::write(&file, b"keep file").unwrap();
     let directory = d.path("existing-directory");
@@ -506,10 +507,7 @@ fn new_outputs_are_exclusive_and_changed_inputs_are_rechecked_before_creation() 
         assert!(!target.exists());
     }
     assert_eq!(fs::read(&file).unwrap(), b"keep file");
-    assert_eq!(
-        fs::read(directory.join("keep")).unwrap(),
-        b"keep directory"
-    );
+    assert_eq!(fs::read(directory.join("keep")).unwrap(), b"keep directory");
     assert_eq!(fs::read(&package_path).unwrap(), original_package);
     // A prior successful open and plan cannot authorize future base contents.
     change_tail(&base_path).unwrap();
@@ -600,7 +598,9 @@ fn partial_package_and_restore_failures_keep_exact_targets_and_release_creation_
         drop(file);
     }
     let package_path = d.path("complete.incremental");
-    let mut package = base.pack_incremental_new(&mut later, &package_path).unwrap();
+    let mut package = base
+        .pack_incremental_new(&mut later, &package_path)
+        .unwrap();
     for fault in 11..=14 {
         let target = d.path(&format!("partial-restore-{fault}"));
         package.fault = fault;
@@ -776,8 +776,7 @@ fn package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_reject
             }
             assert!(ActiveIncrementalPackage::open(&path, &mut base, later_pin).is_err());
         } else {
-            let mut package =
-                ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
+            let mut package = ActiveIncrementalPackage::open(&path, &mut base, later_pin).unwrap();
             if kind == "replacement" {
                 fs::rename(&path, &other).unwrap();
                 fs::write(&path, &raw).unwrap();
@@ -804,10 +803,7 @@ fn package_symlinks_hardlinks_name_replacement_and_parent_replacement_are_reject
     fs::write(&path, &raw).unwrap();
     assert_eq!(package.verify(&mut base), Err(PoolError::Corrupt));
     assert_eq!(fs::read(&path).unwrap(), raw);
-    assert_eq!(
-        fs::read(moved.join("package.incremental")).unwrap(),
-        raw
-    );
+    assert_eq!(fs::read(moved.join("package.incremental")).unwrap(), raw);
 }
 
 #[cfg(windows)]

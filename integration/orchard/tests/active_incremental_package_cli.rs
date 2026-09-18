@@ -34,8 +34,10 @@ impl Dir {
     fn new() -> Self {
         let mut nonce = [0; 16];
         OsRng.fill_bytes(&mut nonce);
-        let path = std::env::temp_dir()
-            .join(format!("zevune-active-incremental-package-cli-{}", hex(&nonce)));
+        let path = std::env::temp_dir().join(format!(
+            "zevune-active-incremental-package-cli-{}",
+            hex(&nonce)
+        ));
         fs::create_dir(&path).unwrap();
         Self(path)
     }
@@ -418,12 +420,7 @@ fn package_cli_genesis_same_content_and_new_segment_have_exact_schema() {
         (&f.base, &f.base, f.base.path.as_path(), vec![]),
         (&f.later, &f.later, f.later.path.as_path(), vec![]),
         (&f.later, &f.later, copy.as_path(), vec![]),
-        (
-            &f.base,
-            &f.later,
-            f.later.path.as_path(),
-            vec![(0, 0, 450)],
-        ),
+        (&f.base, &f.later, f.later.path.as_path(), vec![(0, 0, 450)]),
     ];
     for (number, (base, later, source, ranges)) in cases.into_iter().enumerate() {
         let package = f.dir.path(&format!("package-{number}"));
@@ -439,12 +436,7 @@ fn package_cli_genesis_same_content_and_new_segment_have_exact_schema() {
         ] {
             success(
                 &call(&package_args(
-                    mode,
-                    &base.path,
-                    base.pin,
-                    input,
-                    later.pin,
-                    output,
+                    mode, &base.path, base.pin, input, later.pin, output,
                 )),
                 &expected_json(mode, base.pin, later.pin, &ranges),
             );
