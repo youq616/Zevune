@@ -57,13 +57,16 @@ impl Sandbox {
             .canonicalize()
             .expect("test temporary root unavailable")
             .join(format!("zevune-wallet-process-{suffix}"));
-        let mut builder = fs::DirBuilder::new();
         #[cfg(unix)]
         {
             use std::os::unix::fs::DirBuilderExt;
-            builder.mode(0o700);
+            fs::DirBuilder::new()
+                .mode(0o700)
+                .create(&root)
+                .expect("test directory creation failed");
         }
-        builder.create(&root).expect("test directory creation failed");
+        #[cfg(windows)]
+        fs::create_dir(&root).expect("test directory creation failed");
         Self {
             root,
             removable: Arc::new(AtomicBool::new(true)),
@@ -88,16 +91,25 @@ struct OwnedChild {
     child: Child,
     removable: Arc<AtomicBool>,
     stop_deadline: Option<Instant>,
+    kill_sent: bool,
 }
 impl OwnedChild {
     fn start(sandbox: &Sandbox, case: &str, password: &[u8]) -> Self {
-        assert!(matches!(case, "prepare" | "sync" | "stall" | "exit" | "bad-ready"));
+        assert!(matches!(
+            case,
+            "prepare" | "sync" | "stall" | "exit" | "bad-ready"
+        ));
         assert_eq!(password.len(), 32);
         assert!(sandbox.removable.swap(false, Ordering::SeqCst));
         // Only a fixed operation label enters the environment. The random test
         // password goes through a pipe, never argv, environment, files or logs.
         let spawned = Command::new(std::env::current_exe().unwrap())
-            .args(["--ignored", "--exact", "wallet_process_helper", "--nocapture"])
+            .args([
+                "--ignored",
+                "--exact",
+                "wallet_process_helper",
+                "--nocapture",
+            ])
             .current_dir(&sandbox.root)
             .env(CASE_ENV, case)
             .env("RAYON_NUM_THREADS", "2")
@@ -116,6 +128,7 @@ impl OwnedChild {
             child,
             removable: sandbox.removable.clone(),
             stop_deadline: None,
+            kill_sent: false,
         };
         let mut input = result.child.stdin.take().expect("helper input missing");
         input.write_all(password).expect("helper input failed");
@@ -124,7 +137,10 @@ impl OwnedChild {
     }
 
     fn poll(&mut self) -> Result<Option<ExitStatus>, &'static str> {
-        let result = self.child.try_wait().map_err(|_| "child observation failed")?;
+        let result = self
+            .child
+            .try_wait()
+            .map_err(|_| "child observation failed")?;
         if result.is_some() {
             self.removable.store(true, Ordering::SeqCst);
         }
@@ -166,7 +182,7 @@ impl OwnedChild {
         // Do not restart this budget if explicit shutdown failed and Drop runs.
         if self.stop_deadline.is_none() {
             self.stop_deadline = Some(Instant::now() + STOP_LIMIT);
-            let _ = self.child.kill();
+            self.kill_sent = self.child.kill().is_ok();
         }
         loop {
             if let Some(status) = self.poll()? {
@@ -186,7 +202,10 @@ impl Drop for OwnedChild {
 }
 
 fn assert_killed(status: ExitStatus) {
-    assert!(!status.success(), "helper exited successfully instead of being killed");
+    assert!(
+        !status.success(),
+        "helper exited successfully instead of being killed"
+    );
     #[cfg(unix)]
     {
         use std::os::unix::process::ExitStatusExt;
@@ -244,6 +263,20 @@ fn wallet_bytes(root: &Path) -> Vec<u8> {
     read_bounded(&root.join("wallet.journal"), MAX_FILE_BYTES as usize)
 }
 
+// Inspect owned bytes through the existing handle; do not bypass Windows byte
+// range locks with a second File handle, even inside the same process.
+fn saved_wallet_bytes(store: &mut WalletStore, root: &Path) -> Vec<u8> {
+    let before = store.receipt().unwrap();
+    let target = root.join("wallet-observation.journal");
+    assert!(!target.exists());
+    assert_eq!(store.backup_new(&target).unwrap(), before);
+    let bytes = read_bounded(&target, MAX_FILE_BYTES as usize);
+    fs::remove_file(target).unwrap();
+    assert_eq!(store.receipt().unwrap(), before);
+    bytes
+}
+
+// Direct physical snapshots require that all PoolStore handles are closed.
 fn pool_bytes(root: &Path) -> PublicFiles {
     let mut files = BTreeMap::new();
     for entry in fs::read_dir(root.join("pool")).unwrap() {
@@ -251,7 +284,9 @@ fn pool_bytes(root: &Path) -> PublicFiles {
         assert!(files.len() < 2);
         let name = entry.file_name().into_string().unwrap();
         assert!(matches!(name.as_str(), "genesis" | "00000000.journal"));
-        assert!(files.insert(name, read_bounded(&entry.path(), 1024 * 1024)).is_none());
+        assert!(files
+            .insert(name, read_bounded(&entry.path(), 1024 * 1024))
+            .is_none());
     }
     files
 }
@@ -264,7 +299,9 @@ fn block_id(height: u64) -> [u8; 32] {
 
 fn commit(pool: &mut PoolStore, bytes: &[u8]) -> Summary {
     let height = pool.summary().unwrap().height + 1;
-    let prepared = pool.prepare(height, block_id(height), &[bytes.to_vec()]).unwrap();
+    let prepared = pool
+        .prepare(height, block_id(height), &[bytes.to_vec()])
+        .unwrap();
     let expected = prepared.result().clone();
     let actual = pool.commit(prepared).unwrap();
     assert_eq!(actual, expected);
@@ -298,7 +335,9 @@ fn wallet_process_helper() {
     let case = std::env::var(CASE_ENV).expect("helper needs explicit parent context");
     let mut password = Zeroizing::new([0; 32]);
     let mut input = std::io::stdin().lock();
-    input.read_exact(password.as_mut()).expect("missing test password");
+    input
+        .read_exact(password.as_mut())
+        .expect("missing test password");
     let mut trailing = [0; 1];
     assert_eq!(input.read(&mut trailing).unwrap(), 0);
     let _exit = GracefulExit;
@@ -323,13 +362,16 @@ fn wallet_process_helper() {
         WalletStore::open(Path::new("wallet.journal"), password.as_ref(), Some(pin)).unwrap();
     assert_eq!(store.receipt().unwrap(), pin);
     assert_cold(&store);
-    let mut pool = genesis.open_pool(Path::new("pool")).unwrap();
+    let root = std::env::current_dir().unwrap();
+    let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
     let history = genesis.wallet_history(&mut pool).unwrap();
     store.sync(&history).unwrap();
     if case == "prepare" {
         assert_eq!(history.tip().height, 0);
         assert_eq!(store.receipt().unwrap(), pin);
-        let raw: [u8; 43] = read_bounded(Path::new("recipient.bin"), 43).try_into().unwrap();
+        let raw: [u8; 43] = read_bounded(Path::new("recipient.bin"), 43)
+            .try_into()
+            .unwrap();
         let recipient =
             Option::<orchard::Address>::from(orchard::Address::from_raw_address_bytes(&raw))
                 .unwrap();
@@ -351,6 +393,14 @@ fn wallet_process_helper() {
     assert_eq!(after.generation, pin.generation + 1);
     assert!(after.journal_id == pin.journal_id);
     write_new(Path::new("observed.pin"), &pin_bytes(after));
+    // A second handle cannot read the locked live wallet on Windows. Capture
+    // its exact bytes through the already owned handle, then close the copy.
+    assert_eq!(
+        store
+            .backup_new(Path::new("observed-backup.journal"))
+            .unwrap(),
+        after,
+    );
     drop(history);
     drop(pool);
     write_new(Path::new("ready"), READY);
@@ -383,7 +433,9 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
         &bob.receive_address(0).unwrap().to_raw_address_bytes(),
     );
     let mut pool = genesis.create_pool(&root.join("pool")).unwrap();
-    wallet.sync(&genesis.wallet_history(&mut pool).unwrap()).unwrap();
+    wallet
+        .sync(&genesis.wallet_history(&mut pool).unwrap())
+        .unwrap();
     assert_eq!(wallet.receipt().unwrap().generation, 2);
     let prover = WalletProver::new();
     let mut first = Vec::new();
@@ -400,20 +452,22 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     let before = wallet.receipt().unwrap();
     write_new(&root.join("before.pin"), &pin_bytes(before));
     assert_eq!(wallet.backup_new(&backup_path).unwrap(), before);
-    let before_bytes = wallet_bytes(root);
-    assert!(read_bounded(&backup_path, MAX_FILE_BYTES as usize) == before_bytes);
+    let before_bytes = read_bounded(&backup_path, MAX_FILE_BYTES as usize);
     let pool_before = pool.summary().unwrap();
-    let pool_before_bytes = pool_bytes(root);
     drop(wallet);
     drop(pool);
+    assert!(wallet_bytes(root) == before_bytes);
+    let pool_before_bytes = pool_bytes(root);
 
     let mut process = OwnedChild::start(sandbox, case, password.as_ref());
-    process.ready(root, READY_LIMIT).expect("wallet operation did not reach its durable boundary");
+    process
+        .ready(root, READY_LIMIT)
+        .expect("wallet operation did not reach its durable boundary");
     assert!(process.poll().unwrap().is_none());
     let observed = read_pin(&root.join("observed.pin"));
     assert_eq!(observed.generation, before.generation + 1);
     assert!(observed.journal_id == before.journal_id && observed.digest != before.digest);
-    let after_bytes = wallet_bytes(root);
+    let after_bytes = read_bounded(&root.join("observed-backup.journal"), MAX_FILE_BYTES as usize);
     assert!(after_bytes.starts_with(&before_bytes));
     assert_eq!(after_bytes.len(), before_bytes.len() + RECORD_BYTES);
     assert_eq!(
@@ -427,7 +481,12 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     } else {
         assert!(!root.join("observed-payment.bin").exists());
     }
-    assert_killed(process.stop().expect("wallet helper termination was not confirmed"));
+    assert_killed(
+        process
+            .stop()
+            .expect("wallet helper termination was not confirmed"),
+    );
+    assert!(process.kill_sent, "no successful native kill request");
     assert!(sandbox.removable.load(Ordering::SeqCst));
     assert!(!root.join("graceful-exit").exists());
     assert!(wallet_bytes(root) == after_bytes);
@@ -454,10 +513,14 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     assert!(wallet.view().unwrap().receive_address(0).unwrap() == owner);
     let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
     assert_eq!(pool.summary().unwrap(), pool_before);
+    drop(pool);
     assert!(pool_bytes(root) == pool_before_bytes);
-    wallet.sync(&genesis.wallet_history(&mut pool).unwrap()).unwrap();
+    let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
+    wallet
+        .sync(&genesis.wallet_history(&mut pool).unwrap())
+        .unwrap();
     assert_eq!(wallet.receipt().unwrap(), observed);
-    assert!(wallet_bytes(root) == after_bytes);
+    assert!(saved_wallet_bytes(&mut wallet, root) == after_bytes);
     if case == "prepare" {
         let pending = wallet.pending_payment().unwrap().unwrap();
         assert!(pending.bytes() == first && pending.id() == digest(&first));
@@ -465,14 +528,18 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
         assert_eq!(wallet.view().unwrap().balance().unwrap(), TEST_SUPPLY);
         assert_eq!(wallet.view().unwrap().available_balance().unwrap(), 0);
         assert_eq!(
-            wallet.prepare_payment(bob.receive_address(0).unwrap(), 1, 1, 10, &prover).err(),
+            wallet
+                .prepare_payment(bob.receive_address(0).unwrap(), 1, 1, 10, &prover)
+                .err(),
             Some(StoreError::Wallet(WalletError::Pending)),
         );
         assert_eq!(wallet.receipt().unwrap(), observed);
-        assert!(wallet_bytes(root) == after_bytes);
+        assert!(saved_wallet_bytes(&mut wallet, root) == after_bytes);
         commit(&mut pool, &first);
         assert!(wallet.pending_payment().unwrap().unwrap().bytes() == first);
-        wallet.sync(&genesis.wallet_history(&mut pool).unwrap()).unwrap();
+        wallet
+            .sync(&genesis.wallet_history(&mut pool).unwrap())
+            .unwrap();
     }
     let paid = pool.summary().unwrap();
     assert_eq!(
@@ -490,7 +557,13 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     carol.sync(&history).unwrap();
     assert_eq!(bob.balance().unwrap(), 60_000);
     let second = bob
-        .build_payment(carol.receive_address(0).unwrap(), 40_000, 1_000, 10, &prover)
+        .build_payment(
+            carol.receive_address(0).unwrap(),
+            40_000,
+            1_000,
+            10,
+            &prover,
+        )
         .unwrap()
         .bytes()
         .to_vec();
@@ -501,38 +574,55 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     bob.sync(&history).unwrap();
     carol.sync(&history).unwrap();
     assert_eq!(
-        (wallet.view().unwrap().balance().unwrap(), bob.balance().unwrap(), carol.balance().unwrap()),
+        (
+            wallet.view().unwrap().balance().unwrap(),
+            bob.balance().unwrap(),
+            carol.balance().unwrap()
+        ),
         (39_000, 19_000, 40_000),
     );
     assert_eq!(final_state.fees, 2_000);
     assert_eq!(
-        wallet.view().unwrap().balance().unwrap() + bob.balance().unwrap() + carol.balance().unwrap() + final_state.fees,
+        wallet.view().unwrap().balance().unwrap()
+            + bob.balance().unwrap()
+            + carol.balance().unwrap()
+            + final_state.fees,
         TEST_SUPPLY,
     );
     assert!(bob.pending_id().is_none());
     drop(history);
+    drop(pool);
     let final_bytes = pool_bytes(root);
+    let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
     for payment in [&first, &second] {
         assert_eq!(
             pool.prepare(3, block_id(3), &[payment.to_vec()]).err(),
             Some(PoolError::DoubleSpend),
         );
         assert_eq!(pool.summary().unwrap(), final_state);
+        drop(pool);
         assert!(pool_bytes(root) == final_bytes);
+        pool = genesis.open_pool(&root.join("pool")).unwrap();
+        assert_eq!(pool.summary().unwrap(), final_state);
     }
     let final_receipt = wallet.receipt().unwrap();
-    let final_wallet_bytes = wallet_bytes(root);
+    let final_wallet_bytes = saved_wallet_bytes(&mut wallet, root);
     drop(wallet);
     drop(pool);
+    assert!(wallet_bytes(root) == final_wallet_bytes);
     let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
     assert_eq!(pool.summary().unwrap(), final_state);
     let mut wallet =
         WalletStore::open(&wallet_path, password.as_ref(), Some(final_receipt)).unwrap();
     assert_cold(&wallet);
-    wallet.sync(&genesis.wallet_history(&mut pool).unwrap()).unwrap();
+    wallet
+        .sync(&genesis.wallet_history(&mut pool).unwrap())
+        .unwrap();
     assert_eq!(wallet.receipt().unwrap(), final_receipt);
     assert_eq!(wallet.view().unwrap().available_balance().unwrap(), 39_000);
     assert!(wallet.pending_payment().unwrap().is_none());
+    drop(wallet);
+    drop(pool);
     assert!(wallet_bytes(root) == final_wallet_bytes);
     assert!(pool_bytes(root) == final_bytes);
     assert!(read_bounded(&backup_path, MAX_FILE_BYTES as usize) == before_bytes);
@@ -558,6 +648,7 @@ fn supervisor_reaps_stalled_child_without_readiness() {
         Err("helper readiness timed out"),
     );
     assert_killed(process.stop().unwrap());
+    assert!(process.kill_sent, "no successful native kill request");
     sandbox.clean();
 }
 
@@ -583,5 +674,6 @@ fn supervisor_rejects_malformed_readiness_then_reaps_child() {
         Err("invalid readiness marker"),
     );
     assert_killed(process.stop().unwrap());
+    assert!(process.kill_sent, "no successful native kill request");
     sandbox.clean();
 }
