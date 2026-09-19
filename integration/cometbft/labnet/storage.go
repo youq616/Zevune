@@ -16,8 +16,9 @@ const recordLimit uint64 = 10000
 const minimumJournalHeaderBytes uint64 = 44
 const emptyRecordBytes uint64 = 150
 
-// StorageReport describes one offline journal after genuine worker replay. It
-// says nothing about consensus freshness, disk free space, or spend permission.
+// StorageReport describes one offline journal after genuine worker replay.
+// DiskSpace, when explicitly requested, is a separate later OS observation.
+// Neither establishes consensus freshness, spend permission or future writes.
 type StorageReport struct {
 	Scope                     string   `json:"scope"`
 	StorageProfile            string   `json:"storage_profile"`
@@ -39,6 +40,8 @@ type StorageReport struct {
 	Segments                  uint32   `json:"segments,omitempty"`
 	SegmentLimit              uint32   `json:"segment_limit,omitempty"`
 	TailBytes                 uint32   `json:"tail_bytes,omitempty"`
+
+	DiskSpace *DiskSpaceReport `json:"disk_space,omitempty"`
 }
 
 func storageReport(s poolbridge.Summary, size int64) (StorageReport, error) {
@@ -154,6 +157,59 @@ func (n *Network) InspectStorageAtCheckpoint(ctx context.Context, worker string,
 	}
 	// Copy by value so the caller cannot change the requirement during replay.
 	return n.inspectStorage(ctx, worker, workerPin, journal, &expected)
+}
+
+// InspectStorageWithDiskSpace retains the storage target through the same
+// genuine offline replay and optional exact checkpoint check as InspectStorage.
+// It then queries available OS space against a positive caller-selected reserve.
+// Low space is a successful diagnostic, not a failed replay. The observation
+// reserves no bytes and is not an atomic snapshot with the replayed capacity.
+// Trusted parent directories and the local OS remain part of the trust boundary.
+func (n *Network) InspectStorageWithDiskSpace(ctx context.Context, worker string, workerPin Hash, journal string, reserveBytes uint64, expected *StorageCheckpoint) (StorageReport, error) {
+	if n == nil || ctx == nil || ctx.Err() != nil || reserveBytes == 0 {
+		return StorageReport{}, ErrBounds
+	}
+	if n.profile != poolbridge.LegacyJournal && n.profile != poolbridge.ActiveSegmentsV1 {
+		return StorageReport{}, ErrStorageProfile
+	}
+	var checkpoint *StorageCheckpoint
+	if expected != nil {
+		copied := *expected
+		if err := n.ValidateStorageCheckpoint(copied); err != nil {
+			return StorageReport{}, err
+		}
+		checkpoint = &copied
+	}
+	target, err := openDiskSpaceTarget(n.profile, journal)
+	if err != nil {
+		return StorageReport{}, err
+	}
+	defer target.close()
+	report, err := n.inspectStorage(ctx, worker, workerPin, journal, checkpoint)
+	if err != nil {
+		return StorageReport{}, err
+	}
+	if err := target.verify(); err != nil {
+		return StorageReport{}, err
+	}
+	diskSpace, err := target.sample(reserveBytes)
+	if err != nil {
+		return StorageReport{}, err
+	}
+	if err := target.verify(); err != nil {
+		return StorageReport{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return StorageReport{}, err
+	}
+	if err := target.close(); err != nil {
+		return StorageReport{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return StorageReport{}, err
+	}
+	report.DiskSpace = &diskSpace
+	return report, nil
 }
 
 func (n *Network) inspectStorage(ctx context.Context, worker string, workerPin Hash, journal string, expected *StorageCheckpoint) (StorageReport, error) {

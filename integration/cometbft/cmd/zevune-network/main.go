@@ -119,6 +119,23 @@ func checkpointFlagSyntax(height, appHash string, requested bool) error {
 	return nil
 }
 
+func diskReserveFlag(text string, requested bool) (uint64, error) {
+	if !requested {
+		if text != "" {
+			return 0, labnet.ErrBounds
+		}
+		return 0, nil
+	}
+	if len(text) == 0 || len(text) > 20 {
+		return 0, labnet.ErrBounds
+	}
+	reserve, err := strconv.ParseUint(text, 10, 64)
+	if err != nil || reserve == 0 || strconv.FormatUint(reserve, 10) != text {
+		return 0, labnet.ErrBounds
+	}
+	return reserve, nil
+}
+
 func execute(ctx context.Context, args []string, input io.Reader, output io.Writer) error {
 	if len(args) == 1 && args[0] == "version" {
 		return json.NewEncoder(output).Encode(map[string]any{"version": labnet.Version, "real_funds_allowed": false})
@@ -139,7 +156,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	var index, ports int
 	var create, stopOnEOF bool
 	var limit uint64
-	var expectedHeight, expectedAppHash, destination string
+	var expectedHeight, expectedAppHash, destination, diskReserveText string
 	if command == "init" {
 		f.StringVar(&home, "home", "", "new private network directory")
 		f.StringVar(&manifest, "genesis", "", "public test asset manifest")
@@ -153,6 +170,9 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			f.BoolVar(&stopOnEOF, "stop-on-stdin-eof", false, "stop when supervising process closes stdin")
 		} else if command == "storage" || command == "storage-copy" {
 			f.StringVar(&journal, "journal", "", "existing offline node or reference journal; never created")
+			if command == "storage" {
+				f.StringVar(&diskReserveText, "disk-reserve-bytes", "", "positive OS disk warning threshold; available <= threshold sets low_space; no bytes reserved")
+			}
 			if command == "storage-copy" {
 				f.StringVar(&destination, "output", "", "new journal backup or restore path; never overwritten")
 			}
@@ -176,11 +196,14 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		return labnet.ErrBounds
 	}
 	// Track flag presence separately from its value: passing empty shell
-	// variables must fail, not silently disable the requested checkpoint.
-	checkpointRequested := false
+	// variables must fail, not silently disable a checkpoint or disk inspection.
+	checkpointRequested, diskRequested := false, false
 	f.Visit(func(v *flag.Flag) {
 		if v.Name == "expected-height" || v.Name == "expected-app-hash" {
 			checkpointRequested = true
+		}
+		if v.Name == "disk-reserve-bytes" {
+			diskRequested = true
 		}
 	})
 	// Validate before configuration/file access. Explicit height 0 is a real
@@ -188,6 +211,10 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	if err := checkpointFlagSyntax(expectedHeight, expectedAppHash, checkpointRequested); err != nil || (checkpointRequested && create) ||
 		(command == "storage-copy" && (!checkpointRequested || !filepath.IsAbs(destination) || !filepath.IsAbs(journal))) {
 		return labnet.ErrBounds
+	}
+	diskReserve, err := diskReserveFlag(diskReserveText, diskRequested)
+	if err != nil {
+		return err
 	}
 	pin, err := labnet.ParseHash(*workerDigest)
 	if err != nil {
@@ -248,7 +275,9 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	if command == "storage" {
 		var result labnet.StorageReport
 		var err error
-		if expected == nil {
+		if diskRequested {
+			result, err = network.InspectStorageWithDiskSpace(bounded, *worker, pin, journal, diskReserve, expected)
+		} else if expected == nil {
 			result, err = network.InspectStorage(bounded, *worker, pin, journal)
 		} else {
 			result, err = network.InspectStorageAtCheckpoint(bounded, *worker, pin, journal, *expected)
