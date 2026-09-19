@@ -467,7 +467,10 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     let observed = read_pin(&root.join("observed.pin"));
     assert_eq!(observed.generation, before.generation + 1);
     assert!(observed.journal_id == before.journal_id && observed.digest != before.digest);
-    let after_bytes = read_bounded(&root.join("observed-backup.journal"), MAX_FILE_BYTES as usize);
+    let after_bytes = read_bounded(
+        &root.join("observed-backup.journal"),
+        MAX_FILE_BYTES as usize,
+    );
     assert!(after_bytes.starts_with(&before_bytes));
     assert_eq!(after_bytes.len(), before_bytes.len() + RECORD_BYTES);
     assert_eq!(
