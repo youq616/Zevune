@@ -190,6 +190,10 @@ func (g *growthObservation) complete() bool {
 		growthCommitEmpty: 99_999, growthCommitPaid: 2,
 		growthScenarioApply: 10_002, growthWalletRecovery: 2,
 		growthSpent: 2, growthClose: 4, growthDisk: 2,
+		growthChecks: 11, growthBalances: 3,
+	}
+	if len(want) != int(growthPhaseCount)-1 {
+		return false
 	}
 	for phase, count := range want {
 		if g.timings[phase].Completed != count {

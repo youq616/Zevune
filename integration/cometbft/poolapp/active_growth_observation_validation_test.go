@@ -24,7 +24,7 @@ func growthObservationFixtureWithCheckpoints(emit func(*growthObservation)) *gro
 		emit(g)
 	}
 	step := func(p growthPhase, h uint64) { g.begin(p, h); g.end() }
-	for _, p := range []growthPhase{growthSetup, growthFundedStart, growthWorkerCreate} {
+	for _, p := range []growthPhase{growthSetup, growthFundedStart, growthChecks, growthWorkerCreate, growthChecks} {
 		step(p, 0)
 	}
 	for h := uint64(1); h <= 100_001; h++ {
@@ -48,19 +48,28 @@ func growthObservationFixtureWithCheckpoints(emit func(*growthObservation)) *gro
 			step(growthScenarioApply, h)
 		}
 		if paid {
-			for _, p := range []growthPhase{growthBalances, growthClose, growthWorkerReplay, growthWalletRecovery, growthSpent} {
+			for _, p := range []growthPhase{growthBalances, growthClose, growthWorkerReplay, growthChecks, growthWalletRecovery, growthSpent} {
 				step(p, h)
 			}
 		}
-		if emit != nil && h%25_000 == 0 {
-			emit(g)
+		if h == 10_002 {
+			step(growthBalances, h)
+		}
+		if h%25_000 == 0 {
+			step(growthChecks, h)
+			if emit != nil {
+				emit(g)
+			}
 		}
 		if h == 100_000 {
+			step(growthChecks, h)
 			step(growthClose, h)
 			step(growthDisk, h)
 			step(growthFullReplay, h)
+			step(growthChecks, h)
 		}
 		if h == 100_001 {
+			step(growthChecks, h)
 			step(growthClose, h)
 			step(growthDisk, h)
 		}
@@ -89,11 +98,25 @@ func TestGrowthObservationFullSequenceAndTiming(t *testing.T) {
 
 func TestGrowthObservationMissingCoverageCannotClaimCompletion(t *testing.T) {
 	g := growthObservationFixture()
-	for _, p := range []growthPhase{growthFullReplay, growthDisk, growthOutbox, growthWalletRecovery, growthScenarioApply, growthCommitEmpty, growthCommitPaid, growthSelect} {
-		copy := *g
-		copy.timings[p].Completed--
-		if copy.report(true, false).ChecksCompleted {
-			t.Fatal("missing operation was accepted")
+	// Regression for the independent C1 review: state_checks (11) and
+	// wallet_balances (3) must not escape the exact coverage inventory.
+	if g.timings[growthChecks].Completed != 11 || g.timings[growthBalances].Completed != 3 {
+		t.Fatal("fixture differs from the actual instrumented call sites")
+	}
+	for p := growthPhase(1); p < growthPhaseCount; p++ {
+		if g.timings[p].Completed == 0 {
+			t.Fatalf("phase %s has no fixture coverage", growthPhaseNames[p])
+		}
+		for _, duplicate := range []bool{false, true} {
+			copy := *g
+			if duplicate {
+				copy.timings[p].Completed++
+			} else {
+				copy.timings[p].Completed--
+			}
+			if copy.report(true, false).ChecksCompleted {
+				t.Fatalf("phase %s missing/duplicate=%t was accepted", growthPhaseNames[p], duplicate)
+			}
 		}
 	}
 	g.coreDone = false
