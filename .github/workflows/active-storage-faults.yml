@@ -2,13 +2,17 @@ name: active-storage-faults
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
   pull_request:
-    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
 permissions:
   contents: read
 jobs:
   linux-enospc:
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [active, wallet]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -18,6 +22,7 @@ jobs:
       RAYON_NUM_THREADS: '2'
       CARGO_BUILD_JOBS: '2'
       ZEVUNE_ENOSPC_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      ZEVUNE_ENOSPC_SUITE: ${{ matrix.suite }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
@@ -28,9 +33,12 @@ jobs:
           import datetime, json, os, pathlib, subprocess
           def git(expression):
               return subprocess.check_output(['git', '--no-replace-objects', 'rev-parse', expression], text=True).strip()
-          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'zevune-enospc-evidence'
+          suite = os.environ['ZEVUNE_ENOSPC_SUITE']
+          if suite not in ('active', 'wallet'):
+              raise SystemExit('Unknown ENOSPC suite')
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / ('zevune-enospc-evidence-' + suite)
           folder.mkdir()
-          result = {'schema_version': 1, 'kind': 'linux_tmpfs_enospc_setup',
+          result = {'schema_version': 1, 'kind': 'linux_tmpfs_enospc_setup', 'suite': suite,
                     'source_head': os.environ['ZEVUNE_ENOSPC_SOURCE_HEAD'],
                     'checkout_commit': git('HEAD'), 'checkout_tree': git('HEAD^{tree}'),
                     'observed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -54,11 +62,12 @@ jobs:
           git diff --exit-code
       - name: Actually verify root watchdog termination of a TERM-ignoring namespace
         timeout-minutes: 1
-        run: python scripts/run_active_enospc.py --supervision-probe --output "$RUNNER_TEMP/zevune-enospc-evidence/supervision-probe.json"
+        run: python scripts/run_active_enospc.py --supervision-probe --output "$RUNNER_TEMP/zevune-enospc-evidence-$ZEVUNE_ENOSPC_SUITE/supervision-probe.json"
       - name: Build only the explicit ignored ENOSPC test target as the runner
         run: |
           test "$(id -u)" -ne 0
-          cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test active_enospc --no-run --message-format=json-render-diagnostics > "$RUNNER_TEMP/zevune-enospc-build.jsonl"
+          case "$ZEVUNE_ENOSPC_SUITE" in active|wallet) ;; *) exit 1 ;; esac
+          cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test "${ZEVUNE_ENOSPC_SUITE}_enospc" --no-run --message-format=json-render-diagnostics > "$RUNNER_TEMP/zevune-enospc-build.jsonl"
           git diff --exit-code
       - name: Explicitly execute both ignored tests in private bounded filesystems
         timeout-minutes: 10
@@ -66,20 +75,25 @@ jobs:
           python - <<'PY'
           import json, os, pathlib, subprocess, sys
           temporary = pathlib.Path(os.environ['RUNNER_TEMP'])
+          suite = os.environ['ZEVUNE_ENOSPC_SUITE']
+          if suite not in ('active', 'wallet'):
+              raise SystemExit('Unknown ENOSPC suite')
+          target = suite + '_enospc'
           records = []
           with (temporary / 'zevune-enospc-build.jsonl').open(encoding='utf-8') as handle:
               for line in handle:
                   record = json.loads(line)
                   if (record.get('reason') == 'compiler-artifact'
-                          and record.get('target', {}).get('name') == 'active_enospc'
+                          and record.get('target', {}).get('name') == target
                           and record.get('target', {}).get('kind') == ['test']
                           and record.get('profile', {}).get('test') is True
                           and record.get('executable')):
                       records.append(pathlib.Path(record['executable']).resolve(strict=True))
           if len(records) != 1:
-              raise SystemExit('Expected exactly one compiled active_enospc test executable')
-          subprocess.run([sys.executable, 'scripts/run_active_enospc.py', '--test-executable', str(records[0]),
-                          '--output', str(temporary / 'zevune-enospc-evidence/result.json')], check=True)
+              raise SystemExit('Expected exactly one compiled executable for the selected ENOSPC suite')
+          subprocess.run([sys.executable, 'scripts/run_active_enospc.py', '--suite', suite,
+                          '--test-executable', str(records[0]),
+                          '--output', str(temporary / ('zevune-enospc-evidence-' + suite) / 'result.json')], check=True)
           PY
       - name: Assert source and dependency locks remain unchanged
         run: git diff --exit-code
@@ -87,7 +101,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: active-storage-faults-Linux-${{ github.sha }}
-          path: ${{ runner.temp }}/zevune-enospc-evidence/
+          name: active-storage-faults-${{ matrix.suite }}-Linux-${{ github.sha }}
+          path: ${{ runner.temp }}/zevune-enospc-evidence-${{ matrix.suite }}/
           if-no-files-found: error
           retention-days: 14

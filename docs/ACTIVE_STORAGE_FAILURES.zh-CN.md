@@ -59,6 +59,6 @@ tmpfs 的固定容量耗尽会产生真实 Linux 文件系统 ENOSPC，但它不
 
 候选冻结后，由未编写候选的代理分别审核存储、Go 进程边界和 CI / 交付；修复阻断后复核准确提交。原生验收逐一检查当前 head 的 PR 工作流、完整日志、实际执行场景和平台条件。合入后再次核对完整 tree，不能以其他提交或同 head 的部分成功替代。
 
-P2 尚需完成快照状态导入与防回滚设计、真实物理存储故障及同步/断电试验、Windows 实际磁盘满与目录持久化、钱包磁盘满、持续真实交易和完整容量负载。P3 多机、P4 完整钱包、网络隐私、经济规则、长期运行和外部专业审查继续按[八工作包计划](DELIVERY_PLAN.zh-CN.md)推进。`production_storage_ready`、`audited` 和 `real_funds_allowed` 保持 false。
+本阶段未测试钱包文件自身磁盘满；后续针对钱包同步追加及整理目标的实际 ENOSPC 合同见[钱包存储故障与恢复](WALLET_STORAGE_FAILURES.zh-CN.md)，不能把本阶段账本结果改记为钱包结果。P2 尚需完成快照状态导入与防回滚设计、真实物理存储故障及同步/断电试验、Windows 实际磁盘满与目录持久化、其余钱包故障、持续真实交易和完整容量负载。P3 多机、P4 完整钱包、网络隐私、经济规则、长期运行和外部专业审查继续按[八工作包计划](DELIVERY_PLAN.zh-CN.md)推进。`production_storage_ready`、`audited` 和 `real_funds_allowed` 保持 false。
 
 上游依据：[Linux tmpfs](https://docs.kernel.org/filesystems/tmpfs.html)、[strace 手册](https://man7.org/linux/man-pages/man1/strace.1.html)、[strace v6.8 raw 输出](https://github.com/strace/strace/blob/v6.8/src/syscall.c)、[strace v6.8 路径过滤](https://github.com/strace/strace/blob/v6.8/src/pathtrace.c)、[unshare](https://man7.org/linux/man-pages/man1/unshare.1.html)、[Go 1.27.1 Process.Kill](https://github.com/golang/go/blob/go1.27.1/src/os/exec.go)。这些说明操作系统和工具行为，不是对 Zevune 的安全背书。

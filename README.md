@@ -13,7 +13,8 @@
 [2026-09-16接手记录](reports/project-handoff-2026-09-16.md)。
 构建、旧账本容量、节点诊断和签名加载的后续修复见
 [2026-09-19接手审核](docs/TAKEOVER_AUDIT_2026-09-19.zh-CN.md)；本阶段的真实空间耗尽、进程终止和提交回执丢失回归见
-[P2活动存储故障与恢复](docs/ACTIVE_STORAGE_FAILURES.zh-CN.md)，准确执行和验收结果以对应PR记录为准。
+[P2活动存储故障与恢复](docs/ACTIVE_STORAGE_FAILURES.zh-CN.md)。接续的钱包追加和整理目标真实写满、精确 outbox 恢复见
+[P2钱包存储故障与恢复](docs/WALLET_STORAGE_FAILURES.zh-CN.md)，准确执行和验收结果以对应PR记录为准。
 统一开发入口仍是 `dev/m12-genesis-domain`；整体交付范围见
 [八工作包计划](docs/DELIVERY_PLAN.zh-CN.md)。
 
