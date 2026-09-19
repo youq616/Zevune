@@ -137,14 +137,16 @@ func activeGrowthDiskDigest(t *testing.T, path string) poolbridge.Hash {
 	return result
 }
 
-func activeGrowthCommit(t *testing.T, ctx context.Context, c *poolbridge.Client, path string, previous poolbridge.Summary, txs [][]byte, boundary bool) poolbridge.Summary {
+func activeGrowthCommit(t *testing.T, ctx context.Context, c *poolbridge.Client, path string, previous poolbridge.Summary, txs [][]byte, boundary bool, observation *growthObservation) poolbridge.Summary {
 	t.Helper()
 	height := previous.Height + 1
+	observation.next(height)
 	hash := activeGrowthHash(height)
 	var preview poolbridge.Summary
 	var before poolbridge.ActiveStorage
 	var disk poolbridge.Hash
 	if boundary {
+		observation.begin(growthSelect, height)
 		before = activeGrowthCapacity(t, ctx, c)
 		disk = activeGrowthDiskDigest(t, path)
 		var candidates [][]byte
@@ -164,12 +166,20 @@ func activeGrowthCommit(t *testing.T, ctx context.Context, c *poolbridge.Client,
 		if activeGrowthStatus(t, ctx, c) != previous || activeGrowthCapacity(t, ctx, c) != before || activeGrowthDiskDigest(t, path) != disk {
 			t.Fatal("selection or preview changed committed state, segment bytes or genesis metadata")
 		}
+		observation.end()
 	}
+	finalizePhase, commitPhase := growthFinalizeEmpty, growthCommitEmpty
+	if len(txs) != 0 {
+		finalizePhase, commitPhase = growthFinalizePaid, growthCommitPaid
+	}
+	observation.begin(finalizePhase, height)
 	finalized, tag, err := c.Finalize(ctx, height, hash, txs)
 	if err != nil || finalized.Height != height {
 		t.Fatalf("real worker finalization at height %d: %v", height, err)
 	}
+	observation.end()
 	if boundary {
+		observation.begin(growthPendingChecks, height)
 		if finalized != preview || activeGrowthStatus(t, ctx, c) != previous || activeGrowthCapacity(t, ctx, c) != before || activeGrowthDiskDigest(t, path) != disk {
 			t.Fatal("boundary finalization differs from preview or persisted before commit")
 		}
@@ -182,11 +192,14 @@ func activeGrowthCommit(t *testing.T, ctx context.Context, c *poolbridge.Client,
 		if activeGrowthStatus(t, ctx, c) != previous || activeGrowthCapacity(t, ctx, c) != before || activeGrowthDiskDigest(t, path) != disk {
 			t.Fatal("rejected commit or pending selection changed committed state")
 		}
+		observation.end()
 	}
+	observation.begin(commitPhase, height)
 	committed, err := c.Commit(ctx, tag)
 	if err != nil || committed != finalized {
 		t.Fatalf("real worker commit at height %d: %v", height, err)
 	}
+	observation.end()
 	return committed
 }
 
@@ -286,12 +299,18 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 	// acceptance double: every height crosses the actual worker IPC and fsync.
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
+	observation := installGrowthObservation(t)
+	observation.begin(growthSetup, 0)
 	root := t.TempDir()
 	walletHome := filepath.Join(root, "wallets")
 	if err := os.Mkdir(walletHome, 0700); err != nil {
 		t.Fatal(err)
 	}
+	observation.end()
+	observation.begin(growthFundedStart, 0)
 	driver, pin := startActiveFunded(t, walletHome)
+	observation.end()
+	observation.begin(growthChecks, 0)
 	manifest := filepath.Join(walletHome, "test-genesis.bin")
 	genesis, err := os.ReadFile(manifest)
 	if err != nil || len(genesis) != 312 || string(genesis[:8]) != "ZVTGEN03" || sha256.Sum256(genesis) != pin {
@@ -306,8 +325,16 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 	}
 	o.StartupTimeout = 5 * time.Minute
 	o.RequestTimeout = time.Minute
+	observation.end()
 	start := func(create bool) *poolbridge.Client {
 		t.Helper()
+		phase := growthWorkerReplay
+		if create {
+			phase = growthWorkerCreate
+		} else if observation.confirmed == 100_000 {
+			phase = growthFullReplay
+		}
+		observation.begin(phase, observation.confirmed)
 		o.Create = create
 		c, err := poolbridge.Start(ctx, o)
 		if err != nil {
@@ -317,9 +344,11 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 		if c.Profile() != poolbridge.ActiveSegmentsV1 {
 			t.Fatal("pinned 03 genesis did not select the active IPC profile")
 		}
+		observation.end()
 		return c
 	}
 	c := start(true)
+	observation.begin(growthChecks, 0)
 	if poolbridge.ActiveSegmentBytes != 1_048_576 || c.Profile().MaxHeight() != 1_000_000 || c.Profile().MaxJournalBytes() != 1_073_741_824 {
 		t.Fatal("growth test did not use the fixed active-segments-v1 production policy")
 	}
@@ -337,8 +366,10 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 	state := initial
 	payments := make(map[uint64][]byte)
 	logical := capacity.LogicalBytes
+	observation.end()
 	started := time.Now()
 	for height := uint64(1); height <= 100_000; height++ {
+		observation.next(height)
 		if err = ctx.Err(); err != nil {
 			t.Fatalf("growth deadline at height %d: %v", height, err)
 		}
@@ -348,23 +379,28 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 			if height == 10_001 {
 				op, sender = 3, 1
 			}
+			observation.begin(growthPrepare, height)
 			tx := driver.call(t, op, nil)
 			if len(tx) < 40 || string(tx[:8]) != "ZVORLAB2" || !bytes.Equal(tx[8:40], pin[:]) {
 				t.Fatal("real boundary payment lost the active genesis signing domain")
 			}
+			observation.end()
+			observation.begin(growthOutbox, height)
 			if restored := driver.call(t, 4, []byte{sender}); !bytes.Equal(restored, tx) {
 				t.Fatal("encrypted wallet recovery lost the exact boundary payment")
 			}
+			observation.end()
 			txs = [][]byte{tx}
 			payments[height] = tx
 		}
 		boundary := height >= 9_999 && height <= 10_002
-		state = activeGrowthCommit(t, ctx, c, path, state, txs, boundary)
+		state = activeGrowthCommit(t, ctx, c, path, state, txs, boundary, observation)
 		logical += poolbridge.EmptyRecordBytes
 		for _, tx := range txs {
 			logical += 4 + uint64(len(tx))
 		}
 		if height <= 10_002 {
+			observation.begin(growthScenarioApply, height)
 			// Wallets scan at explicit checkpoints, not once per empty block.
 			// The scenario still obtains every record via its normal prepare/commit.
 			raw, err := c.BlockBytes(height, activeGrowthHash(height), txs)
@@ -375,71 +411,102 @@ func TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart(t *testing.
 			if driver.state != state {
 				t.Fatal("independent genuine replay differs at the active height boundary")
 			}
+			observation.end()
 		}
 		if height == 9_999 || height == 10_001 {
 			balances, fees := [3]uint64{39_000, 60_000, 0}, uint64(1_000)
 			if height == 10_001 {
 				balances, fees = [3]uint64{39_000, 19_000, 40_000}, 2_000
 			}
+			observation.begin(growthBalances, height)
 			balancesFunded(t, driver.call(t, 0, nil), balances, fees)
 			before := activeGrowthCapacity(t, ctx, c)
+			observation.end()
+			observation.begin(growthClose, height)
 			if err = c.Close(); err != nil {
 				t.Fatal(err)
 			}
+			observation.end()
 			c = start(false)
+			observation.begin(growthChecks, height)
 			if activeGrowthStatus(t, ctx, c) != state || activeGrowthCapacity(t, ctx, c) != before {
 				t.Fatal("boundary restart changed the complete replay result")
 			}
+			observation.end()
+			observation.begin(growthWalletRecovery, height)
 			restored := driver.call(t, 5, nil)
 			balancesFunded(t, restored, balances, fees)
 			if fundedSummary(t, restored[:96]) != state {
 				t.Fatal("wallet full-history recovery differs from the restarted worker")
 			}
+			observation.end()
 			spent := [][]byte{payments[9_999]}
 			if height == 10_001 {
 				spent = append(spent, payments[10_001])
 			}
 			// Both payments remain within expiry at these checks.
+			observation.begin(growthSpent, height)
 			activeGrowthRejectSpent(t, ctx, c, path, state, spent)
+			observation.end()
 		}
 		if height == 10_002 {
+			observation.begin(growthBalances, height)
 			balancesFunded(t, driver.call(t, 6, nil), [3]uint64{39_000, 19_000, 40_000}, 2_000)
+			observation.end()
 			t.Log("ACTIVE_BOUNDARY heights=9999,10000,10001,10002; selection, preview, finalize and commit agree; real A->B then recovered B->C, full wallet history, exact outbox recovery and pre-expiry duplicate rejection passed")
 		}
 		if height%25_000 == 0 {
+			observation.begin(growthChecks, height)
 			capacity = activeGrowthCapacity(t, ctx, c)
 			if capacity.Summary != state || capacity.LogicalBytes != logical {
 				t.Fatal("committed logical capacity differs from complete submitted frames")
 			}
+			observation.end()
+			observation.publish(t, false)
 			t.Logf("ACTIVE_GROWTH_PROGRESS committed_blocks=%d paid_blocks=%d logical_bytes=%d segments=%d elapsed_ms=%d", height, len(payments), capacity.LogicalBytes, capacity.Segments, time.Since(started).Milliseconds())
 		}
 	}
 	growthMS := time.Since(started).Milliseconds()
+	observation.begin(growthChecks, state.Height)
 	capacity = activeGrowthCapacity(t, ctx, c)
 	if capacity.Summary != state || state.Height != 100_000 || state.Fees != 2_000 || state.Commitments != 6 || state.Nullifiers != 4 || capacity.LogicalBytes != logical || capacity.Segments < 10 {
 		t.Fatal("100000 real commits or repeated default-size rotations were not observed")
 	}
+	observation.end()
+	observation.begin(growthClose, state.Height)
 	if err = c.Close(); err != nil {
 		t.Fatal(err)
 	}
+	observation.end()
+	observation.begin(growthDisk, state.Height)
 	headerDigest := activeGrowthCheckDisk(t, path, pin, initial, capacity, payments)
+	observation.end()
 	replayStart := time.Now()
 	c = start(false)
+	observation.begin(growthChecks, state.Height)
 	if activeGrowthStatus(t, ctx, c) != state || activeGrowthCapacity(t, ctx, c) != capacity {
 		t.Fatal("100000-block full replay did not recover exact committed state and capacity")
 	}
+	observation.end()
 	replayMS := time.Since(replayStart).Milliseconds()
-	state = activeGrowthCommit(t, ctx, c, path, state, nil, true)
+	state = activeGrowthCommit(t, ctx, c, path, state, nil, true, observation)
+	observation.begin(growthChecks, state.Height)
 	continued := activeGrowthCapacity(t, ctx, c)
 	if state.Height != 100_001 || continued.Summary != state || continued.LogicalBytes != logical+poolbridge.EmptyRecordBytes {
 		t.Fatal("normal commit after full 100000-block replay failed")
 	}
+	observation.end()
+	observation.begin(growthClose, state.Height)
 	if err = c.Close(); err != nil {
 		t.Fatal(err)
 	}
+	observation.end()
+	observation.begin(growthDisk, state.Height)
 	if activeGrowthCheckDisk(t, path, pin, initial, continued, payments) != headerDigest {
 		t.Fatal("immutable genesis header changed across replay and continued commit")
 	}
+	observation.end()
+	observation.coreDone = true
 	t.Logf("ACTIVE_GROWTH_RESULT committed_blocks=100000 empty_blocks=99998 paid_blocks=2 logical_bytes=%d segments=%d segment_limit_bytes=%d growth_elapsed_ms=%d replay_elapsed_ms=%d continued_height=%d", capacity.LogicalBytes, capacity.Segments, poolbridge.ActiveSegmentBytes, growthMS, replayMS, state.Height)
 	t.Log("growth counts are actual local worker commits, not four-node consensus heights; about 15 MB of records does not prove growth beyond 64 MiB or the commitment limit; timing includes durable writes and boundary proof/wallet checks, not payment latency or throughput")
 }
