@@ -14,7 +14,8 @@ MAX_FILES = 4096
 MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_SOURCE_BYTES = 32 * 1024 * 1024
 OID = re.compile(r"[0-9a-f]{40}\Z")
-WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL"} | {
+WINDOWS_INVALID = re.compile(r'[<>"|?*\x00-\x1f]')
+WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {
     prefix + digit for prefix in ("COM", "LPT") for digit in "123456789¹²³"}
 
 
@@ -48,6 +49,7 @@ def _check_path(path: str, spellings: dict[str, str], files: set[str]) -> None:
     parts = path.split("/")
     if (PurePosixPath(path).is_absolute() or "\\" in path or ":" in path
             or any(p in ("", ".", "..") or p.lower() == ".git"
+                   or WINDOWS_INVALID.search(p)
                    or p.split(".", 1)[0].rstrip(" ").upper() in WINDOWS_DEVICES
                    or p.endswith((".", " ")) for p in parts)):
         raise ValueError("unsupported_source_entry")

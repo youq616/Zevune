@@ -25,6 +25,7 @@ const (
 var (
 	ErrJournalCorrupt     = errors.New("invalid or incomplete journal; original file left unchanged")
 	ErrJournalLocked      = errors.New("journal already in use, or OS lock unavailable")
+	ErrJournalCapacity    = errors.New("local journal capacity limit reached")
 	ErrStorageUnavailable = errors.New("storage unavailable; stop and inspect before reopening")
 	ErrClosed             = errors.New("ledger is closed")
 )
@@ -39,6 +40,14 @@ type journal struct {
 	write func([]byte) (int, error)
 	sync  func() error
 }
+
+// journalIOError marks an error after entering write or sync. Such an error has
+// an uncertain disk outcome, even if it reports zero bytes or wraps a capacity
+// error. Pure encoding/capacity checks never return this type.
+type journalIOError struct{ err error }
+
+func (e *journalIOError) Error() string { return e.err.Error() }
+func (e *journalIOError) Unwrap() error { return e.err }
 
 type StorageStatus struct {
 	Mode      string `json:"mode"`
@@ -191,9 +200,11 @@ func encodeGenesis(chain string, genesis []protocol.Hash) []byte {
 	return b.Bytes()
 }
 
-func (j *journal) appendBlock(height uint64, txs []protocol.Envelope) error {
+// prepareBlock uses exactly the payload and framing written by appendBlock.
+// It only reads journal accounting; previews do not reserve storage capacity.
+func (j *journal) prepareBlock(height uint64, txs []protocol.Envelope) ([]byte, error) {
 	if j.blocks >= maxJournalBlocks {
-		return errors.New("local journal block limit reached")
+		return nil, fmt.Errorf("%w: block limit reached", ErrJournalCapacity)
 	}
 	var b bytes.Buffer
 	_ = binary.Write(&b, binary.BigEndian, height)
@@ -201,12 +212,25 @@ func (j *journal) appendBlock(height uint64, txs []protocol.Envelope) error {
 	for _, tx := range txs {
 		data, err := tx.MarshalBinary()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		_ = binary.Write(&b, binary.BigEndian, uint32(len(data)))
 		b.Write(data)
 	}
-	if err := j.appendFrame(b.Bytes()); err != nil {
+	payload := b.Bytes()
+	if _, err := j.checkFrameCapacity(payload); err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
+func (j *journal) appendBlock(height uint64, txs []protocol.Envelope) error {
+	// Recheck both limits at the persistence boundary, independently of preview.
+	payload, err := j.prepareBlock(height, txs)
+	if err != nil {
+		return err
+	}
+	if err := j.appendFrame(payload); err != nil {
 		return err
 	}
 	j.blocks++
@@ -224,13 +248,21 @@ func frameDigest(previous [32]byte, header, payload []byte) [32]byte {
 	return out
 }
 
-func (j *journal) appendFrame(payload []byte) error {
+func (j *journal) checkFrameCapacity(payload []byte) (int64, error) {
 	if len(payload) == 0 || len(payload) > maxFrameBytes {
-		return ErrJournalCorrupt
+		return 0, ErrJournalCorrupt
 	}
 	total := int64(4 + len(payload) + 32)
 	if j.size > MaxJournalBytes-total {
-		return errors.New("local journal size limit reached")
+		return 0, fmt.Errorf("%w: size limit reached", ErrJournalCapacity)
+	}
+	return total, nil
+}
+
+func (j *journal) appendFrame(payload []byte) error {
+	total, err := j.checkFrameCapacity(payload)
+	if err != nil {
+		return err
 	}
 	var header [4]byte
 	binary.BigEndian.PutUint32(header[:], uint32(len(payload)))
@@ -241,13 +273,13 @@ func (j *journal) appendFrame(payload []byte) error {
 	frame = append(frame, digest[:]...)
 	n, err := j.write(frame)
 	if err != nil {
-		return err
+		return &journalIOError{err}
 	}
 	if n != len(frame) {
-		return io.ErrShortWrite
+		return &journalIOError{io.ErrShortWrite}
 	}
 	if err = j.sync(); err != nil {
-		return err
+		return &journalIOError{err}
 	}
 	j.size += total
 	j.tail = digest

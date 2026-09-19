@@ -71,25 +71,35 @@ class SourceSnapshotTests(unittest.TestCase):
         (self.root / "untracked.go").write_bytes(b"not a build input")
         (self.root / "ignored.rs").write_bytes(b"not a build input")
         (self.root / "tracked.rs").write_bytes(b"modified working source")
-        tree = snapshot.export_source(self.root, self.commit, self.output)
-        self.assertEqual(tree, self.git("rev-parse", self.commit + "^{tree}").decode().strip())
-        self.assertEqual({p.name for p in self.output.iterdir()}, {".gitignore", "tracked.rs"})
-        self.assertEqual((self.output / "tracked.rs").read_bytes(), b"// synthetic tracked source\n")
-        self.assertEqual((self.root / "tracked.rs").read_bytes(), b"modified working source")
+        for exporter in (snapshot.export_source, snapshot.export_build_source):
+            with self.subTest(exporter=exporter.__name__):
+                output = self.root.parent / exporter.__name__
+                tree = exporter(self.root, self.commit, output)
+                self.assertEqual(tree, self.git("rev-parse", self.commit + "^{tree}").decode().strip())
+                self.assertEqual({p.name for p in output.iterdir()}, {".gitignore", "tracked.rs"})
+                self.assertEqual((output / "tracked.rs").read_bytes(), b"// synthetic tracked source\n")
+                self.assertEqual((self.root / "tracked.rs").read_bytes(), b"modified working source")
 
     def test_uses_captured_commit_not_moving_head(self):
         (self.root / "later.rs").write_bytes(b"later source")
         self.git("add", "."); self.git("commit", "-qm", "Later source")
-        snapshot.export_source(self.root, self.commit, self.output)
-        self.assertFalse((self.output / "later.rs").exists())
+        for exporter in (snapshot.export_source, snapshot.export_build_source):
+            with self.subTest(exporter=exporter.__name__):
+                output = self.root.parent / exporter.__name__
+                tree = exporter(self.root, self.commit, output)
+                self.assertFalse((output / "later.rs").exists())
+                self.assertEqual(tree, self.git("rev-parse", self.commit + "^{tree}").decode().strip())
 
     def test_no_checkout_eol_filter_changes(self):
         (self.root / ".gitattributes").write_bytes(b"*.ps1 text eol=crlf\n")
         (self.root / "test.ps1").write_bytes(b"# synthetic\n# canonical LF\n")
         self.git("add", "."); self.git("commit", "-qm", "EOL attributes")
         commit = self.git("rev-parse", "HEAD").decode().strip()
-        snapshot.export_source(self.root, commit, self.output)
-        self.assertEqual((self.output / "test.ps1").read_bytes(), b"# synthetic\n# canonical LF\n")
+        for exporter in (snapshot.export_source, snapshot.export_build_source):
+            with self.subTest(exporter=exporter.__name__):
+                output = self.root.parent / exporter.__name__
+                exporter(self.root, commit, output)
+                self.assertEqual((output / "test.ps1").read_bytes(), b"# synthetic\n# canonical LF\n")
 
     def test_create_only(self):
         self.output.mkdir()
@@ -160,8 +170,15 @@ class SourceSnapshotTests(unittest.TestCase):
         exact = self.blob(b"x" * snapshot.MAX_FILE_BYTES)
         too_large = self.blob(b"x" * (snapshot.MAX_FILE_BYTES + 1))
         small = self.blob(b"x")
-        commit = self.commit_entries([("input.dat", "100644", too_large)])
-        self.assert_rejected_before_blobs(snapshot.export_build_source, commit, "source_size_exceeded")
+        for path in ("input.dat", "reports"):
+            with self.subTest(path=path):
+                commit = self.commit_entries([(path, "100644", too_large)])
+                self.assert_rejected_before_blobs(snapshot.export_build_source, commit, "source_size_exceeded")
+        excluded = self.commit_entries([("reports/large.bin", "100644", too_large),
+                                        ("input.dat", "100644", small)])
+        excluded_output = self.root.parent / "excluded-report"
+        snapshot.export_build_source(self.root, excluded, excluded_output)
+        self.assertEqual({p.name for p in excluded_output.iterdir()}, {"input.dat"})
         entries = [(f"inputs/part-{index}.bin", "100644", exact) for index in range(4)]
         commit = self.commit_entries(entries + [("inputs/one-more-byte", "100644", small)])
         self.assert_rejected_before_blobs(snapshot.export_build_source, commit, "source_size_exceeded")
@@ -184,6 +201,8 @@ class SourceSnapshotTests(unittest.TestCase):
         blob = self.blob(payload)
         entries = [("input[1].dat", "100644", blob), ("reports[1]/data", "100644", blob),
                    ("assets/reports/input", "100644", blob), ("run.sh", "100755", blob),
+                   ("go.mod", "100644", blob), ("go.sum", "100644", blob),
+                   ("integration/Cargo.lock", "100644", blob), (".cargo/config.toml", "100644", blob),
                    ("reports/excluded", "100644", blob)]
         commit = self.commit_entries(entries)
         # Neither HEAD nor matching working-copy files supply build bytes.
@@ -196,18 +215,15 @@ class SourceSnapshotTests(unittest.TestCase):
         if os.name != "nt":
             self.assertEqual(stat.S_IMODE((self.output / "run.sh").stat().st_mode), 0o700)
 
-    def test_build_root_selection_uses_bounded_literal_argument_batches(self):
+    def test_build_many_root_paths_are_all_preserved(self):
         blob = self.blob(b"x")
-        entries = [(f"input-{index:03d}-" + "x" * 90, "100644", blob) for index in range(100)]
+        # Enough literal roots to exceed a Windows process command-line limit
+        # if a caller accidentally tries to enumerate them all in one command.
+        entries = [(f"input [{index:03d}] " + "x" * 90, "100644", blob) for index in range(400)]
         commit = self.commit_entries(entries)
-        with patch.object(snapshot, "git_bytes", wraps=snapshot.git_bytes) as observed:
-            snapshot.export_build_source(self.root, commit, self.output)
-        selections = [call.args[7:] for call in observed.call_args_list
-                      if call.args[1:3] == ("--literal-pathspecs", "ls-tree")]
-        self.assertGreater(len(selections), 1)
-        for batch in selections:
-            self.assertLessEqual(sum(len(path.encode("utf-8")) + 1 for path in batch), 8192)
+        snapshot.export_build_source(self.root, commit, self.output)
         self.assertEqual({p.name for p in self.output.iterdir()}, {entry[0] for entry in entries})
+        self.assertTrue(all(path.read_bytes() == b"x" for path in self.output.iterdir()))
 
     def test_build_reports_exclusion_requires_exact_root_tree(self):
         blob = self.blob(b"regular tracked report filename")
@@ -219,11 +235,13 @@ class SourceSnapshotTests(unittest.TestCase):
         snapshot.export_build_source(self.root, commit, self.output)
         self.assertEqual((self.output / "reports").read_bytes(), b"regular tracked report filename")
 
-    def test_build_unsafe_paths_links_and_case_collisions_remain_rejected(self):
+    def test_unsafe_paths_links_and_case_collisions_remain_rejected(self):
         blob = self.blob(b"synthetic public input")
         cases = [[(name, "100644", blob)] for name in
                  ("bad:name", "bad\\name", "trailing.", "dir /input", ".GiT/input",
-                  "CON", "nul.txt", "src/AUX.dat", "COM1", "LPT9.log", "COM¹", "src/LPT³.dat", "CON .txt")]
+                  "CON", "nul.txt", "src/AUX.dat", "COM1", "LPT9.log", "COM¹", "src/LPT³.dat", "CON .txt",
+                  "CONIN$", "src/conout$.txt", "src/star*.rs", "input?.txt", 'src/quote".rs',
+                  "input<.txt", "input>.txt", "input|.txt", "src/control\x1f.txt", "src/tab\t.txt")]
         cases += [
             [("src/link", "120000", blob)],
             [("src/submodule", "160000", self.commit)],
@@ -234,9 +252,19 @@ class SourceSnapshotTests(unittest.TestCase):
             [("reports/a", "100644", blob), ("Reports/b", "100644", blob)],
         ]
         for entries in cases:
-            with self.subTest(entries=[e[0] for e in entries]):
-                commit = self.commit_entries(entries)
-                self.assert_rejected_before_blobs(snapshot.export_build_source, commit, "unsupported_source_entry")
+            commit = self.commit_entries(entries)
+            for exporter in (snapshot.export_source, snapshot.export_build_source):
+                with self.subTest(entries=[e[0] for e in entries], exporter=exporter.__name__):
+                    self.assert_rejected_before_blobs(exporter, commit, "unsupported_source_entry")
+
+    def test_full_export_keeps_reports_and_build_exclusion_is_exact(self):
+        blob = self.blob(b"synthetic public evidence")
+        commit = self.commit_entries([("source", "100644", blob), ("reports/record", "100644", blob)])
+        snapshot.export_source(self.root, commit, self.output)
+        self.assertEqual((self.output / "reports/record").read_bytes(), b"synthetic public evidence")
+        capitalized = self.commit_entries([("Reports/record", "100644", blob)])
+        snapshot.export_build_source(self.root, capitalized, self.root.parent / "capitalized")
+        self.assertEqual((self.root.parent / "capitalized/Reports/record").read_bytes(), b"synthetic public evidence")
 
     def test_build_create_only_and_non_oid_still_fail(self):
         for value in ("HEAD", "--all", "a" * 39, "a" * 40 + "\n", "F" * 40):

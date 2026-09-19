@@ -1,5 +1,7 @@
 # Zevune M3: local CometBFT laboratory
 
+This document describes the original `app` / `zevune-devnet` M3 path, which still rejects transactions. It is not a feature summary of the entire nested module. The separate Orchard `poolapp` and `zevune-network` operator now support explicit fixed-supply nonzero **NO-FUNDS** local test payments. See [Orchard consensus](../../docs/ORCHARD_CONSENSUS.zh-CN.md), [funded test network](../../docs/FUNDED_TEST_NETWORK.zh-CN.md), [local operator](../../docs/LOCAL_NETWORK_OPERATOR.zh-CN.md) and [current project status](../../PROJECT_STATUS.json). The M3 format and historical test scope below remain unchanged.
+
 Version `0.2.0-consensus-dev`. **NO FUNDS, NO PAYMENTS, NO WALLET, NO NETWORK PRIVACY.**
 
 This optional nested module pins CometBFT v0.38.26 with committed go.mod/go.sum. The dependency-free M2 program and its ledger format are unchanged. This is a consensus integration laboratory, not a mainnet or test-asset payment network.

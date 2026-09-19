@@ -1,5 +1,7 @@
 # Orchard laboratory: real cryptography, durable state and local wallet
 
+This document preserves the M4–M8 baseline. References below to empty-only public constructors, incomplete durable outboxes, missing nonzero network integration and old journal limits describe those stages. Later opt-in `local-funding-lab` code supports fixed-supply nonzero test payments, a durable wallet/outbox, local operator commands, genesis-bound LAB2 and explicit active segmented storage with verified recovery. See the [current project status](../../PROJECT_STATUS.json), [funded test network](../../docs/FUNDED_TEST_NETWORK.zh-CN.md), [wallet durability](../../docs/WALLET_DURABILITY.zh-CN.md), [wallet compaction](../../docs/WALLET_COMPACTION.zh-CN.md) and [delivery plan](../../docs/DELIVERY_PLAN.zh-CN.md). Historical acceptance claims are not extended to later features; real funds and public-network deployment remain unsupported.
+
 **NO FUNDS. No complete wallet application, public payment service, witness service or issuance API.** This Rust module uses genuine upstream cryptography. Cargo publishing is disabled. The original M3 application still rejects transactions; the separate M7 integration tests real zero-value protocol transactions.
 
 ## Fixed cryptographic scope

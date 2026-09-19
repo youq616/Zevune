@@ -1,6 +1,8 @@
 # Zevune M5/M6：真实验证边界与本地资产状态
 
-这是禁止真实资金的实验模块，不是完整隐私链。原有单机程序和四节点 CometBFT 仍未开放支付；本轮没有迁移旧数据或部署公网服务。
+本文保留 M5/M6 的实现与验收范围。下文的“当前”“尚未”和容量说明均指该历史阶段，不能作为当前功能清单。后续已接入真实 Rust 状态 worker 与 CometBFT，并在显式 `local-funding-lab` 中支持固定供给的非零无价值测试付款；活动分段存储使用独立 profile，旧单文件格式和限制仍保留。当前入口见[共识集成](ORCHARD_CONSENSUS.zh-CN.md)、[非零测试网络](FUNDED_TEST_NETWORK.zh-CN.md)、[交付计划](DELIVERY_PLAN.zh-CN.md)及 [PROJECT_STATUS.json](../PROJECT_STATUS.json)。这些后续能力不改变本阶段原始验收记录。
+
+M5/M6 当时是禁止真实资金的实验模块，不是完整隐私链。原有单机程序和四节点 CometBFT 当时仍未开放支付；该轮没有迁移旧数据或部署公网服务。
 
 ## M5：Go 调用真实 Rust 验证器
 

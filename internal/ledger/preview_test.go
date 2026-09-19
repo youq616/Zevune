@@ -281,7 +281,7 @@ func TestPreviewAndCommitAcrossRestart(t *testing.T) {
 }
 
 func TestCommitPreviewStorageFailureStopsEngine(t *testing.T) {
-	for _, kind := range []string{"write", "short-write", "sync"} {
+	for _, kind := range []string{"write", "short-write", "sync", "write-capacity-error", "sync-capacity-error"} {
 		t.Run(kind, func(t *testing.T) {
 			dir := t.TempDir()
 			e := openTestDisk(t, dir)
@@ -297,6 +297,10 @@ func TestCommitPreviewStorageFailureStopsEngine(t *testing.T) {
 				e.journal.write = func(b []byte) (int, error) { return e.journal.f.Write(b[:len(b)/2]) }
 			case "sync":
 				e.journal.sync = func() error { return errors.New("test sync failure") }
+			case "write-capacity-error":
+				e.journal.write = func([]byte) (int, error) { return 0, ErrJournalCapacity }
+			case "sync-capacity-error":
+				e.journal.sync = func() error { return ErrJournalCapacity }
 			}
 			if _, err = e.CommitPreview(p, nil); !errors.Is(err, ErrStorageUnavailable) {
 				t.Fatal(err)
@@ -311,7 +315,7 @@ func TestCommitPreviewStorageFailureStopsEngine(t *testing.T) {
 				t.Fatal(err)
 			}
 			_ = e.Close()
-			if kind == "sync" {
+			if kind == "sync" || kind == "sync-capacity-error" {
 				reopened := openTestDisk(t, dir)
 				if reopened.Summary() != p.Result {
 					t.Fatal("complete uncertain write not recovered")
