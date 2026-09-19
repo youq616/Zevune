@@ -259,16 +259,23 @@ func TestRealPinnedReferencePayment(t *testing.T) {
 	common := []string{"--no-real-funds", "--worker", worker, "--worker-sha256", HashText(workerPin),
 		"--config", filepath.Join(home, configName), "--config-sha256", HashText(configPin)}
 	ports := freePorts(t)
-	for i := 0; i < 4; i++ {
-		args := append(append([]string{"run"}, common...), "--node", strconv.Itoa(i), "--base-port", strconv.Itoa(ports), "--stop-on-stdin-eof")
-		launch(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), args...)
-	}
-	peer, err := newPeer(Endpoint(ports, 0))
+	network, err := Load(filepath.Join(home, configName), configPin)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer peer.close()
-	awaitHeight(t, peer, 3)
+	nodes := make([]*process, 4)
+	peers := make([]*peer, 4)
+	for i := 0; i < 4; i++ {
+		args := append(append([]string{"run"}, common...), "--node", strconv.Itoa(i), "--base-port", strconv.Itoa(ports), "--stop-on-stdin-eof")
+		nodes[i] = launchNode(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), i, network.config.NodeIDs[i], args...)
+		peers[i], err = newPeer(Endpoint(ports, i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer peers[i].close()
+	}
+	awaitNetworkHeight(t, nodes, peers, 3)
+	peer := peers[0]
 	journal := filepath.Join(root, "reference.journal")
 	syncArgs := append(append([]string{"sync"}, common...), "--endpoint", Endpoint(ports, 0), "--journal", journal)
 	var synced SyncResult
@@ -299,7 +306,7 @@ func TestRealPinnedReferencePayment(t *testing.T) {
 		t.Fatal("pinned submit failed or invented finality", err)
 	}
 	height := findInclusion(t, peer, raw, 1)
-	awaitHeight(t, peer, height+1)
+	awaitNetworkHeight(t, nodes, peers, height+1)
 	// Submit may have saved newer blocks before broadcasting. Obtain its current
 	// offline state for this test's subsequent call; this is not independent
 	// checkpoint authentication and must not be described as such.

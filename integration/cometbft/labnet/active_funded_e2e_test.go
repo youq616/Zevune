@@ -160,7 +160,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	start := func(index int) {
 		args := append([]string{"run"}, common...)
 		args = append(args, "--node", strconv.Itoa(index), "--base-port", strconv.Itoa(base), "--stop-on-stdin-eof")
-		nodes[index] = launch(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), args...)
+		nodes[index] = launchNode(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), index, network.config.NodeIDs[index], args...)
 	}
 	for i := 0; i < 4; i++ {
 		start(i)
@@ -170,9 +170,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 		}
 		defer peers[i].close()
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, 3)
-	}
+	awaitNetworkHeight(t, nodes, peers, 3)
 	reference := filepath.Join(root, "reference-ledger")
 	syncArgs := append([]string{"sync"}, common...)
 	syncArgs = append(syncArgs, "--endpoint", Endpoint(base, 0), "--journal", reference)
@@ -216,7 +214,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	}
 	submit(first, 0, true)
 	h := findInclusion(t, peers[0], first, 1)
-	awaitHeight(t, peers[0], h+1)
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	doSync(false)
 	if state.Commitments != 4 || state.Nullifiers != 2 || state.Fees != 1000 {
 		t.Fatal("first genuine nonzero active payment accounting")
@@ -237,24 +235,20 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		start(i)
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, int64(highest)+2)
-	}
+	awaitNetworkHeight(t, nodes, peers, int64(highest)+2)
 	doSync(false)
 	second := driver.call(t, 3, nil)
 	submit(second, 1, true)
 	h = findInclusion(t, peers[0], second, int64(state.Height)+1)
-	for _, p := range peers {
-		awaitHeight(t, p, h+1)
-	}
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	synced := doSync(false)
 	if state.Commitments != 6 || state.Nullifiers != 4 || state.Fees != 2000 {
 		t.Fatal("onward active payment after full restart accounting")
 	}
 	driver.call(t, 5, nil) // reopen the genuine wallet and active ledger history
 	driver.call(t, 6, nil) // assert actual A/B/C balances and conservation
+	awaitNetworkHeight(t, nodes, peers, int64(state.Height)+1)
 	for _, p := range peers {
-		awaitHeight(t, p, int64(state.Height)+1)
 		header, err := network.header(context.Background(), p, int64(state.Height)+1)
 		if err != nil || !bytes.Equal(header.Header.AppHash, state.AppHash[:]) {
 			t.Fatal("active signed cross-node post-state mismatch", err)

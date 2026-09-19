@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -256,9 +257,16 @@ func Endpoint(base, index int) string { return fmt.Sprintf("http://127.0.0.1:%d"
 // Run preserves signer state and existing journals. Each node reads only its
 // OWN private files; peer IDs come from the pinned PUBLIC network configuration.
 func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index, base int, ready func()) (err error) {
+	stage := "validation"
+	defer func() {
+		if err != nil {
+			err = &nodeRunError{stage: stage, err: err}
+		}
+	}()
 	if ctx == nil || ctx.Err() != nil || index < 0 || index >= 4 || !ValidPorts(base) || n == nil {
 		return ErrBounds
 	}
+	stage = "configuration"
 	conf := cfg.DefaultConfig().SetRoot(filepath.Join(n.home, fmt.Sprintf("node%d", index)))
 	for _, p := range []string{conf.PrivValidatorKeyFile(), conf.PrivValidatorStateFile(), conf.NodeKeyFile()} {
 		if _, err = regularBytes(p, 2, 32*1024); err != nil {
@@ -272,6 +280,7 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 	if _, err = pinnedBytes(conf.GenesisFile(), consensusPin, 100, 64*1024); err != nil {
 		return err
 	}
+	stage = "worker_start"
 	a, err := poolapp.Open(ctx, n.workerOptions(worker, workerPin, filepath.Join(conf.RootDir, "pool.journal"), false))
 	if err != nil {
 		return err
@@ -284,7 +293,11 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 			err = ErrStorage
 		}
 	}()
-	pv := privval.LoadFilePV(conf.PrivValidatorKeyFile(), conf.PrivValidatorStateFile())
+	stage = "signer_load"
+	pv, err := loadExistingFilePV(conf.PrivValidatorKeyFile(), conf.PrivValidatorStateFile())
+	if err != nil {
+		return err
+	}
 	pub, err := pv.GetPubKey()
 	if err != nil || !bytes.Equal(pub.Bytes(), n.genesis.Validators[index].PubKey.Bytes()) {
 		return ErrConfiguration
@@ -293,6 +306,7 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 	if err != nil || string(nk.ID()) != n.config.NodeIDs[index] {
 		return ErrConfiguration
 	}
+	stage = "consensus_configuration"
 	conf.Moniker = fmt.Sprintf("zevune-local-%d", index)
 	conf.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", base+index*2)
 	conf.RPC.GRPCListenAddress = ""
@@ -329,10 +343,12 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 	if conf.ValidateBasic() != nil {
 		return ErrConfiguration
 	}
+	stage = "consensus_construct"
 	engine, err := node.NewNode(conf, pv, nk, proxy.NewLocalClientCreator(a), node.DefaultGenesisDocProviderFunc(conf), cfg.DefaultDBProvider, node.DefaultMetricsProvider(conf.Instrumentation), log.NewNopLogger())
 	if err != nil {
-		return ErrConfiguration
+		return errors.Join(ErrConfiguration, err)
 	}
+	stage = "consensus_start"
 	if err = engine.Start(); err != nil {
 		return err
 	}
@@ -342,6 +358,7 @@ func (n *Network) Run(ctx context.Context, worker string, workerPin Hash, index,
 			engine.Wait()
 		}
 	}()
+	stage = "running"
 	if ready != nil {
 		ready()
 	}

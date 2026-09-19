@@ -320,11 +320,24 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := execute(ctx, os.Args[1:], os.Stdin, os.Stdout); err != nil {
-		// Do not echo arbitrary peer text, transaction contents or local paths.
-		fmt.Fprintln(os.Stderr, "Local network operation not completed; no automatic reset or retry. Reconcile signed history and preserve pending wallet state.")
+		writeFailure(os.Stderr, os.Args[1:], err)
 		if errors.Is(err, context.Canceled) {
 			os.Exit(130)
 		}
 		os.Exit(1)
 	}
+}
+
+func writeFailure(output io.Writer, args []string, err error) {
+	// Do not echo arbitrary peer text, transaction contents or local paths.
+	if len(args) > 0 && args[0] == "run" {
+		failure := labnet.DescribeNodeFailure(err)
+		_ = json.NewEncoder(output).Encode(struct {
+			Status string `json:"status"`
+			Stage  string `json:"stage"`
+			Code   string `json:"code"`
+		}{"local_node_failed", failure.Stage, failure.Code})
+		return
+	}
+	_, _ = fmt.Fprintln(output, "Local network operation not completed; no automatic reset or retry. Reconcile signed history and preserve pending wallet state.")
 }
