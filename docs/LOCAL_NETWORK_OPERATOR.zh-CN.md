@@ -25,7 +25,7 @@
 python scripts/build_local_lab.py --output <尚不存在的输出目录>
 ```
 
-脚本先将准确提交的 Git blob 导出到隔离的临时源码目录，再构建 `zevune-network`、`zevune-pool-worker`、`zevune-wallet-local`，复制 Python 钱包控制台与本说明，生成对应准确提交及每个文件 SHA-256 的清单。依赖由固定锁解析，脚本本身不安装编译器；首次依赖下载可能由 Go/Cargo 发起。输出目录必须不存在；失败保留新建的部分目录供检查，不覆盖旧版本。
+脚本先将准确提交中除根 `reports/` 历史验证资料外的 Git blob 导出到隔离的临时源码目录，再构建 `zevune-network`、`zevune-pool-worker`、`zevune-wallet-local`，复制 Python 钱包控制台与本说明，生成对应准确提交及每个文件 SHA-256 的清单。源码与构建资源仍执行原文件数和字节预算，来源树仍绑定完整提交，具体范围见下方构建完整性说明。依赖由固定锁解析，脚本本身不安装编译器；首次依赖下载可能由 Go/Cargo 发起。输出目录必须不存在；失败保留新建的部分目录供检查，不覆盖旧版本。
 
 v2 清单同时记录源码树。独立核验命令与未跟踪源码隔离边界见 [构建完整性](BUILD_INTEGRITY.zh-CN.md)。核验器不会启动程序或修改文件。
 

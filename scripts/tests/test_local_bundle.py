@@ -31,6 +31,33 @@ class BundleManifestTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build.manifest_for(root, "a" * 40, {})
 
+    def test_build_source_manifest_keeps_full_origin_tree_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            root.mkdir()
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root).decode().strip()
+            git("init", "-q")
+            git("config", "user.name", "Synthetic test")
+            git("config", "user.email", "test@example.invalid")
+            (root / "reports").mkdir()
+            (root / "reports/evidence.txt").write_bytes(b"retained source evidence")
+            (root / "public.txt").write_bytes(b"synthetic bundle fixture; never executed")
+            git("add", ".")
+            git("commit", "-qm", "Synthetic provenance")
+            commit = git("rev-parse", "HEAD")
+            tree = git("rev-parse", "HEAD^{tree}")
+            staged = Path(temp) / "source"
+            captured_tree = build.export_build_source(root, commit, staged)
+            output = build.manifest_for(staged, commit, {"go": "test", "rust": "test"}, captured_tree)
+            self.assertEqual(output["source_commit"], commit)
+            self.assertEqual(output["source_tree"], tree)
+            self.assertEqual(output["format"], "zevune-local-bundle-2")
+            self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
+            self.assertFalse((staged / "reports").exists())
+            self.assertTrue((root / "reports/evidence.txt").is_file())
+            self.assertEqual([item["name"] for item in output["files"]], ["public.txt"])
+
     def test_signer_material_is_ignored_without_creating_secret_files(self):
         root = Path(__file__).resolve().parents[2]
         paths = ["local-data/config/priv_validator_key.json",
