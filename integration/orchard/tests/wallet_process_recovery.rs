@@ -514,7 +514,7 @@ fn run_case_in(sandbox: &Sandbox, case: &str) {
     assert_eq!(wallet.receipt().unwrap(), observed);
     assert_cold(&wallet);
     assert!(wallet.view().unwrap().receive_address(0).unwrap() == owner);
-    let mut pool = genesis.open_pool(&root.join("pool")).unwrap();
+    let pool = genesis.open_pool(&root.join("pool")).unwrap();
     assert_eq!(pool.summary().unwrap(), pool_before);
     drop(pool);
     assert!(pool_bytes(root) == pool_before_bytes);
