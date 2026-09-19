@@ -75,6 +75,22 @@ jobs:
           PY
       - name: Build the actual fixed-profile worker and wallet scenario
         run: cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bins
+      - name: Actual worker termination and lost Commit reply with full replay
+        run: |
+          python - <<'PY'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          binaries = pathlib.Path.cwd() / 'integration/orchard/target/release'
+          environment = os.environ.copy()
+          environment['ZEVUNE_POOL_WORKER'] = str(binaries / ('zevune-pool-worker' + suffix))
+          environment['ZEVUNE_FUNDED_SCENARIO'] = str(binaries / ('zevune-funded-scenario' + suffix))
+          command = ['go', 'test', '-mod=readonly', '-tags=payment_resource_e2e']
+          if sys.platform == 'linux':
+              command.append('-race')
+          command.extend(['./internal/poolbridge', '-run', '^TestActiveWorkerProcessFailureRecovery$',
+                          '-count=1', '-timeout=9m', '-v'])
+          subprocess.run(command, env=environment, check=True)
+          PY
       - name: Execute 32 real payments, full recovery and payment 33 with OS resource gates
         run: |
           python - <<'PY'

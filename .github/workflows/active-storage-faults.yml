@@ -1,0 +1,93 @@
+name: active-storage-faults
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+permissions:
+  contents: read
+jobs:
+  linux-enospc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_ENOSPC_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Preserve exact initial source identity even if setup fails
+        run: |
+          python - <<'PY'
+          import datetime, json, os, pathlib, subprocess
+          def git(expression):
+              return subprocess.check_output(['git', '--no-replace-objects', 'rev-parse', expression], text=True).strip()
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'zevune-enospc-evidence'
+          folder.mkdir()
+          result = {'schema_version': 1, 'kind': 'linux_tmpfs_enospc_setup',
+                    'source_head': os.environ['ZEVUNE_ENOSPC_SOURCE_HEAD'],
+                    'checkout_commit': git('HEAD'), 'checkout_tree': git('HEAD^{tree}'),
+                    'observed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    'execution_started': False, 'physical_disk_failure_tested': False,
+                    'power_loss_tested': False}
+          with (folder / 'setup.json').open('x', encoding='utf-8') as handle:
+              json.dump(result, handle, indent=2)
+              handle.write('\n')
+          PY
+      - name: Install fixed Rust compiler and formatter
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+      - name: Install syscall observer, without compiling as root
+        timeout-minutes: 5
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes --no-install-recommends strace
+      - name: Verify bounded harness and canonical Rust source
+        run: |
+          python -m unittest discover -s scripts/tests -p test_active_enospc.py -v
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+          git diff --exit-code
+      - name: Actually verify root watchdog termination of a TERM-ignoring namespace
+        timeout-minutes: 1
+        run: python scripts/run_active_enospc.py --supervision-probe --output "$RUNNER_TEMP/zevune-enospc-evidence/supervision-probe.json"
+      - name: Build only the explicit ignored ENOSPC test target as the runner
+        run: |
+          test "$(id -u)" -ne 0
+          cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test active_enospc --no-run --message-format=json-render-diagnostics > "$RUNNER_TEMP/zevune-enospc-build.jsonl"
+          git diff --exit-code
+      - name: Explicitly execute both ignored tests in private bounded filesystems
+        timeout-minutes: 10
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, subprocess, sys
+          temporary = pathlib.Path(os.environ['RUNNER_TEMP'])
+          records = []
+          with (temporary / 'zevune-enospc-build.jsonl').open(encoding='utf-8') as handle:
+              for line in handle:
+                  record = json.loads(line)
+                  if (record.get('reason') == 'compiler-artifact'
+                          and record.get('target', {}).get('name') == 'active_enospc'
+                          and record.get('target', {}).get('kind') == ['test']
+                          and record.get('profile', {}).get('test') is True
+                          and record.get('executable')):
+                      records.append(pathlib.Path(record['executable']).resolve(strict=True))
+          if len(records) != 1:
+              raise SystemExit('Expected exactly one compiled active_enospc test executable')
+          subprocess.run([sys.executable, 'scripts/run_active_enospc.py', '--test-executable', str(records[0]),
+                          '--output', str(temporary / 'zevune-enospc-evidence/result.json')], check=True)
+          PY
+      - name: Assert source and dependency locks remain unchanged
+        run: git diff --exit-code
+      - name: Preserve only public receipts, syscall counts and cleanup results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: active-storage-faults-Linux-${{ github.sha }}
+          path: ${{ runner.temp }}/zevune-enospc-evidence/
+          if-no-files-found: error
+          retention-days: 14
