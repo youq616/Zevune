@@ -88,7 +88,7 @@ func TestDiskSpaceWindowsLegacyQueryDirectoryIsRetained(t *testing.T) {
 	}
 }
 
-func TestDiskSpaceWindowsAttributeHandleCoexistsWithExclusiveByteLock(t *testing.T) {
+func TestDiskSpaceWindowsReadOnlyHandleCoexistsWithExclusiveByteLock(t *testing.T) {
 	journal, _ := diskSpaceTestJournal(t)
 	target, err := openDiskSpaceTarget(poolbridge.LegacyJournal, journal)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestDiskSpaceWindowsAttributeHandleCoexistsWithExclusiveByteLock(t *testing
 	var overlapped windows.Overlapped
 	if err := windows.LockFileEx(windows.Handle(worker.Fd()), windows.LOCKFILE_EXCLUSIVE_LOCK|windows.LOCKFILE_FAIL_IMMEDIATELY,
 		0, 1, 0, &overlapped); err != nil {
-		t.Fatal("retained metadata handle prevented an exclusive worker lock:", err)
+		t.Fatal("retained read-only handle prevented an exclusive worker lock:", err)
 	}
 	defer windows.UnlockFileEx(windows.Handle(worker.Fd()), 0, 1, 0, &overlapped)
 	if report, err := target.sample(1); err != nil || report.Scope != diskSpaceScope {

@@ -27,10 +27,14 @@ func openDiskSpaceHandle(path string, directory bool) (*os.File, error) {
 	access := uint32(windows.FILE_READ_ATTRIBUTES)
 	if directory {
 		access |= windows.FILE_LIST_DIRECTORY
+	} else {
+		// Data-read access makes the retained file participate in sharing
+		// checks. The probe never reads its contents, so a worker's exclusive
+		// byte-range lock remains compatible with these metadata operations.
+		access |= windows.FILE_READ_DATA
 	}
-	// Attribute-only access does not read the journal or collide with its
-	// worker's byte-range lock. Denying DELETE sharing retains the name during
-	// normal rename/delete attempts; OPEN_REPARSE_POINT permits explicit refusal.
+	// Denying DELETE sharing retains the name during normal rename/delete
+	// attempts; OPEN_REPARSE_POINT permits explicit refusal of reparse points.
 	handle, err := windows.CreateFile(name, access, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE,
 		nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
