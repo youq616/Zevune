@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/cometbft/cometbft v0.38.26
 	github.com/youq616/Zevune v0.0.0
+	golang.org/x/sys v0.30.0
 )
 
 require (
@@ -68,7 +69,6 @@ require (
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 	google.golang.org/grpc v1.70.0 // indirect

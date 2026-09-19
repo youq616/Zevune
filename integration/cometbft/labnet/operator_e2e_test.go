@@ -54,53 +54,6 @@ func operator(t *testing.T, args []string, wantSuccess bool) []byte {
 	return b
 }
 
-type process struct {
-	cmd     *exec.Cmd
-	in      io.WriteCloser
-	out     io.ReadCloser
-	done    chan error
-	stopped bool
-}
-
-func launch(t *testing.T, exe string, args ...string) *process {
-	t.Helper()
-	p := &process{cmd: exec.Command(exe, args...), done: make(chan error, 1)}
-	p.cmd.Stderr = io.Discard
-	var e error
-	p.in, e = p.cmd.StdinPipe()
-	if e != nil {
-		t.Fatal(e)
-	}
-	p.out, e = p.cmd.StdoutPipe()
-	if e != nil {
-		t.Fatal(e)
-	}
-	if e = p.cmd.Start(); e != nil {
-		t.Fatal(e)
-	}
-	go func() { p.done <- p.cmd.Wait() }()
-	t.Cleanup(func() { p.stop(t) })
-	return p
-}
-func (p *process) stop(t *testing.T) {
-	t.Helper()
-	if p.stopped {
-		return
-	}
-	p.stopped = true
-	_ = p.in.Close()
-	select {
-	case e := <-p.done:
-		if e != nil {
-			t.Error("child exited unsuccessfully")
-		}
-	case <-time.After(45 * time.Second):
-		_ = p.cmd.Process.Kill()
-		<-p.done
-		t.Error("child did not stop")
-	}
-	_ = p.out.Close()
-}
 func (p *process) frame(t *testing.T) []byte {
 	t.Helper()
 	type readResult struct {
@@ -185,20 +138,6 @@ func freePorts(t *testing.T) int {
 	}
 	t.Fatal("no local ports")
 	return 0
-}
-func awaitHeight(t *testing.T, p *peer, want int64) {
-	t.Helper()
-	until := time.Now().Add(90 * time.Second)
-	for time.Now().Before(until) {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		s, e := p.Status(ctx)
-		cancel()
-		if e == nil && s != nil && s.SyncInfo.LatestBlockHeight >= want {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	t.Fatalf("node did not reach height %d", want)
 }
 func findInclusion(t *testing.T, p *peer, raw []byte, start int64) int64 {
 	t.Helper()
@@ -293,7 +232,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	start := func(index int) {
 		args := append([]string{"run"}, common...)
 		args = append(args, "--node", strconv.Itoa(index), "--base-port", strconv.Itoa(base), "--stop-on-stdin-eof")
-		nodes[index] = launch(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), args...)
+		nodes[index] = launchNode(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), index, network.config.NodeIDs[index], args...)
 	}
 	for i := 0; i < 4; i++ {
 		start(i)
@@ -303,9 +242,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 		}
 		defer peers[i].close()
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, 3)
-	}
+	awaitNetworkHeight(t, nodes, peers, 3)
 	ref := filepath.Join(root, "reference.journal")
 	syncArgs := append([]string{"sync"}, common...)
 	syncArgs = append(syncArgs, "--endpoint", Endpoint(base, 0), "--journal", ref)
@@ -385,7 +322,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	submit(bad, 0, false)
 	submit(first, 0, true)
 	h := findInclusion(t, peers[0], first, 1)
-	awaitHeight(t, peers[0], h+1)
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	synced = doSync(false)
 	state = replayScenario(t, peers[0], driver, state, synced.Height)
 	if HashText(state.AppHash) != synced.AppHash {
@@ -398,11 +335,9 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	}
 	submit(second, 1, true)
 	h = findInclusion(t, peers[0], second, int64(state.Height)+1)
-	awaitHeight(t, peers[0], h+1)
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	start(3)
-	for _, p := range peers {
-		awaitHeight(t, p, h+1)
-	}
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	synced = doSync(false)
 	state = replayScenario(t, peers[0], driver, state, synced.Height)
 	if HashText(state.AppHash) != synced.AppHash {
@@ -436,9 +371,7 @@ func TestRealOperatorNonzeroPaymentsAndRestart(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		start(i)
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, int64(highest)+2)
-	}
+	awaitNetworkHeight(t, nodes, peers, int64(highest)+2)
 	synced = doSync(false)
 	state = replayScenario(t, peers[0], driver, state, synced.Height)
 	if HashText(state.AppHash) != synced.AppHash {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -18,6 +19,30 @@ import (
 	"github.com/youq616/Zevune/integration/cometbft/poolapp"
 	"github.com/youq616/Zevune/internal/poolbridge"
 )
+
+// Active ledgers contain only the public genesis and regular segment files.
+// Read the complete directory after workers release their file locks, including
+// on Windows; no lock file is ignored when checking that inspection is read-only.
+func activeStorageDirectoryBytes(t *testing.T, path string) map[string][]byte {
+	t.Helper()
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := make(map[string][]byte, len(entries))
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			t.Fatal("active storage fixture contains a nonregular entry", err)
+		}
+		raw, err := os.ReadFile(filepath.Join(path, entry.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		result[entry.Name()] = raw
+	}
+	return result
+}
 
 func replayActiveScenario(t *testing.T, p *peer, driver *process, state poolbridge.Summary, target uint64) poolbridge.Summary {
 	t.Helper()
@@ -135,7 +160,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	start := func(index int) {
 		args := append([]string{"run"}, common...)
 		args = append(args, "--node", strconv.Itoa(index), "--base-port", strconv.Itoa(base), "--stop-on-stdin-eof")
-		nodes[index] = launch(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), args...)
+		nodes[index] = launchNode(t, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), index, network.config.NodeIDs[index], args...)
 	}
 	for i := 0; i < 4; i++ {
 		start(i)
@@ -145,9 +170,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 		}
 		defer peers[i].close()
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, 3)
-	}
+	awaitNetworkHeight(t, nodes, peers, 3)
 	reference := filepath.Join(root, "reference-ledger")
 	syncArgs := append([]string{"sync"}, common...)
 	syncArgs = append(syncArgs, "--endpoint", Endpoint(base, 0), "--journal", reference)
@@ -191,7 +214,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	}
 	submit(first, 0, true)
 	h := findInclusion(t, peers[0], first, 1)
-	awaitHeight(t, peers[0], h+1)
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	doSync(false)
 	if state.Commitments != 4 || state.Nullifiers != 2 || state.Fees != 1000 {
 		t.Fatal("first genuine nonzero active payment accounting")
@@ -202,7 +225,7 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	highest := uint64(0)
 	for i := 0; i < 4; i++ {
 		report, err := network.InspectStorage(context.Background(), worker, workerPin, filepath.Join(home, fmt.Sprintf("node%d/pool.journal", i)))
-		if err != nil || report.StorageProfile != "active_segments_v1" || report.Segments == 0 || report.JournalBytes < 108+report.Height*150 || report.ConsensusVerified {
+		if err != nil || report.StorageProfile != "active_segments_v1" || report.Segments == 0 || report.JournalBytes < 108+report.Height*150 || report.DiskSpace != nil || report.ConsensusVerified {
 			t.Fatal("genuine offline active node capacity failed", err)
 		}
 		if report.Height > highest {
@@ -212,24 +235,20 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		start(i)
 	}
-	for _, p := range peers {
-		awaitHeight(t, p, int64(highest)+2)
-	}
+	awaitNetworkHeight(t, nodes, peers, int64(highest)+2)
 	doSync(false)
 	second := driver.call(t, 3, nil)
 	submit(second, 1, true)
 	h = findInclusion(t, peers[0], second, int64(state.Height)+1)
-	for _, p := range peers {
-		awaitHeight(t, p, h+1)
-	}
+	awaitNetworkHeight(t, nodes, peers, h+1)
 	synced := doSync(false)
 	if state.Commitments != 6 || state.Nullifiers != 4 || state.Fees != 2000 {
 		t.Fatal("onward active payment after full restart accounting")
 	}
 	driver.call(t, 5, nil) // reopen the genuine wallet and active ledger history
 	driver.call(t, 6, nil) // assert actual A/B/C balances and conservation
+	awaitNetworkHeight(t, nodes, peers, int64(state.Height)+1)
 	for _, p := range peers {
-		awaitHeight(t, p, int64(state.Height)+1)
 		header, err := network.header(context.Background(), p, int64(state.Height)+1)
 		if err != nil || !bytes.Equal(header.Header.AppHash, state.AppHash[:]) {
 			t.Fatal("active signed cross-node post-state mismatch", err)
@@ -237,11 +256,91 @@ func TestActiveFundedFourNodePaymentRestart(t *testing.T) {
 	}
 	storageArgs := append([]string{"storage"}, common...)
 	storageArgs = append(storageArgs, "--journal", reference, "--expected-height", strconv.FormatUint(synced.Height, 10), "--expected-app-hash", synced.AppHash)
+	storageBytes := activeStorageDirectoryBytes(t, reference)
 	var report StorageReport
-	if err := json.Unmarshal(operator(t, storageArgs, true), &report); err != nil || !report.ExpectedCheckpointMatched || report.StorageProfile != "active_segments_v1" || report.JournalBytes == 0 || report.Segments == 0 {
+	out := operator(t, storageArgs, true)
+	assertDefaultDiskFieldOmitted(t, out)
+	if err := json.Unmarshal(out, &report); err != nil || !report.ExpectedCheckpointMatched || report.StorageProfile != "active_segments_v1" || report.JournalBytes == 0 || report.Segments == 0 || report.DiskSpace != nil {
 		t.Fatal("active CLI exact-checkpoint capacity failed", err)
+	}
+	if !reflect.DeepEqual(activeStorageDirectoryBytes(t, reference), storageBytes) {
+		t.Fatal("default active CLI inspection modified public ledger bytes")
+	}
+	for _, reserve := range []uint64{1, ^uint64(0)} {
+		diskArgs := append(append([]string(nil), storageArgs...), "--disk-reserve-bytes", strconv.FormatUint(reserve, 10))
+		var observed StorageReport
+		if err := json.Unmarshal(operator(t, diskArgs, true), &observed); err != nil {
+			t.Fatal(err)
+		}
+		assertRealDiskObservation(t, observed, reserve)
+		observed.DiskSpace = nil
+		if !reflect.DeepEqual(observed, report) || !reflect.DeepEqual(activeStorageDirectoryBytes(t, reference), storageBytes) {
+			t.Fatal("optional OS observation changed active protocol accounting or ledger bytes")
+		}
+	}
+	diskArgs := append(append([]string(nil), storageArgs...), "--disk-reserve-bytes", "1")
+	wrongCheckpoint := append([]string(nil), diskArgs...)
+	wrongHash, err := ParseHash(synced.AppHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongHash[0] ^= 1
+	for i := range wrongCheckpoint {
+		if wrongCheckpoint[i] == "--expected-app-hash" {
+			wrongCheckpoint[i+1] = HashText(wrongHash)
+		}
+	}
+	if len(operator(t, wrongCheckpoint, false)) != 0 {
+		t.Fatal("active disk-space inspection ignored the exact checkpoint")
+	}
+	lockCtx, cancelLock := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancelLock()
+	owner, err := poolbridge.Start(lockCtx, network.workerOptions(worker, workerPin, reference, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = owner.Close() })
+	if len(operator(t, diskArgs, false)) != 0 {
+		t.Fatal("active disk-space inspection bypassed the actual worker owner lock")
+	}
+	if err := owner.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(activeStorageDirectoryBytes(t, reference), storageBytes) {
+		t.Fatal("rejected active checkpoint or owner-lock inspection modified ledger bytes")
+	}
+	corrupted := filepath.Join(root, "corrupt-active-ledger")
+	if err := os.Mkdir(corrupted, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if len(storageBytes["00000000.journal"]) == 0 {
+		t.Fatal("active payment fixture has no first segment to corrupt")
+	}
+	for name, raw := range storageBytes {
+		copyBytes := bytes.Clone(raw)
+		if name == "00000000.journal" {
+			copyBytes[len(copyBytes)-1] ^= 1
+		}
+		if err := os.WriteFile(filepath.Join(corrupted, name), copyBytes, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	corruptBytes := activeStorageDirectoryBytes(t, corrupted)
+	corruptArgs := append([]string(nil), diskArgs...)
+	for i := range corruptArgs {
+		if corruptArgs[i] == "--journal" {
+			corruptArgs[i+1] = corrupted
+		}
+	}
+	if len(operator(t, corruptArgs, false)) != 0 {
+		t.Fatal("active disk-space inspection bypassed genuine replay of a corrupt segment")
+	}
+	if !reflect.DeepEqual(activeStorageDirectoryBytes(t, corrupted), corruptBytes) ||
+		!reflect.DeepEqual(activeStorageDirectoryBytes(t, reference), storageBytes) {
+		t.Fatal("rejected active disk-space inspection repaired or changed public ledger bytes")
 	}
 	submit(first, 0, false)
 	submit(second, 1, false)
 	t.Log("active profile: shipped init/run/sync/submit/storage, InitChain version rejection, genuine nonzero A->B, all-four-node restart, B->C spend, wallet history reopen, signed next-header verification and duplicate rejection passed; low-height NO-FUNDS scenario")
+	t.Log("active disk-space inspection: real OS sampling after genuine four-node payment/restart and onward payment, one-byte observation and MaxUint64 warning, unchanged protocol accounting and complete public directory bytes, exact-checkpoint/owner-lock/corrupt-segment rejection passed; no real disk-full or power-loss test")
 }

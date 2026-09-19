@@ -7,14 +7,72 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/youq616/Zevune/internal/poolbridge"
 )
+
+// These assertions use the shipped CLI's real OS observation. The one-byte
+// threshold does not assume how much space a shared CI runner currently has;
+// MaxUint64 deliberately exercises the warning branch without filling a disk.
+func assertRealDiskObservation(t *testing.T, report StorageReport, reserve uint64) {
+	t.Helper()
+	wantScope := ""
+	switch runtime.GOOS {
+	case "linux":
+		wantScope = "linux_f_bavail_bytes"
+	case "windows":
+		wantScope = "windows_caller_available_bytes"
+	default:
+		t.Fatal("real disk-space operator evidence requires a supported OS")
+	}
+	disk := report.DiskSpace
+	if disk == nil || disk.Scope != wantScope || disk.ReserveBytes != reserve ||
+		disk.LowSpace != (disk.AvailableBytes <= reserve) || disk.SpaceReserved ||
+		report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed {
+		t.Fatal("real disk-space observation lost its threshold, scope or safety boundary")
+	}
+}
+
+func assertDefaultDiskFieldOmitted(t *testing.T, raw []byte) {
+	t.Helper()
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := fields["disk_space"]; present {
+		t.Fatal("default storage JSON included an unrequested disk observation")
+	}
+}
+
+func assertStorageRejectsBrokenStdout(t *testing.T, args []string) {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	if err := reader.Close(); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, requiredExecutable(t, "ZEVUNE_NETWORK_OPERATOR"), args...)
+	cmd.Stdout = writer
+	cmd.Stderr = io.Discard
+	err = cmd.Run()
+	if _, exited := err.(*exec.ExitError); !exited || ctx.Err() != nil {
+		t.Fatal("real storage command did not reject its broken stdout after starting")
+	}
+}
 
 // Actual compiled CLI, real Rust journal owner, and genuine Orchard payment.
 // No RPC is needed: the command is explicitly not a finality/freshness check.
@@ -55,7 +113,9 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 			t.Fatal(err)
 		}
 		var report StorageReport
-		if err := json.Unmarshal(operator(t, args, true), &report); err != nil {
+		out := operator(t, args, true)
+		assertDefaultDiskFieldOmitted(t, out)
+		if err := json.Unmarshal(out, &report); err != nil {
 			t.Fatal(err)
 		}
 		after, err := os.ReadFile(journal)
@@ -64,12 +124,33 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		}
 		if !bytes.Equal(before, after) || report.Height != want.Height || report.AppHash != HashText(want.AppHash) ||
 			report.Commitments != want.Commitments || report.JournalBytes != uint64(len(before)) ||
-			report.ExpectedCheckpointMatched || report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed || !report.EmptyBlockFitsLimits {
+			report.DiskSpace != nil || report.ExpectedCheckpointMatched || report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed || !report.EmptyBlockFitsLimits {
 			t.Fatal("offline inspection changed data or overstated its result")
 		}
 		return report
 	}
+	inspectDisk := func(baseline StorageReport, reserve uint64) {
+		t.Helper()
+		before, err := os.ReadFile(journal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		diskArgs := append(append([]string(nil), args...), "--disk-reserve-bytes", strconv.FormatUint(reserve, 10))
+		var report StorageReport
+		if err := json.Unmarshal(operator(t, diskArgs, true), &report); err != nil {
+			t.Fatal(err)
+		}
+		assertRealDiskObservation(t, report, reserve)
+		report.DiskSpace = nil
+		if !reflect.DeepEqual(report, baseline) {
+			t.Fatal("optional OS observation changed legacy protocol capacity accounting")
+		}
+		if after, err := os.ReadFile(journal); err != nil || !bytes.Equal(before, after) {
+			t.Fatal("disk-space inspection modified the legacy journal")
+		}
+	}
 	initial := inspect(expected)
+	inspectDisk(initial, ^uint64(0))
 	genesisState := expected
 	genesisBytes, err := os.ReadFile(journal)
 	if err != nil {
@@ -77,7 +158,7 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 	}
 	// A real CLI call with an independently selected exact checkpoint. All
 	// samples are temporary test data; this is not a consensus certificate.
-	checkPinned := func(path string, checkpoint poolbridge.Summary, succeeds bool) {
+	checkPinned := func(path string, checkpoint poolbridge.Summary, succeeds bool, diskReserve ...uint64) {
 		t.Helper()
 		before, err := os.ReadFile(path)
 		if err != nil {
@@ -87,6 +168,9 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		pinnedArgs = append(pinnedArgs, "--journal", path,
 			"--expected-height", strconv.FormatUint(checkpoint.Height, 10),
 			"--expected-app-hash", HashText(checkpoint.AppHash))
+		if len(diskReserve) > 0 {
+			pinnedArgs = append(pinnedArgs, "--disk-reserve-bytes", strconv.FormatUint(diskReserve[0], 10))
+		}
 		out := operator(t, pinnedArgs, succeeds)
 		if succeeds {
 			var report StorageReport
@@ -96,6 +180,11 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 			if !report.ExpectedCheckpointMatched || report.Height != checkpoint.Height || report.AppHash != HashText(checkpoint.AppHash) ||
 				report.ConsensusVerified || report.NetworkAccessed || report.RealFundsAllowed {
 				t.Fatal("checkpoint did not constrain real inspection or claimed finality")
+			}
+			if len(diskReserve) > 0 {
+				assertRealDiskObservation(t, report, diskReserve[0])
+			} else {
+				assertDefaultDiskFieldOmitted(t, out)
 			}
 		} else if len(out) != 0 {
 			t.Fatal("checkpoint rejection emitted a partial success report")
@@ -133,6 +222,9 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 	if len(operator(t, missingArgs, false)) != 0 {
 		t.Fatal("missing journal reported")
 	}
+	if len(operator(t, append(missingArgs, "--disk-reserve-bytes", "1"), false)) != 0 {
+		t.Fatal("missing journal produced a disk-space report")
+	}
 	if _, err := os.Stat(missing); !os.IsNotExist(err) {
 		t.Fatal("inspection created data")
 	}
@@ -149,6 +241,20 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 	if len(operator(t, args, false)) != 0 {
 		t.Fatal("inspection bypassed journal owner lock")
 	}
+	if len(operator(t, append(append([]string(nil), args...), "--disk-reserve-bytes", "1"), false)) != 0 {
+		t.Fatal("disk-space inspection bypassed journal owner lock")
+	}
+	if err := owner.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if unchanged, err := os.ReadFile(journal); err != nil || !bytes.Equal(unchanged, genesisBytes) {
+		t.Fatal("rejected owner-lock inspections modified the journal")
+	}
+	owner, err = poolbridge.Start(ctx, poolbridge.Options{Executable: worker, ExpectedSHA256: workerPin,
+		Journal: journal, TestGenesis: filepath.Join(wallets, "test-genesis.bin"), TestGenesisSHA256: assetPin})
+	if err != nil {
+		t.Fatal(err)
+	}
 	raw := driver.call(t, 1, nil)
 	_, tag, err := owner.Finalize(ctx, 1, Hash{7}, [][]byte{raw})
 	if err != nil {
@@ -162,8 +268,31 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	after := inspect(expected)
+	inspectDisk(after, 1)
+	committedBytes, err := os.ReadFile(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStorageRejectsBrokenStdout(t, append(append([]string(nil), args...), "--disk-reserve-bytes", "1"))
+	if unchanged, err := os.ReadFile(journal); err != nil || !bytes.Equal(unchanged, committedBytes) {
+		t.Fatal("broken stdout changed the inspected legacy journal")
+	}
 	checkPinned(journal, expected, true)
+	checkPinned(journal, expected, true, ^uint64(0))
 	checkPinned(journal, genesisState, false) // newer does not mean exact match
+	checkPinned(journal, genesisState, false, 1)
+	wrongWorkerPin := workerPin
+	wrongWorkerPin[0] ^= 1
+	wrongWorkerArgs := append([]string(nil), args...)
+	for i := range wrongWorkerArgs {
+		if wrongWorkerArgs[i] == "--worker-sha256" {
+			wrongWorkerArgs[i+1] = HashText(wrongWorkerPin)
+		}
+	}
+	wrongWorkerArgs = append(wrongWorkerArgs, "--disk-reserve-bytes", "1")
+	if len(operator(t, wrongWorkerArgs, false)) != 0 {
+		t.Fatal("wrong worker pin produced a disk-space report")
+	}
 	prefix := filepath.Join(root, "valid-prefix.journal")
 	if err := os.WriteFile(prefix, genesisBytes, 0600); err != nil {
 		t.Fatal(err)
@@ -243,6 +372,9 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 	if len(operator(t, wrongDomain, false)) != 0 {
 		t.Fatal("wrong genesis replay produced report")
 	}
+	if len(operator(t, append(wrongDomain, "--disk-reserve-bytes", "1"), false)) != 0 {
+		t.Fatal("disk-space inspection bypassed the trusted genesis")
+	}
 	// Do not mutate the pinned source: malformed journal copies are isolated.
 	corrupted := filepath.Join(root, "corrupt.journal")
 	data, err := os.ReadFile(journal)
@@ -263,6 +395,11 @@ func TestRealOfflineStorageInspectionAndLock(t *testing.T) {
 		t.Fatal("inspection repaired or truncated corrupt data")
 	}
 	checkPinned(corrupted, expected, false) // a caller hash never replaces replay
+	checkPinned(corrupted, expected, false, 1)
 	checkPinned(journal, expected, true)
 	inspect(expected)
+	if unchanged, err := os.ReadFile(journal); err != nil || !bytes.Equal(unchanged, committedBytes) {
+		t.Fatal("rejected disk-space requests modified the committed legacy journal")
+	}
+	t.Log("legacy disk-space inspection: actual OS sampling at genesis and after a genuine payment, unchanged protocol accounting and source bytes, one-byte threshold observation, MaxUint64 warning, exact checkpoint and pin/genesis/lock/corruption/broken-stdout rejection passed; no real disk-full or power-loss test")
 }

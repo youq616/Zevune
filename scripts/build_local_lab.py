@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 
-from source_snapshot import export_source
+from source_snapshot import export_build_source
 from verify_local_lab import verify
 
 
@@ -60,12 +60,13 @@ def build(destination: Path) -> dict:
     suffix = ".exe" if os.name == "nt" else ""
     env = os.environ.copy()
     env.update({"GOTOOLCHAIN": "local", "GOWORK": "off", "GOFLAGS": "", "CARGO_BUILD_JOBS": "2"})
-    # Build only captured Git objects. Untracked/ignored .go, build.rs, Cargo
-    # configuration and generated outputs in the working copy are not inputs.
+    # Build only captured Git objects outside the root reports/ evidence tree.
+    # Untracked/ignored .go, build.rs, Cargo configuration and generated outputs
+    # in the working copy are not inputs. No file-extension filtering is used.
     # Compilers, dependency sources and host environment remain trusted.
     with tempfile.TemporaryDirectory(prefix="zevune-source-build-") as temporary:
         staged = Path(temporary) / "source"
-        source_tree = export_source(root, commit, staged)
+        source_tree = export_build_source(root, commit, staged)
         env["CARGO_TARGET_DIR"] = str(Path(temporary) / "cargo-target")
         network = Path(temporary) / ("zevune-network" + suffix)
         subprocess.run(["go", "build", "-mod=readonly", "-buildvcs=false", "-trimpath", "-o",

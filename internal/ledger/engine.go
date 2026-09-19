@@ -197,6 +197,11 @@ func (e *Engine) stageBlockLocked(height uint64, txs []protocol.Envelope) (state
 		}
 		owned[i] = t.Clone()
 	}
+	if e.journal != nil {
+		if _, err := e.journal.prepareBlock(height, owned); err != nil {
+			return state{}, nil, err
+		}
+	}
 	staged := e.s.clone()
 	for i, t := range owned {
 		if err := e.cheapChecks(&staged, t, height); err != nil {
@@ -227,6 +232,10 @@ func (e *Engine) stageBlockLocked(height uint64, txs []protocol.Envelope) (state
 func (e *Engine) commitStateLocked(height uint64, owned []protocol.Envelope, staged state) (Summary, error) {
 	if e.journal != nil {
 		if err := e.journal.appendBlock(height, owned); err != nil {
+			var ioErr *journalIOError
+			if !errors.As(err, &ioErr) {
+				return Summary{}, err // A pre-I/O refusal leaves the engine usable.
+			}
 			e.storageErr = err // No further writes after an uncertain disk outcome.
 			return Summary{}, fmt.Errorf("%w: %v", ErrStorageUnavailable, err)
 		}
