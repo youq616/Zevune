@@ -244,7 +244,9 @@ class WalletEvidenceTests(unittest.TestCase):
 
     def test_wallet_public_pin_requires_actual_retained_generation_and_complete_chain(self):
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "wallet.journal"
+            # Native Windows temporary roots may use an 8.3 alias. The valid
+            # fixture must satisfy the same canonical-path contract as the runner.
+            path = Path(temporary).resolve(strict=True) / "wallet.journal"
             contents, pin = public_wallet_chain(4, retained=3)
             path.write_bytes(contents)
             runner.wallet_public_pin(path, pin, require_tip=False)
@@ -260,6 +262,21 @@ class WalletEvidenceTests(unittest.TestCase):
                 path.write_bytes(damaged)
                 with self.subTest(length=len(damaged)), self.assertRaises(ValueError):
                     runner.wallet_public_pin(path, pin, require_tip=False)
+
+    def test_wallet_public_pin_rejects_noncanonical_alias_before_file_read(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve(strict=True)
+            path = base / "wallet.journal"
+            contents, pin = public_wallet_chain(1)
+            path.write_bytes(contents)
+            child = base / "child"
+            child.mkdir()
+            alias = child / ".." / path.name
+            self.assertEqual(alias.resolve(strict=True), path)
+            with patch.object(runner, "file_identity") as read, \
+                    self.assertRaisesRegex(ValueError, "^wallet_public_path_changed$"):
+                runner.wallet_public_pin(alias, pin, require_tip=True)
+            read.assert_not_called()
 
     @unittest.skipUnless(hasattr(os, "geteuid"), "Unix receipt ownership")
     def test_wallet_file_checks_bind_pins_backup_source_prefix_and_restored_chain(self):
