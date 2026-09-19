@@ -231,10 +231,9 @@ struct Receipt {
 }
 impl Receipt {
     fn write(&self, control: &Path) {
-        let before_hash = self.before_hash.map_or_else(
-            || "null".to_owned(),
-            |hash| format!("\"{}\"", hex(&hash)),
-        );
+        let before_hash = self
+            .before_hash
+            .map_or_else(|| "null".to_owned(), |hash| format!("\"{}\"", hex(&hash)));
         // All values are fixed labels, integers, public hashes or assertions
         // already established below. No transaction, wallet or path is logged.
         let encoded = format!(
@@ -324,7 +323,10 @@ fn run_case(case: Case) {
         )
         .unwrap();
     let paid = pool.commit(prepared).unwrap();
-    assert_eq!((paid.commitments, paid.nullifiers, paid.fees), (3, 2, 1_000));
+    assert_eq!(
+        (paid.commitments, paid.nullifiers, paid.fees),
+        (3, 2, 1_000)
+    );
     let history = genesis.wallet_history(&mut pool).unwrap();
     alice.sync(&history).unwrap();
     bob.sync(&history).unwrap();
@@ -383,7 +385,10 @@ fn run_case(case: Case) {
         &environment.control.join("checkpoint.bin"),
         &checkpoint.to_bytes(),
     );
-    File::open(&environment.control).unwrap().sync_all().unwrap();
+    File::open(&environment.control)
+        .unwrap()
+        .sync_all()
+        .unwrap();
     let mut archive = ActiveArchive::open(&source, checkpoint).unwrap();
     assert_eq!(archive.copy_new(&backup).unwrap(), checkpoint);
     drop(archive);
@@ -486,7 +491,10 @@ fn run_case(case: Case) {
     unchanged(&restored, &original);
     let mut recovered = genesis.open_pool(&restored).unwrap();
     assert_eq!(recovered.summary().unwrap(), before);
-    assert_eq!(recovered.active_recovery_checkpoint().unwrap(), retained_pin);
+    assert_eq!(
+        recovered.active_recovery_checkpoint().unwrap(),
+        retained_pin
+    );
     assert_eq!(
         recovered
             .prepare(height, block_id(height), std::slice::from_ref(&first))
@@ -512,7 +520,11 @@ fn run_case(case: Case) {
     for payment in [&first, &second] {
         assert_eq!(
             recovered
-                .prepare(height + 1, block_id(height + 1), std::slice::from_ref(payment))
+                .prepare(
+                    height + 1,
+                    block_id(height + 1),
+                    std::slice::from_ref(payment)
+                )
                 .err(),
             Some(PoolError::DoubleSpend)
         );
@@ -542,9 +554,7 @@ fn run_case(case: Case) {
     unchanged(&restored, &complete);
     unchanged(&backup, &original);
     unchanged(&source, &damaged);
-    assert!(
-        fs::read(environment.control.join("checkpoint.bin")).unwrap() == checkpoint.to_bytes()
-    );
+    assert!(fs::read(environment.control.join("checkpoint.bin")).unwrap() == checkpoint.to_bytes());
     Receipt {
         case,
         target: target_metadata,
