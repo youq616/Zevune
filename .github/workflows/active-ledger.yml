@@ -42,6 +42,13 @@ jobs:
           cd integration/cometbft
           go test -mod=readonly -tags=pool_e2e,funded_e2e ./... -run '^$'
           git diff --exit-code
+      - name: Measurement contract, real failure helpers and race checks
+        working-directory: integration/cometbft
+        run: |
+          go test -mod=readonly ./poolapp -run '^TestGrowthObservation' -count=1 -timeout=60s
+          go test -mod=readonly -race ./poolapp -run '^TestGrowthObservation' -count=1 -timeout=60s
+          go vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp
+          git diff --exit-code
   growth:
     needs: source
     strategy:
@@ -56,14 +63,49 @@ jobs:
     env:
       RAYON_NUM_THREADS: '2'
       CARGO_BUILD_JOBS: '2'
+      ZEVUNE_GROWTH_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           persist-credentials: false
+      - name: Preserve bounded public identity before toolchain setup
+        run: |
+          python - <<'PYCODE'
+          import json, os, pathlib, re, subprocess, sys
+          def oid(value):
+              if not re.fullmatch(r'[0-9a-f]{40}', value):
+                  raise SystemExit('Invalid source identity')
+              return value
+          def git(expression):
+              return oid(subprocess.check_output(['git', '--no-replace-objects', 'rev-parse', expression], text=True).strip())
+          source = oid(os.environ['ZEVUNE_GROWTH_SOURCE_HEAD'])
+          run_id, attempt = os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']
+          if any(not re.fullmatch(r'[1-9][0-9]{0,19}', value) for value in (run_id, attempt)):
+              raise SystemExit('Invalid run identity')
+          if sys.platform not in ('linux', 'win32'):
+              raise SystemExit('Unsupported growth platform')
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'zevune-growth-evidence'
+          folder.mkdir(mode=0o700)
+          setup = dict(schema_version=1, scope='local_growth_setup_not_execution',
+                       source_head=source, checkout_commit=git('HEAD'), checkout_tree=git('HEAD^{tree}'),
+                       platform=sys.platform, run_id=int(run_id), run_attempt=int(attempt),
+                       required_go='1.27.1', required_rust='1.98.1', execution_started=False,
+                       real_funds_allowed=False)
+          data = json.dumps(setup, sort_keys=True) + '\n'
+          if len(data.encode('utf-8')) > 2048:
+              raise SystemExit('Setup evidence exceeded its bound')
+          with (folder / 'setup.json').open('x', encoding='utf-8') as output:
+              output.write(data)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write('ZEVUNE_GROWTH_EVIDENCE_DIR=' + str(folder) + '\n')
+          PYCODE
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
         with:
           go-version: '1.27.1'
           cache-dependency-path: integration/cometbft/go.sum
+      - name: Native observation contract and failure-path checks
+        working-directory: integration/cometbft
+        run: go test -mod=readonly ./poolapp -run '^TestGrowthObservation' -count=1 -timeout=60s
       - name: Install fixed Rust
         run: rustup toolchain install 1.98.1 --profile minimal
       - name: Build the real fixed-profile worker and wallet scenario
@@ -83,3 +125,18 @@ jobs:
         run: go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^TestActiveSegmentedLedger100000BlocksBoundaryPaymentsAndRestart$' -count=1 -timeout=25m -v
       - name: Assert exact committed source and dependency locks
         run: git diff --exit-code
+      - name: Preserve only bounded public growth evidence, including failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: growth-observations-${{ matrix.os }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/zevune-growth-evidence/setup.json
+            ${{ runner.temp }}/zevune-growth-evidence/checkpoint-0.json
+            ${{ runner.temp }}/zevune-growth-evidence/checkpoint-1.json
+            ${{ runner.temp }}/zevune-growth-evidence/checkpoint-2.json
+            ${{ runner.temp }}/zevune-growth-evidence/checkpoint-3.json
+            ${{ runner.temp }}/zevune-growth-evidence/checkpoint-4.json
+            ${{ runner.temp }}/zevune-growth-evidence/final.json
+          if-no-files-found: error
+          retention-days: 14
