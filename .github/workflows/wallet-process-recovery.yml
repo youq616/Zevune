@@ -1,0 +1,41 @@
+name: wallet-process-recovery
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'docs/WALLET_PROCESS_RECOVERY.zh-CN.md', '.github/workflows/wallet-process-recovery.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'docs/WALLET_PROCESS_RECOVERY.zh-CN.md', '.github/workflows/wallet-process-recovery.yml']
+permissions:
+  contents: read
+jobs:
+  wallet-process:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_WALLET_PROCESS_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Record exact source identity
+        run: |
+          printf 'source_head=%s\n' "$ZEVUNE_WALLET_PROCESS_SOURCE_HEAD"
+          git --no-replace-objects rev-parse HEAD 'HEAD^{tree}'
+      - name: Install fixed Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Real wallet process termination, cold recovery and supervisor rejection tests
+        run: cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test wallet_process_recovery -- --test-threads=1 --nocapture
+      - name: Strict static checks and canonical source
+        run: |
+          cargo +1.98.1 clippy --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test wallet_process_recovery -- -D warnings
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+          git diff --exit-code
