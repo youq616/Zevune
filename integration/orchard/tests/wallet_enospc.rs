@@ -121,7 +121,10 @@ fn write_new(path: &Path, bytes: &[u8]) {
 }
 
 fn unchanged(path: &Path, expected: &[u8]) {
-    assert!(fs::read(path).unwrap() == expected, "encrypted file changed");
+    assert!(
+        fs::read(path).unwrap() == expected,
+        "encrypted file changed"
+    );
 }
 
 fn pool_bytes(path: &Path) -> DirectoryBytes {
@@ -135,7 +138,9 @@ fn pool_bytes(path: &Path) -> DirectoryBytes {
         assert!(files.len() < 2);
         let name = entry.file_name().into_string().unwrap();
         assert!(matches!(name.as_str(), "genesis" | "00000000.journal"));
-        assert!(files.insert(name, fs::read(entry.path()).unwrap()).is_none());
+        assert!(files
+            .insert(name, fs::read(entry.path()).unwrap())
+            .is_none());
     }
     files
 }
