@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run two explicit Linux tmpfs ENOSPC tests; never compile or fill a host disk.
+"""Run an explicit Linux tmpfs ENOSPC suite; never compile or fill a host disk.
 
 The ordinary runner owns compilation. Privilege is used only in a fresh mount
 and PID namespace to mount, supervise and normally unmount a bounded tmpfs.
@@ -28,6 +28,12 @@ CASES = {
     "active_tail_enospc_preserves_state_and_recovers": "source/00000000.journal",
     "active_new_segment_enospc_preserves_state_and_recovers": "source/00000001.journal",
 }
+WALLET_CASES = {
+    "wallet_sync_enospc_preserves_outbox_and_recovers": "source/wallet.journal",
+    "wallet_compact_enospc_preserves_source_and_recovers": "compacted/wallet.journal",
+}
+SUITE_CASES = {"active": CASES, "wallet": WALLET_CASES}
+SUITE_TEST_FILES = {"active": "active_enospc.rs", "wallet": "wallet_enospc.rs"}
 TMPFS_BYTES = 8 * 1024 * 1024
 TMPFS_INODES = 256
 CASE_SECONDS = 180
@@ -46,6 +52,24 @@ INTEGER_FIELDS = {"target_dev", "target_ino", "target_nlink", "before_len", "aft
 RECEIPT_FIELDS = BOOL_FIELDS | INTEGER_FIELDS | {
     "schema_version", "case", "profile", "filesystem", "target_rel", "before_sha256",
     "after_sha256", "checkpoint_apphash", "checkpoint_pin_sha256"}
+WALLET_HEADER_BYTES = 72
+WALLET_RECORD_BYTES = 32948
+WALLET_BOOL_FIELDS = {"wallet_io", "reopen_rejected", "source_prefix_preserved", "backup_unchanged",
+                      "rejected_target_unchanged", "exact_pending_recovered", "continuation_done",
+                      "retained_receipt_unchanged", "new_target_receipt_verified"}
+WALLET_INTEGER_FIELDS = {"target_dev", "target_ino", "target_nlink", "before_len", "after_len",
+                         "frame_len", "changed_suffix_len", "receipt_generation", "recovered_receipt_generation",
+                         "backup_len", "filler_errno", "filler_bytes"}
+WALLET_RECEIPT_FIELDS = WALLET_BOOL_FIELDS | WALLET_INTEGER_FIELDS | {
+    "schema_version", "case", "profile", "filesystem", "target_rel", "before_sha256", "after_sha256",
+    "receipt_pin_sha256", "recovered_receipt_pin_sha256", "backup_sha256", "store_unavailable",
+    "source_retired_after_success"}
+
+
+def suite_cases(suite: str) -> dict:
+    if suite not in SUITE_CASES:
+        raise ValueError("unsupported_enospc_suite")
+    return SUITE_CASES[suite]
 
 
 def utc() -> str:
@@ -97,12 +121,16 @@ def public_summary(report: dict) -> dict:
                 summary[field] = report[field]
         summary["payload_ignored_sigterm"] = report.get("payload_ignored_sigterm") is True
     else:
+        suite = report.get("suite")
+        cases = SUITE_CASES.get(suite, {}) if isinstance(suite, str) else {}
+        if isinstance(suite, str) and suite in SUITE_CASES:
+            summary["suite"] = suite
         summary["cases"] = []
         for case in report.get("cases", []):
             name = case.get("case")
-            if name not in CASES or case.get("target_rel") != CASES[name]:
+            if name not in cases or case.get("target_rel") != cases[name]:
                 continue
-            item = {"case": name, "target_rel": CASES[name], "completed": case.get("completed") is True,
+            item = {"case": name, "target_rel": cases[name], "completed": case.get("completed") is True,
                     "ordinary_unmount_succeeded": case.get("ordinary_unmount_succeeded") is True}
             for field in ("failure_stage", "failure"):
                 value = case.get(field)
@@ -125,7 +153,7 @@ def public_summary(report: dict) -> dict:
             item["syscall_counts"] = {name: counts[name] for name in ("write", "writev", "pwrite64", "fsync", "fdatasync")
                                       if type(counts.get(name)) is int and 0 <= counts[name] <= 65536}
             location = case.get("rust_test_location", {})
-            if location.get("file") == "active_enospc.rs" and type(location.get("line")) is int:
+            if location.get("file") == SUITE_TEST_FILES[suite] and type(location.get("line")) is int:
                 item["rust_test_line"] = location["line"]
             summary["cases"].append(item)
     for field in ("failure", "failure_stage", "controller_failure"):
@@ -306,7 +334,13 @@ def trace_evidence(raw: bytes) -> dict:
             "single_exact_target_filter": True}
 
 
-def validate_receipt(receipt: dict, case: str) -> None:
+def validate_receipt(receipt: dict, case: str, suite: str = "active") -> None:
+    cases = suite_cases(suite)
+    if case not in cases:
+        raise ValueError("unexpected_test_case")
+    if suite == "wallet":
+        validate_wallet_receipt(receipt, case)
+        return
     if (not isinstance(receipt, dict) or set(receipt) != RECEIPT_FIELDS
             or type(receipt["schema_version"]) is not int or receipt["schema_version"] != 1
             or receipt["case"] != case or receipt["target_rel"] != CASES[case]
@@ -332,6 +366,103 @@ def validate_receipt(receipt: dict, case: str) -> None:
     elif (receipt["before_len"] != 0 or receipt["after_len"] != 0 or receipt["before_sha256"] is not None
           or receipt["after_sha256"] != hashlib.sha256(b"").hexdigest()):
         raise ValueError("new_segment_first_write_not_confirmed")
+
+
+def validate_wallet_receipt(receipt: dict, case: str) -> None:
+    if (not isinstance(receipt, dict) or set(receipt) != WALLET_RECEIPT_FIELDS
+            or type(receipt["schema_version"]) is not int or receipt["schema_version"] != 1
+            or receipt["case"] != case or receipt["target_rel"] != WALLET_CASES[case]
+            or receipt["profile"] != "wallet_journal_v1" or receipt["filesystem"] != "tmpfs"):
+        raise ValueError("unexpected_wallet_receipt")
+    is_sync = case == next(iter(WALLET_CASES))
+    if (any(receipt[field] is not True for field in WALLET_BOOL_FIELDS)
+            or receipt["store_unavailable"] is not is_sync
+            or receipt["source_retired_after_success"] is not (not is_sync)):
+        raise ValueError("wallet_invariant_not_confirmed")
+    if any(type(receipt[field]) is not int or not 0 <= receipt[field] < 2**64 for field in WALLET_INTEGER_FIELDS):
+        raise ValueError("invalid_wallet_receipt_integer")
+    if (receipt["target_ino"] == 0 or receipt["target_nlink"] != 1 or receipt["filler_errno"] != 28
+            or not 0 < receipt["filler_bytes"] < TMPFS_BYTES
+            or receipt["frame_len"] != WALLET_RECORD_BYTES
+            or not 0 < receipt["changed_suffix_len"] < WALLET_RECORD_BYTES
+            or receipt["receipt_generation"] != 3
+            or not 1 <= receipt["recovered_receipt_generation"] <= 256
+            or receipt["backup_len"] != WALLET_HEADER_BYTES + receipt["receipt_generation"] * WALLET_RECORD_BYTES
+            or receipt["backup_len"] > TMPFS_BYTES
+            or not receipt["before_len"] <= receipt["after_len"] <= TMPFS_BYTES):
+        raise ValueError("invalid_wallet_target_extent")
+    for field in ("after_sha256", "backup_sha256", "receipt_pin_sha256", "recovered_receipt_pin_sha256"):
+        if not isinstance(receipt[field], str) or not HEX.fullmatch(receipt[field]):
+            raise ValueError("invalid_wallet_receipt_digest")
+    if is_sync:
+        if (receipt["before_len"] != receipt["backup_len"]
+                or receipt["before_sha256"] != receipt["backup_sha256"]
+                or receipt["after_len"] != 102400 or receipt["changed_suffix_len"] != 3484
+                or receipt["after_len"] - receipt["before_len"] != receipt["changed_suffix_len"]
+                or receipt["recovered_receipt_generation"] != receipt["receipt_generation"]
+                or receipt["recovered_receipt_pin_sha256"] != receipt["receipt_pin_sha256"]):
+            raise ValueError("partial_wallet_sync_not_confirmed")
+    elif (receipt["before_len"] != 0 or receipt["before_sha256"] is not None
+          or receipt["after_len"] != 4096 or receipt["changed_suffix_len"] != 4024
+          or receipt["after_len"] - WALLET_HEADER_BYTES != receipt["changed_suffix_len"]
+          or receipt["recovered_receipt_generation"] != 1
+          or receipt["recovered_receipt_pin_sha256"] == receipt["receipt_pin_sha256"]):
+        raise ValueError("partial_wallet_compact_not_confirmed")
+
+
+def wallet_public_pin(path: Path, pin: bytes, *, require_tip: bool) -> tuple[os.stat_result, str, bytes]:
+    """Bind a retained receipt to encrypted bytes, without treating hashes as authentication."""
+    if path.resolve(strict=True) != path:
+        raise ValueError("wallet_public_path_changed")
+    info, digest, encrypted = file_identity(path, TMPFS_BYTES, capture=True)
+    count, remainder = divmod(len(encrypted) - WALLET_HEADER_BYTES, WALLET_RECORD_BYTES)
+    generation = int.from_bytes(pin[32:40], "big")
+    if (len(pin) != 72 or not 1 <= count <= 256 or remainder or encrypted[:8] != b"ZVWJNL01"
+            or not 1 <= generation <= count or (require_tip and generation != count)):
+        raise ValueError("wallet_public_framing_mismatch")
+    previous = hashlib.sha256(encrypted[:WALLET_HEADER_BYTES]).digest()
+    if previous != pin[:32]:
+        raise ValueError("wallet_public_pin_mismatch")
+    for index in range(1, count + 1):
+        offset = WALLET_HEADER_BYTES + (index - 1) * WALLET_RECORD_BYTES
+        record = encrypted[offset:offset + WALLET_RECORD_BYTES]
+        observed = hashlib.sha256(record[:-32]).digest()
+        if (record[:8] != index.to_bytes(8, "big") or record[8:40] != previous
+                or record[-32:] != observed or (index == generation and observed != pin[40:])):
+            raise ValueError("wallet_public_pin_mismatch")
+        previous = observed
+    return info, digest, encrypted
+
+
+def verify_wallet_files(mount: Path, control: Path, receipt: dict, case: str, uid: int) -> None:
+    control_device = control.stat().st_dev
+    pins = []
+    for name, field, generation in (("checkpoint.bin", "receipt_pin_sha256", "receipt_generation"),
+                                    ("recovered-checkpoint.bin", "recovered_receipt_pin_sha256", "recovered_receipt_generation")):
+        info, digest, pin = file_identity(control / name, 72, capture=True)
+        if (info.st_uid != uid or info.st_dev != control_device or info.st_size != 72 or digest != receipt[field]
+                or int.from_bytes(pin[32:40], "big") != receipt[generation]):
+            raise ValueError("wallet_checkpoint_identity_mismatch")
+        pins.append(pin)
+    is_sync = case == next(iter(WALLET_CASES))
+    if (is_sync and pins[0] != pins[1]) or (not is_sync and pins[0][:32] == pins[1][:32]):
+        raise ValueError("wallet_checkpoint_relationship_mismatch")
+    info, digest, _ = wallet_public_pin(control / "backup/wallet.journal", pins[0], require_tip=True)
+    if (info.st_uid != uid or info.st_dev != control_device
+            or info.st_size != receipt["backup_len"] or digest != receipt["backup_sha256"]):
+        raise ValueError("wallet_backup_identity_mismatch")
+    source_base = mount if is_sync else control
+    source_path = source_base / "source/wallet.journal"
+    if source_path.resolve(strict=True) != source_path:
+        raise ValueError("wallet_source_path_changed")
+    info, _, source = file_identity(source_path, TMPFS_BYTES, capture=True)
+    if (info.st_uid != uid or info.st_dev != source_base.stat().st_dev
+            or (not is_sync and info.st_size != receipt["backup_len"])
+            or hashlib.sha256(source[:receipt["backup_len"]]).hexdigest() != receipt["backup_sha256"]):
+        raise ValueError("wallet_source_prefix_mismatch")
+    info, _, _ = wallet_public_pin(control / "restored/wallet.journal", pins[1], require_tip=False)
+    if info.st_uid != uid or info.st_dev != control_device:
+        raise ValueError("wallet_recovered_identity_mismatch")
 
 
 def utility(command: list[str]) -> None:
@@ -375,14 +506,17 @@ def verify_exhausted(path: Path) -> dict:
             "inode_exhaustion_observed": False}
 
 
-def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: float) -> dict:
-    mount = base / ("mount-" + str(list(CASES).index(case)))
-    control = base / ("control-" + str(list(CASES).index(case)))
+def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: float, *, suite: str = "active") -> dict:
+    cases = suite_cases(suite)
+    if case not in cases:
+        raise ValueError("unexpected_test_case")
+    mount = base / ("mount-" + str(list(cases).index(case)))
+    control = base / ("control-" + str(list(cases).index(case)))
     mount.mkdir(mode=0o700)
     control.mkdir(mode=0o700)
     os.chown(mount, uid, gid)
     os.chown(control, uid, gid)
-    result = {"case": case, "target_rel": CASES[case], "started_at": utc(),
+    result = {"case": case, "target_rel": cases[case], "started_at": utc(),
               "completed": False, "ordinary_unmount_succeeded": False}
     mounted = False
     stage = "mount"
@@ -392,7 +526,7 @@ def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: 
         mounted = True
         stage = "filesystem_boundary"
         result["mount"] = verify_mount(mount, control, uid)
-        target = mount / CASES[case]
+        target = mount / cases[case]
         trace_read, trace_write = os.pipe()
         # /proc/self/fd/N is reopened by the already-unprivileged tracer. Its
         # inherited pipe inode must therefore belong to that same identity.
@@ -420,9 +554,11 @@ def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: 
         execution = run_bounded(command, timeout=remaining, env=environment,
                                 cwd=control, trace_pipe=(trace_read, trace_write))
         result["process"] = {key: execution[key] for key in ("returncode", "timed_out", "overflow", "leaked_output")}
-        location = re.search(rb"(?:tests/)?active_enospc\.rs:([0-9]{1,6}):([0-9]{1,6})", execution["stderr"] + execution["stdout"])
+        source_file = SUITE_TEST_FILES[suite]
+        location = re.search(rb"(?:tests/)?" + re.escape(source_file.encode("ascii")) + rb":([0-9]{1,6}):([0-9]{1,6})",
+                             execution["stderr"] + execution["stdout"])
         if location:
-            result["rust_test_location"] = {"file": "active_enospc.rs", "line": int(location[1]), "column": int(location[2])}
+            result["rust_test_location"] = {"file": source_file, "line": int(location[1]), "column": int(location[2])}
         require_process(execution)
         if execution["stderr"]:
             raise ValueError("unexpected_tracer_or_test_stderr")
@@ -433,7 +569,7 @@ def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: 
         if info.st_uid != uid:
             raise ValueError("unexpected_receipt_owner")
         receipt = json.loads(raw, object_pairs_hook=unique)
-        validate_receipt(receipt, case)
+        validate_receipt(receipt, case, suite)
         stage = "target_identity"
         if target.resolve(strict=True) != target:
             raise ValueError("traced_target_path_changed")
@@ -443,10 +579,14 @@ def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: 
                 or info.st_nlink != receipt["target_nlink"] or info.st_size != receipt["after_len"]
                 or digest != receipt["after_sha256"]):
             raise ValueError("traced_target_identity_mismatch")
-        stage = "checkpoint_identity"
-        checkpoint, checkpoint_digest, _ = file_identity(control / "checkpoint.bin", 128)
-        if checkpoint.st_size != 128 or checkpoint_digest != receipt["checkpoint_pin_sha256"]:
-            raise ValueError("checkpoint_identity_mismatch")
+        if suite == "wallet":
+            stage = "wallet_file_identities"
+            verify_wallet_files(mount, control, receipt, case, uid)
+        else:
+            stage = "checkpoint_identity"
+            checkpoint, checkpoint_digest, _ = file_identity(control / "checkpoint.bin", 128)
+            if checkpoint.st_size != 128 or checkpoint_digest != receipt["checkpoint_pin_sha256"]:
+                raise ValueError("checkpoint_identity_mismatch")
         stage = "filesystem_exhaustion"
         result["mount"].update(verify_exhausted(mount))
         result["receipt"] = receipt
@@ -475,6 +615,7 @@ def namespace(args: argparse.Namespace) -> int:
             or os.readlink("/proc/self/ns/mnt") == args.parent_mount_ns
             or os.readlink("/proc/self/ns/pid") == args.parent_pid_ns):
         raise ValueError("fresh_privileged_namespaces_required")
+    cases = suite_cases(args.suite)
     base = args.directory
     info = base.lstat()
     if (not base.is_absolute() or base.resolve(strict=True) != base or not stat.S_ISDIR(info.st_mode)
@@ -486,13 +627,13 @@ def namespace(args: argparse.Namespace) -> int:
     utility(["/usr/bin/mount", "--make-rprivate", "/"])
     deadline = time.monotonic() + NAMESPACE_SECONDS
     results = []
-    for case in CASES:
-        result = run_case(args.test_executable, case, base, args.uid, args.gid, deadline)
+    for case in cases:
+        result = run_case(args.test_executable, case, base, args.uid, args.gid, deadline, suite=args.suite)
         results.append(result)
         if not result["completed"] or not result["ordinary_unmount_succeeded"]:
             break
-    completed = len(results) == len(CASES) and all(case["completed"] for case in results)
-    print(json.dumps({"completed": completed, "cases": results}, sort_keys=True), flush=True)
+    completed = len(results) == len(cases) and all(case["completed"] for case in results)
+    print(json.dumps({"suite": args.suite, "completed": completed, "cases": results}, sort_keys=True), flush=True)
     return 0 if completed else 1
 
 
@@ -621,7 +762,8 @@ def supervision_probe(output: Path) -> dict:
     return report
 
 
-def outer(binary: Path, output: Path) -> dict:
+def outer(binary: Path, output: Path, suite: str = "active") -> dict:
+    cases = suite_cases(suite)
     if sys.platform != "linux" or os.geteuid() == 0 or os.getegid() == 0:
         raise ValueError("ordinary_linux_runner_required")
     if not binary.is_absolute() or binary.resolve(strict=True) != binary or not os.access(binary, os.X_OK):
@@ -629,7 +771,7 @@ def outer(binary: Path, output: Path) -> dict:
     if not output.is_absolute() or output.exists() or output.is_symlink():
         raise ValueError("new_absolute_evidence_path_required")
     _, binary_pin, _ = file_identity(binary, 128 * 1024 * 1024)
-    report = {"schema_version": 1, "kind": "linux_tmpfs_enospc", **source_identity(),
+    report = {"schema_version": 1, "kind": "linux_tmpfs_enospc", "suite": suite, **source_identity(),
               "test_executable_sha256": binary_pin, "started_at": utc(), "completed": False,
               "real_funds_allowed": False, "physical_disk_failure_tested": False,
               "power_loss_tested": False, "case_timeout_seconds": CASE_SECONDS,
@@ -649,14 +791,14 @@ def outer(binary: Path, output: Path) -> dict:
         stage = "ignored_case_discovery"
         listing = run_bounded([str(binary), "--list", "--ignored"], timeout=15)
         require_process(listing)
-        discovered = {line.removesuffix(": test") for line in listing["stdout"].decode("ascii").splitlines() if line.endswith(": test")}
-        if discovered != set(CASES):
+        discovered = [line.removesuffix(": test") for line in listing["stdout"].decode("ascii").splitlines() if line.endswith(": test")]
+        if len(discovered) != len(cases) or set(discovered) != set(cases):
             raise ValueError("ignored_case_inventory_mismatch")
         # Only public receipts survive this directory. Raw traces use pipes;
         # filler writes are confined to fresh tmpfs mounts in the child namespace.
         base = Path(tempfile.mkdtemp(prefix="zevune-enospc-", dir=os.environ.get("RUNNER_TEMP"))).resolve()
         report["control_directory_retained"] = True
-        command = root_namespace_command(["--namespace", "--test-executable", str(binary),
+        command = root_namespace_command(["--namespace", "--suite", suite, "--test-executable", str(binary),
                    "--directory", str(base), "--uid", str(os.geteuid()), "--gid", str(os.getegid()),
                    "--parent-mount-ns", os.readlink("/proc/self/ns/mnt"),
                    "--parent-pid-ns", os.readlink("/proc/self/ns/pid"), "--executable-sha256", binary_pin])
@@ -668,16 +810,18 @@ def outer(binary: Path, output: Path) -> dict:
         result = None
         if not execution["overflow"] and execution["stdout"]:
             result = json.loads(execution["stdout"], object_pairs_hook=unique)
-            if (not isinstance(result, dict) or set(result) != {"completed", "cases"}
+            if (not isinstance(result, dict) or set(result) != {"suite", "completed", "cases"}
+                    or result["suite"] != suite
                     or type(result["completed"]) is not bool or not isinstance(result["cases"], list)
-                    or len(result["cases"]) > len(CASES)):
+                    or len(result["cases"]) > len(cases) or any(not isinstance(case, dict) for case in result["cases"])):
                 raise ValueError("unexpected_namespace_receipt")
             report["cases"] = result["cases"]
         require_process(execution)
         if (execution["stderr"] or result is None or not result["completed"]
-                or len(result["cases"]) != len(CASES)
-                or [case.get("case") for case in result["cases"]] != list(CASES)
-                or any(case.get("completed") is not True or case.get("ordinary_unmount_succeeded") is not True for case in result["cases"])):
+                or len(result["cases"]) != len(cases)
+                or [case.get("case") for case in result["cases"]] != list(cases)
+                or any(case.get("target_rel") != cases[case["case"]] or case.get("completed") is not True
+                       or case.get("ordinary_unmount_succeeded") is not True for case in result["cases"])):
             raise ValueError("namespace_not_completed")
         # unshare --fork has now waited for namespace init, GNU timeout has
         # reaped unshare, and both ordinary umount acknowledgements are present.
@@ -701,6 +845,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--test-executable", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--suite", choices=tuple(SUITE_CASES), default="active")
     parser.add_argument("--namespace", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--supervision-probe", action="store_true")
     parser.add_argument("--probe-controller", action="store_true", help=argparse.SUPPRESS)
@@ -727,7 +872,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["completed"] else 1
         if args.test_executable is None:
             raise ValueError("test_executable_required")
-        result = outer(args.test_executable, args.output)
+        result = outer(args.test_executable, args.output, args.suite)
         print(json.dumps(public_summary(result), sort_keys=True), flush=True)
         return 0 if result["completed"] else 1
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
