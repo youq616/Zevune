@@ -1,0 +1,56 @@
+name: active-commit-timing
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'scripts/check_commit_timing.py', 'scripts/tests/test_commit_timing.py', 'docs/ACTIVE_COMMIT_TIMING.zh-CN.md', '.github/workflows/commit-timing.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'scripts/check_commit_timing.py', 'scripts/tests/test_commit_timing.py', 'docs/ACTIVE_COMMIT_TIMING.zh-CN.md', '.github/workflows/commit-timing.yml']
+permissions:
+  contents: read
+jobs:
+  timing:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_TIMING_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Preserve exact public source and run identity
+        run: python scripts/check_commit_timing.py setup
+      - name: Strict public evidence parser tests
+        run: python -m unittest discover -s scripts/tests -p test_commit_timing.py -v
+      - name: Install locked native Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Recorder negatives and real store rejection/fault semantics
+        run: cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --lib pool::commit_timing -- --test-threads=1
+      - name: Real paired 8192-block storage experiment, rotation and replay
+        run: cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --lib pool::commit_timing_tests::native_paired_commits -- --exact --ignored --nocapture --test-threads=1
+      - name: Validate complete bounded evidence and unchanged source
+        run: |
+          python scripts/check_commit_timing.py verify
+          git diff --exit-code
+      - name: Strict Clippy and canonical formatting
+        run: |
+          cargo +1.98.1 clippy --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --all-targets -- -D warnings
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+      - name: Preserve only public setup and profile, never wallet or raw output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: commit-timing-${{ matrix.os }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/zevune-commit-timing/setup.json
+            ${{ runner.temp }}/zevune-commit-timing/profile.json
+          if-no-files-found: error
+          retention-days: 14

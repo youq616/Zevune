@@ -576,11 +576,19 @@ impl PoolStore {
         })
     }
     pub fn commit(&mut self, prepared: PreparedBlock) -> Result<Summary, PoolError> {
+        #[cfg(test)]
+        let timing_attempt = commit_timing::Attempt::start(self.active.is_some(), prepared.result.height, !prepared.transactions.is_empty());
+        #[cfg(test)]
+        commit_timing::begin(commit_timing::Phase::Preflight);
         let base = self.summary()?;
         if base != prepared.base {
             return Err(PoolError::Stale);
         }
         let new_length = self.record_end(&prepared.transactions)?;
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::begin(commit_timing::Phase::Reexecute);
         let next = self.state.execute(
             prepared.result.height,
             prepared.block_id,
@@ -591,6 +599,10 @@ impl PoolStore {
         if result != prepared.result {
             return Err(PoolError::Stale);
         }
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::begin(commit_timing::Phase::EncodeFrame);
         let body = Record {
             height: result.height,
             block_id: prepared.block_id,
@@ -620,6 +632,8 @@ impl PoolStore {
         let mut frame = (body.len() as u32).to_be_bytes().to_vec();
         frame.extend_from_slice(&body);
         frame.extend_from_slice(&Sha256::digest(&body));
+        #[cfg(test)]
+        commit_timing::end();
         let written = if let Some(active) = self.active.as_mut() {
             active.append(&self.file, &frame)
         } else {
@@ -629,8 +643,14 @@ impl PoolStore {
             self.available = false;
             return Err(error);
         }
+        #[cfg(test)]
+        commit_timing::begin(commit_timing::Phase::StatePublish);
         self.state = next;
         self.length = new_length;
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        timing_attempt.accept();
         Ok(result)
     }
     fn journal_byte_limit(&self) -> u64 {
@@ -818,3 +838,9 @@ mod active_flow_tests;
 #[cfg(all(test, feature = "local-funding-lab"))]
 #[path = "pool/root_cache_tests.rs"]
 mod root_cache_tests;
+
+#[cfg(test)]
+mod commit_timing;
+
+#[cfg(all(test, feature = "local-funding-lab"))]
+mod commit_timing_tests;
