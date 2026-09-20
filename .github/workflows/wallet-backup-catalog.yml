@@ -2,9 +2,9 @@ name: wallet-backup-catalog
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
   pull_request:
-    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
 permissions:
   contents: read
 jobs:
@@ -26,13 +26,30 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Exact public source identity
         run: |
-          printf 'source_head=%s\n' "$ZEVUNE_CATALOG_SOURCE_HEAD"
-          git --no-replace-objects rev-parse HEAD 'HEAD^{tree}'
+          python - <<'PY_SOURCE'
+          import json, os, re, subprocess
+          expected = os.environ['ZEVUNE_CATALOG_SOURCE_HEAD']
+          if not re.fullmatch(r'[0-9a-f]{40}', expected):
+              raise SystemExit('Invalid expected catalog commit')
+          def git(*args):
+              return subprocess.check_output(['git', '--no-replace-objects', *args], text=True).strip()
+          actual = git('rev-parse', 'HEAD')
+          # The externally supplied commit hash binds its exact tree. Do not
+          # silently substitute a synthetic merge when the base branch moves.
+          expected_tree = git('show', '-s', '--format=%T', expected)
+          actual_tree = git('rev-parse', 'HEAD^{tree}')
+          if actual != expected or actual_tree != expected_tree or not re.fullmatch(r'[0-9a-f]{40}', expected_tree):
+              raise SystemExit('Catalog source identity mismatch')
+          subprocess.run(['git', '--no-replace-objects', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print(json.dumps({'source_head': expected, 'checkout_commit': actual, 'source_tree': actual_tree}))
+          PY_SOURCE
       - name: Catalog, native lock and backwards-compatible bundle regressions
         run: |
           python -m unittest discover -s scripts/tests -p test_wallet_backup.py -v
+          python -m unittest discover -s scripts/tests -p test_wallet_backup_source.py -v
           python -m unittest discover -s scripts/tests -p test_local_bundle.py -v
           python -m unittest discover -s scripts/tests -p test_verify_local_lab.py -v
       - name: Install fixed Rust and build the unchanged real wallet backend
