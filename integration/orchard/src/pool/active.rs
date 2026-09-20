@@ -2,6 +2,8 @@
 //! This layer binds names, lengths, framing and durability, never authorization.
 //! A caller must replay every record and validate every returned physical frame
 //! before publishing any state. Trusted parents, OS and filesystem are required.
+#[cfg(test)]
+use super::commit_timing::{self, Phase};
 use super::recovery::segments::namespace;
 use super::{replay, Hash, PoolError, StorageProfile, MAX_COMMITMENTS, MAX_RECORD_BYTES};
 use sha2::{Digest, Sha256};
@@ -664,12 +666,18 @@ impl ActiveJournal {
     /// disk bytes may contain an incomplete frame OR a complete durable frame.
     /// There is no truncate, deletion, rollback, retry, or production fault flag.
     pub(super) fn append(&mut self, genesis: &File, frame: &[u8]) -> Result<(), PoolError> {
+        #[cfg(test)]
+        commit_timing::begin(Phase::AppendBounds);
         let frame_length = u64::try_from(frame.len()).map_err(|_| PoolError::Bounds)?;
         self.check_frame(frame_length)?;
         let body_length = u32::from_be_bytes(frame[..4].try_into().map_err(|_| PoolError::Bounds)?);
         if u64::from(body_length) + 36 != frame_length {
             return Err(PoolError::Corrupt);
         }
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::begin(Phase::TailIdentity);
         self.check_tail(genesis)?;
         let rotate = frame_budget(
             self.length,
@@ -677,7 +685,13 @@ impl ActiveJournal {
             self.segments.last().map_or(0, |segment| segment.length),
             frame_length,
         )?;
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::rotation(rotate);
         let mut created = if rotate {
+            #[cfg(test)]
+            commit_timing::begin(Phase::RotationPrepare);
             self.check(genesis)?;
             self.segments
                 .try_reserve(1)
@@ -689,6 +703,10 @@ impl ActiveJournal {
         #[cfg(test)]
         if rotate && self.fault == 1 {
             return Err(PoolError::Storage);
+        }
+        #[cfg(test)]
+        if rotate {
+            commit_timing::end();
         }
         let index = if rotate {
             self.segments.len()
@@ -704,8 +722,14 @@ impl ActiveJournal {
             Some(file) => file,
             None => &mut self.segments.last_mut().ok_or(PoolError::Corrupt)?.file,
         };
+        #[cfg(test)]
+        commit_timing::begin(Phase::Seek);
         file.seek(SeekFrom::Start(previous))
             .map_err(|_| PoolError::Storage)?;
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::begin(Phase::WriteFrame);
         #[cfg(test)]
         if self.fault == 2 {
             file.write_all(&frame[..frame.len() / 2])
@@ -714,17 +738,29 @@ impl ActiveJournal {
         }
         file.write_all(frame).map_err(|_| PoolError::Storage)?;
         #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
         if self.fault == 3 {
             return Err(PoolError::Storage);
         }
+        #[cfg(test)]
+        commit_timing::begin(Phase::FileSync);
         file.sync_all().map_err(|_| PoolError::Storage)?;
+        #[cfg(test)]
+        commit_timing::end();
         if rotate {
+            #[cfg(test)]
+            commit_timing::begin(Phase::DirectorySync);
             self.location.sync()?;
+            #[cfg(test)]
+            commit_timing::end();
         }
         #[cfg(test)]
         if self.fault == 4 {
             return Err(PoolError::Storage);
         }
+        #[cfg(test)]
+        commit_timing::begin(Phase::PostIdentity);
         let next_length = previous + frame_length;
         check_file(&self.path.join(name(index)), file, next_length)?;
         self.location.check(&self.path)?;
@@ -732,6 +768,10 @@ impl ActiveJournal {
         if rotate && inventory(&self.path)? != self.segments.len() + 1 {
             return Err(PoolError::Corrupt);
         }
+        #[cfg(test)]
+        commit_timing::end();
+        #[cfg(test)]
+        commit_timing::begin(Phase::JournalPublish);
         // No committed metadata changes occur before every write/sync/check.
         if let Some(file) = created {
             self.segments.push(Segment {
@@ -742,6 +782,8 @@ impl ActiveJournal {
             self.segments.last_mut().ok_or(PoolError::Corrupt)?.length = next_length;
         }
         self.length += frame_length;
+        #[cfg(test)]
+        commit_timing::end();
         Ok(())
     }
 
