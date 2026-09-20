@@ -48,6 +48,9 @@ class BundleManifestTests(unittest.TestCase):
                 "integration/cometbft/go.mod": b"synthetic locked Go input\n",
                 "integration/orchard/Cargo.lock": b"synthetic locked Rust input\n",
                 "scripts/zevune_wallet.py": b"synthetic script fixture; never executed\n",
+                "scripts/wallet_backup.py": b"synthetic backup CLI; never executed\n",
+                "scripts/wallet_backup_backend.py": b"synthetic transport; never executed\n",
+                "docs/WALLET_BACKUP_CATALOG.zh-CN.md": b"synthetic backup guide\n",
                 "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md": b"synthetic public operator guide\n",
             }
             for name, payload in source.items():
@@ -102,12 +105,15 @@ class BundleManifestTests(unittest.TestCase):
                 output = build.build(bundle)
             self.assertEqual(output["source_commit"], commit)
             self.assertEqual(output["source_tree"], tree)
-            self.assertEqual(output["format"], "zevune-local-bundle-2")
+            self.assertEqual(output["format"], "zevune-local-bundle-3")
             self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
             self.assertTrue((root / "reports/evidence.txt").is_file())
             self.assertEqual(compiler_inputs, ["go", "cargo"])
-            self.assertEqual(len(output["files"]), 5)
-            self.assertEqual((bundle / "zevune_wallet.py").read_bytes(), source["scripts/zevune_wallet.py"])
+            self.assertEqual(len(output["files"]), 8)
+            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py"):
+                self.assertEqual((bundle / name).read_bytes(), source["scripts/" + name])
+            self.assertEqual((bundle / "WALLET_BACKUP_CATALOG.zh-CN.md").read_bytes(),
+                             source["docs/WALLET_BACKUP_CATALOG.zh-CN.md"])
 
     def test_signer_material_is_ignored_without_creating_secret_files(self):
         root = Path(__file__).resolve().parents[2]

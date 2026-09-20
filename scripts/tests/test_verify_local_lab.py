@@ -49,6 +49,63 @@ class BundleVerificationTests(unittest.TestCase):
         self.assertEqual(result["files_checked"], 5)
         self.assertEqual(before, {p.name: p.read_bytes() for p in self.root.iterdir()})
 
+    def test_v3_catalog_payload_and_v2_compatibility(self):
+        # Existing v2 remains verifiable without interpreting it as a catalog.
+        self.assertEqual(self.check()["files_checked"], 5)
+        extra = verify.required_files(False, 3) - verify.required_files(False, 2)
+        for name in extra:
+            (self.root / name).write_bytes(b"synthetic catalog payload; never executed\n")
+        self.manifest["format"] = "zevune-local-bundle-3"
+        for name in sorted(extra):
+            raw = (self.root / name).read_bytes()
+            self.manifest["files"].append(dict(name=name, size=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+        self.save()
+        self.assertEqual(self.check()["files_checked"], 8)
+        for name in extra:
+            path = self.root / name
+            original = path.read_bytes()
+            path.write_bytes(b"changed")
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                self.check()
+            path.write_bytes(original)
+        self.manifest["format"] = "zevune-local-bundle-2"
+        self.save()
+        with self.assertRaises(ValueError):
+            self.check()
+
+    def test_v3_windows_files_and_mixed_platform(self):
+        extra = verify.required_files(False, 3) - verify.required_files(False)
+        for name in sorted(extra):
+            raw = b"synthetic catalog; never executed\n"
+            (self.root / name).write_bytes(raw)
+            self.manifest["files"].append(dict(name=name, size=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+        self.manifest["format"] = "zevune-local-bundle-3"
+        for entry in self.manifest["files"]:
+            if entry["name"].startswith("zevune-"):
+                original = entry["name"]
+                entry["name"] += ".exe"
+                (self.root / original).rename(self.root / entry["name"])
+        self.save()
+        self.assertEqual(self.check()["files_checked"], 8)
+        for entry in self.manifest["files"]:
+            if entry["name"] == "zevune-network.exe":
+                entry["name"] = "zevune-network"
+                (self.root / "zevune-network.exe").rename(self.root / entry["name"])
+        self.save()
+        with self.assertRaises(ValueError):
+            self.check()
+
+    def test_v3_cannot_omit_catalog_or_use_unknown_format(self):
+        self.manifest["format"] = "zevune-local-bundle-3"
+        self.save()
+        with self.assertRaises(ValueError):
+            self.check()
+        for invalid in ("zevune-local-bundle-4", None, 3, [], {}):
+            self.manifest["format"] = invalid
+            self.save()
+            with self.subTest(format=invalid), self.assertRaises(ValueError):
+                self.check()
+
     def test_wrong_independent_pin_and_commit_rejected(self):
         for pin in ("0" * 64, "", self.pin.upper(), self.pin + "\n"):
             with self.subTest(pin=pin), self.assertRaises(ValueError):
