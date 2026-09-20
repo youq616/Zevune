@@ -577,7 +577,11 @@ impl PoolStore {
     }
     pub fn commit(&mut self, prepared: PreparedBlock) -> Result<Summary, PoolError> {
         #[cfg(test)]
-        let timing_attempt = commit_timing::Attempt::start(self.active.is_some(), prepared.result.height, !prepared.transactions.is_empty());
+        let timing_attempt = commit_timing::Attempt::start(
+            self.active.is_some(),
+            prepared.result.height,
+            !prepared.transactions.is_empty(),
+        );
         #[cfg(test)]
         commit_timing::begin(commit_timing::Phase::Preflight);
         let base = self.summary()?;

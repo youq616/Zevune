@@ -26,10 +26,19 @@ pub(super) enum Phase {
 }
 pub(super) const N: usize = 13;
 pub(super) const NAMES: [&str; N] = [
-    "preflight", "reexecute", "encode_frame", "append_bounds",
-    "tail_identity_and_rotation_decision", "rotation_prepare", "seek",
-    "write_frame", "file_sync", "directory_sync", "postwrite_identity",
-    "journal_metadata_publish", "state_publish",
+    "preflight",
+    "reexecute",
+    "encode_frame",
+    "append_bounds",
+    "tail_identity_and_rotation_decision",
+    "rotation_prepare",
+    "seek",
+    "write_frame",
+    "file_sync",
+    "directory_sync",
+    "postwrite_identity",
+    "journal_metadata_publish",
+    "state_publish",
 ];
 const MAX_ATTEMPTS: u64 = 1_000_001;
 const MAX_NS: u64 = 3_600_000_000_000;
@@ -74,10 +83,17 @@ pub(super) struct Snapshot {
 impl Snapshot {
     fn new(height: u64) -> Self {
         Self {
-            valid: true, attempts: 0, accepted: 0, failed: 0,
-            last_accepted: height, paid: 0, rotated: 0,
-            total: Metric::default(), ordinary: [Metric::default(); N],
-            rotating: [Metric::default(); N], failure: None,
+            valid: true,
+            attempts: 0,
+            accepted: 0,
+            failed: 0,
+            last_accepted: height,
+            paid: 0,
+            rotated: 0,
+            total: Metric::default(),
+            ordinary: [Metric::default(); N],
+            rotating: [Metric::default(); N],
+            failure: None,
         }
     }
 
@@ -91,7 +107,9 @@ impl Snapshot {
             self.total.total_ns, self.total.max_ns,
         );
         for (i, name) in NAMES.iter().enumerate() {
-            if i != 0 { out.push(','); }
+            if i != 0 {
+                out.push(',');
+            }
             let a = self.ordinary[i];
             let b = self.rotating[i];
             write!(out,
@@ -101,7 +119,9 @@ impl Snapshot {
         }
         out.push_str("],\"last_failed_attempt\":");
         if let Some(f) = &self.failure {
-            let pending = f.pending.map_or("null".to_owned(), |p| format!("\"{}\"", NAMES[p as usize]));
+            let pending = f
+                .pending
+                .map_or("null".to_owned(), |p| format!("\"{}\"", NAMES[p as usize]));
             let elapsed = f.elapsed_ns.map_or("null".to_owned(), |n| n.to_string());
             write!(out, "{{\"height\":{},\"pending\":{},\"completed_phase_mask\":{},\"elapsed_ns\":{},\"disk_outcome_not_inferred\":true}}", f.height, pending, f.completed_mask, elapsed).unwrap();
         } else {
@@ -138,11 +158,19 @@ pub(super) struct Session(u64, PhantomData<Rc<()>>);
 impl Session {
     pub fn start(height: u64) -> Self {
         assert!(height <= 1_000_000, "invalid timing start height");
-        let id = NEXT_ID.with(|n| { let next = n.get().checked_add(1).unwrap(); n.set(next); next });
+        let id = NEXT_ID.with(|n| {
+            let next = n.get().checked_add(1).unwrap();
+            n.set(next);
+            next
+        });
         RECORDING.with(|slot| {
             let mut slot = slot.borrow_mut();
             assert!(slot.is_none(), "nested timing session");
-            *slot = Some(Recording { id, snapshot: Snapshot::new(height), current: None });
+            *slot = Some(Recording {
+                id,
+                snapshot: Snapshot::new(height),
+                current: None,
+            });
         });
         Self(id, PhantomData)
     }
@@ -150,7 +178,10 @@ impl Session {
         RECORDING.with(|slot| {
             let mut slot = slot.borrow_mut();
             assert_eq!(slot.as_ref().unwrap().id, self.0);
-            assert!(slot.as_ref().unwrap().current.is_none(), "live timing attempt");
+            assert!(
+                slot.as_ref().unwrap().current.is_none(),
+                "live timing attempt"
+            );
             slot.take().unwrap().snapshot
         })
     }
@@ -159,14 +190,18 @@ impl Drop for Session {
     fn drop(&mut self) {
         RECORDING.with(|slot| {
             let mut slot = slot.borrow_mut();
-            if slot.as_ref().is_some_and(|r| r.id == self.0) { slot.take(); }
+            if slot.as_ref().is_some_and(|r| r.id == self.0) {
+                slot.take();
+            }
         });
     }
 }
 
 fn elapsed(now: Instant, earlier: Instant) -> Option<u64> {
     let value = now.checked_duration_since(earlier)?;
-    if value > Duration::from_secs(3_600) { return None; }
+    if value > Duration::from_secs(3_600) {
+        return None;
+    }
     u64::try_from(value.as_nanos()).ok()
 }
 
@@ -177,22 +212,35 @@ pub(super) struct Attempt {
 }
 impl Attempt {
     pub fn start(active: bool, height: u64, paid: bool) -> Self {
-        let recording = if active { RECORDING.with(|slot| {
-            let mut slot = slot.borrow_mut();
-            let Some(r) = slot.as_mut() else { return None; };
-            if r.current.is_some() || r.snapshot.attempts >= MAX_ATTEMPTS {
-                r.snapshot.valid = false;
-                return None;
-            }
-            r.snapshot.attempts += 1;
-            let now = Instant::now();
-            r.current = Some(Current {
-                height, paid, rotate: false, started: now, last: now,
-                pending: None, durations: [None; N],
-            });
-            Some(r.id)
-        }) } else { None };
-        Self { recording, finished: false, _thread: PhantomData }
+        let recording = if active {
+            RECORDING.with(|slot| {
+                let mut slot = slot.borrow_mut();
+                let r = slot.as_mut()?;
+                if r.current.is_some() || r.snapshot.attempts >= MAX_ATTEMPTS {
+                    r.snapshot.valid = false;
+                    return None;
+                }
+                r.snapshot.attempts += 1;
+                let now = Instant::now();
+                r.current = Some(Current {
+                    height,
+                    paid,
+                    rotate: false,
+                    started: now,
+                    last: now,
+                    pending: None,
+                    durations: [None; N],
+                });
+                Some(r.id)
+            })
+        } else {
+            None
+        };
+        Self {
+            recording,
+            finished: false,
+            _thread: PhantomData,
+        }
     }
 
     // ONLY called after actual store state and length publication, just before
@@ -201,18 +249,34 @@ impl Attempt {
         if let Some(id) = self.recording {
             RECORDING.with(|slot| {
                 let mut slot = slot.borrow_mut();
-                let Some(r) = slot.as_mut() else { return; };
-                if r.id != id { return; }
-                let Some(c) = r.current.take() else { r.snapshot.valid = false; return; };
+                let Some(r) = slot.as_mut() else {
+                    return;
+                };
+                if r.id != id {
+                    return;
+                }
+                let Some(c) = r.current.take() else {
+                    r.snapshot.valid = false;
+                    return;
+                };
                 let s = &mut r.snapshot;
                 let total = elapsed(Instant::now(), c.started);
                 let mut sum = 0u64;
                 for (i, ns) in c.durations.iter().enumerate() {
-                    let required = c.rotate || (i != Phase::RotationPrepare as usize && i != Phase::DirectorySync as usize);
-                    if ns.is_some() != required { s.valid = false; }
-                    if let Some(ns) = ns { sum += ns; }
+                    let required = c.rotate
+                        || (i != Phase::RotationPrepare as usize
+                            && i != Phase::DirectorySync as usize);
+                    if ns.is_some() != required {
+                        s.valid = false;
+                    }
+                    if let Some(ns) = ns {
+                        sum += ns;
+                    }
                 }
-                if c.pending.is_some() || total.is_none_or(|n| sum > n) || c.height != s.last_accepted + 1 {
+                if c.pending.is_some()
+                    || total.is_none_or(|n| sum > n)
+                    || c.height != s.last_accepted + 1
+                {
                     s.valid = false;
                 }
                 // These are real API outcomes even if the timing inventory is
@@ -221,10 +285,18 @@ impl Attempt {
                 s.last_accepted = c.height;
                 s.paid += u64::from(c.paid);
                 s.rotated += u64::from(c.rotate);
-                if let Some(total) = total { s.total.add(total); }
-                let group = if c.rotate { &mut s.rotating } else { &mut s.ordinary };
+                if let Some(total) = total {
+                    s.total.add(total);
+                }
+                let group = if c.rotate {
+                    &mut s.rotating
+                } else {
+                    &mut s.ordinary
+                };
                 for (metric, ns) in group.iter_mut().zip(c.durations) {
-                    if let Some(ns) = ns { metric.add(ns); }
+                    if let Some(ns) = ns {
+                        metric.add(ns);
+                    }
                 }
             });
         }
@@ -233,19 +305,41 @@ impl Attempt {
 }
 impl Drop for Attempt {
     fn drop(&mut self) {
-        let Some(id) = self.recording else { return; };
-        if self.finished { return; }
+        let Some(id) = self.recording else {
+            return;
+        };
+        if self.finished {
+            return;
+        }
         RECORDING.with(|slot| {
             let mut slot = slot.borrow_mut();
-            let Some(r) = slot.as_mut() else { return; };
-            if r.id != id { return; }
-            let Some(c) = r.current.take() else { r.snapshot.valid = false; return; };
+            let Some(r) = slot.as_mut() else {
+                return;
+            };
+            if r.id != id {
+                return;
+            }
+            let Some(c) = r.current.take() else {
+                r.snapshot.valid = false;
+                return;
+            };
             r.snapshot.failed += 1;
-            let duration = if r.snapshot.valid { elapsed(Instant::now(), c.started) } else { None };
-            if duration.is_none() { r.snapshot.valid = false; }
+            let duration = if r.snapshot.valid {
+                elapsed(Instant::now(), c.started)
+            } else {
+                None
+            };
+            if duration.is_none() {
+                r.snapshot.valid = false;
+            }
             r.snapshot.failure = Some(Failure {
-                height: c.height, pending: c.pending.map(|p| p.0),
-                completed_mask: c.durations.iter().enumerate().fold(0, |mask, (i, n)| mask | (u16::from(n.is_some()) << i)),
+                height: c.height,
+                pending: c.pending.map(|p| p.0),
+                completed_mask: c
+                    .durations
+                    .iter()
+                    .enumerate()
+                    .fold(0, |mask, (i, n)| mask | (u16::from(n.is_some()) << i)),
                 elapsed_ns: duration,
             });
             // In particular, phase durations of failed attempts are NOT mixed
@@ -257,12 +351,29 @@ impl Drop for Attempt {
 pub(super) fn begin(phase: Phase) {
     RECORDING.with(|slot| {
         let mut slot = slot.borrow_mut();
-        let Some(r) = slot.as_mut() else { return; };
-        let Some(c) = r.current.as_mut() else { return; };
+        let Some(r) = slot.as_mut() else {
+            return;
+        };
+        let Some(c) = r.current.as_mut() else {
+            return;
+        };
         let now = Instant::now();
-        let mut expected = c.durations.iter().rposition(Option::is_some).map_or(0, |p| p + 1);
-        if !c.rotate && (expected == Phase::RotationPrepare as usize || expected == Phase::DirectorySync as usize) { expected += 1; }
-        if phase as usize != expected || c.pending.is_some() || c.durations[phase as usize].is_some() || elapsed(now, c.last).is_none() {
+        let mut expected = c
+            .durations
+            .iter()
+            .rposition(Option::is_some)
+            .map_or(0, |p| p + 1);
+        if !c.rotate
+            && (expected == Phase::RotationPrepare as usize
+                || expected == Phase::DirectorySync as usize)
+        {
+            expected += 1;
+        }
+        if phase as usize != expected
+            || c.pending.is_some()
+            || c.durations[phase as usize].is_some()
+            || elapsed(now, c.last).is_none()
+        {
             r.snapshot.valid = false;
             return;
         }
@@ -273,19 +384,30 @@ pub(super) fn begin(phase: Phase) {
 pub(super) fn end() {
     RECORDING.with(|slot| {
         let mut slot = slot.borrow_mut();
-        let Some(r) = slot.as_mut() else { return; };
-        let Some(c) = r.current.as_mut() else { return; };
-        let Some((phase, start)) = c.pending.take() else { r.snapshot.valid = false; return; };
+        let Some(r) = slot.as_mut() else {
+            return;
+        };
+        let Some(c) = r.current.as_mut() else {
+            return;
+        };
+        let Some((phase, start)) = c.pending.take() else {
+            r.snapshot.valid = false;
+            return;
+        };
         let now = Instant::now();
         let ns = elapsed(now, start);
-        if ns.is_none() || elapsed(now, c.last).is_none() { r.snapshot.valid = false; }
+        if ns.is_none() || elapsed(now, c.last).is_none() {
+            r.snapshot.valid = false;
+        }
         c.durations[phase as usize] = ns;
         c.last = now;
     });
 }
 pub(super) fn rotation(value: bool) {
     RECORDING.with(|slot| {
-        if let Some(c) = slot.borrow_mut().as_mut().and_then(|r| r.current.as_mut()) { c.rotate = value; }
+        if let Some(c) = slot.borrow_mut().as_mut().and_then(|r| r.current.as_mut()) {
+            c.rotate = value;
+        }
     });
 }
 
@@ -298,12 +420,26 @@ mod tests {
         let s = Session::start(0);
         {
             let _a = Attempt::start(true, 1, false);
-            for phase in [Phase::Preflight, Phase::Reexecute, Phase::EncodeFrame, Phase::AppendBounds, Phase::TailIdentity, Phase::Seek, Phase::WriteFrame] { begin(phase); end(); }
+            for phase in [
+                Phase::Preflight,
+                Phase::Reexecute,
+                Phase::EncodeFrame,
+                Phase::AppendBounds,
+                Phase::TailIdentity,
+                Phase::Seek,
+                Phase::WriteFrame,
+            ] {
+                begin(phase);
+                end();
+            }
             begin(Phase::FileSync);
         }
         let r = s.finish();
         assert!(r.valid);
-        assert_eq!((r.attempts, r.accepted, r.failed, r.last_accepted), (1, 0, 1, 0));
+        assert_eq!(
+            (r.attempts, r.accepted, r.failed, r.last_accepted),
+            (1, 0, 1, 0)
+        );
         assert_eq!(r.failure.as_ref().unwrap().pending, Some(Phase::FileSync));
         assert!(r.ordinary.iter().all(|m| m.count == 0));
         assert_eq!(r.total.count, 0);
@@ -316,15 +452,35 @@ mod tests {
             let s = Session::start(0);
             let a = Attempt::start(true, 1, false);
             rotation(true);
-            for phase in [Phase::Preflight, Phase::Reexecute, Phase::EncodeFrame, Phase::AppendBounds, Phase::TailIdentity, Phase::RotationPrepare, Phase::Seek, Phase::WriteFrame, Phase::FileSync, Phase::DirectorySync, Phase::PostIdentity, Phase::JournalPublish, Phase::StatePublish] {
-                if phase as usize != omitted { begin(phase); end(); }
+            for phase in [
+                Phase::Preflight,
+                Phase::Reexecute,
+                Phase::EncodeFrame,
+                Phase::AppendBounds,
+                Phase::TailIdentity,
+                Phase::RotationPrepare,
+                Phase::Seek,
+                Phase::WriteFrame,
+                Phase::FileSync,
+                Phase::DirectorySync,
+                Phase::PostIdentity,
+                Phase::JournalPublish,
+                Phase::StatePublish,
+            ] {
+                if phase as usize != omitted {
+                    begin(phase);
+                    end();
+                }
             }
             a.accept();
             assert!(!s.finish().valid);
         }
         let s = Session::start(0);
         let a = Attempt::start(true, 1, false);
-        begin(Phase::Preflight); end(); begin(Phase::Preflight); end();
+        begin(Phase::Preflight);
+        end();
+        begin(Phase::Preflight);
+        end();
         a.accept();
         assert!(!s.finish().valid);
     }
@@ -338,11 +494,18 @@ mod tests {
         let s = Session::start(10);
         std::thread::spawn(|| {
             let _a = Attempt::start(true, 99, true);
-            begin(Phase::Preflight); end();
-        }).join().unwrap();
+            begin(Phase::Preflight);
+            end();
+        })
+        .join()
+        .unwrap();
         assert_eq!(s.finish().attempts, 0);
         // A panic unwinds the session rather than leaking into the next test.
-        assert!(std::panic::catch_unwind(|| { let _s = Session::start(0); panic!("test-only session unwind"); }).is_err());
+        assert!(std::panic::catch_unwind(|| {
+            let _s = Session::start(0);
+            panic!("test-only session unwind");
+        })
+        .is_err());
         assert!(Session::start(0).finish().valid);
     }
     #[test]
@@ -360,5 +523,4 @@ mod tests {
         drop(a);
         assert_eq!(next.finish().failed, 0);
     }
-
 }

@@ -705,7 +705,9 @@ impl ActiveJournal {
             return Err(PoolError::Storage);
         }
         #[cfg(test)]
-        if rotate { commit_timing::end(); }
+        if rotate {
+            commit_timing::end();
+        }
         let index = if rotate {
             self.segments.len()
         } else {
