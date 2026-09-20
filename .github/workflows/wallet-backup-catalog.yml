@@ -1,0 +1,54 @@
+name: wallet-backup-catalog
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+  pull_request:
+    paths: ['integration/orchard/**', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+permissions:
+  contents: read
+jobs:
+  catalog:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_CATALOG_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Exact public source identity
+        run: |
+          printf 'source_head=%s\n' "$ZEVUNE_CATALOG_SOURCE_HEAD"
+          git --no-replace-objects rev-parse HEAD 'HEAD^{tree}'
+      - name: Catalog, native lock and backwards-compatible bundle regressions
+        run: |
+          python -m unittest discover -s scripts/tests -p test_wallet_backup.py -v
+          python -m unittest discover -s scripts/tests -p test_local_bundle.py -v
+          python -m unittest discover -s scripts/tests -p test_verify_local_lab.py -v
+      - name: Install fixed Rust and build the unchanged real wallet backend
+        run: |
+          rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+          cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local
+      - name: Three real encrypted versions and exact pending-payment recovery
+        timeout-minutes: 11
+        run: |
+          python - <<'PY'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          backend = pathlib.Path('integration/orchard/target/release').absolute() / ('zevune-wallet-local' + suffix)
+          subprocess.run([sys.executable, 'scripts/check_wallet_backup_backend.py', str(backend)],
+                         check=True, timeout=600)
+          PY
+      - name: Preserve source and dependency locks; no wallet artifacts uploaded
+        run: git diff --exit-code

@@ -24,7 +24,8 @@ def checked_output(args: list[str], cwd: Path) -> str:
     return subprocess.check_output(args, cwd=cwd, text=True).strip()
 
 
-def manifest_for(folder: Path, commit: str, versions: dict[str, str], source_tree: str = "") -> dict:
+def manifest_for(folder: Path, commit: str, versions: dict[str, str], source_tree: str = "",
+                 bundle_format: str = "zevune-local-bundle-2") -> dict:
     files = []
     for path in sorted(folder.iterdir()):
         if path.is_symlink() or not path.is_file():
@@ -35,7 +36,7 @@ def manifest_for(folder: Path, commit: str, versions: dict[str, str], source_tre
                 digest.update(chunk)
         files.append({"name": path.name, "size": path.stat().st_size,
                       "sha256": digest.hexdigest()})
-    return {"format": "zevune-local-bundle-2", "source_commit": commit,
+    return {"format": bundle_format, "source_commit": commit,
             "source_tree": source_tree, "build_source": "isolated_exact_git_blobs",
             "real_funds_allowed": False, "public_network_supported": False,
             "network_anonymity_implemented": False,
@@ -82,9 +83,12 @@ def build(destination: Path) -> dict:
         shutil.copy2(network, destination)
         for name in ("zevune-pool-worker", "zevune-wallet-local"):
             shutil.copy2(Path(env["CARGO_TARGET_DIR"]) / "release" / (name + suffix), destination)
-        shutil.copy2(staged / "scripts/zevune_wallet.py", destination)
-        shutil.copy2(staged / "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md", destination)
-        result = manifest_for(destination, commit, versions, source_tree)
+        for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py"):
+            shutil.copy2(staged / "scripts" / name, destination)
+        for name in ("LOCAL_NETWORK_OPERATOR.zh-CN.md", "WALLET_BACKUP_CATALOG.zh-CN.md"):
+            shutil.copy2(staged / "docs" / name, destination)
+        result = manifest_for(destination, commit, versions, source_tree,
+                              bundle_format="zevune-local-bundle-3")
         manifest = destination / "BUNDLE-MANIFEST.json"
         with manifest.open("x", encoding="utf-8", newline="\n") as file:
             json.dump(result, file, ensure_ascii=True, indent=2)

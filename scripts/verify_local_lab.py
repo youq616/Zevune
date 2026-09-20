@@ -70,10 +70,15 @@ def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return out
 
 
-def required_files(windows: bool) -> set[str]:
+def required_files(windows: bool, version: int = 2) -> set[str]:
     suffix = ".exe" if windows else ""
-    return {name + suffix for name in ("zevune-network", "zevune-pool-worker", "zevune-wallet-local")} | {
+    if type(version) is not int or version not in (2, 3):
+        raise ValueError("unsupported_bundle_version")
+    files = {name + suffix for name in ("zevune-network", "zevune-pool-worker", "zevune-wallet-local")} | {
         "zevune_wallet.py", "LOCAL_NETWORK_OPERATOR.zh-CN.md"}
+    if version == 3:
+        files |= {"wallet_backup.py", "wallet_backup_backend.py", "WALLET_BACKUP_CATALOG.zh-CN.md"}
+    return files
 
 
 def verify(folder: Path, manifest_sha256: str, source_commit: str | None = None) -> dict[str, Any]:
@@ -92,7 +97,12 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str | None = None)
               "public_network_supported", "network_anonymity_implemented", "scope", "toolchains", "files"}
     if not isinstance(manifest, dict) or set(manifest) != fields:
         raise ValueError("unsupported_manifest_fields")
-    if (manifest["format"] != "zevune-local-bundle-2"
+    formats = {"zevune-local-bundle-2": 2, "zevune-local-bundle-3": 3}
+    if type(manifest["format"]) is not str or manifest["format"] not in formats:
+        raise ValueError("unsupported_bundle_format")
+    version = formats[manifest["format"]]
+    allowed_linux, allowed_windows = required_files(False, version), required_files(True, version)
+    if (manifest["format"] not in formats
             or manifest["scope"] != "single_machine_fixed_validator_test_lab"
             or manifest["build_source"] != "isolated_exact_git_blobs"
             or any(manifest[k] is not False for k in ("real_funds_allowed", "public_network_supported", "network_anonymity_implemented"))):
@@ -109,7 +119,7 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str | None = None)
             or not versions["rust"].startswith("rustc 1.98.1 ")):
         raise ValueError("unexpected_toolchains")
     entries = manifest["files"]
-    if not isinstance(entries, list) or len(entries) != 5:
+    if not isinstance(entries, list) or len(entries) != len(allowed_linux):
         raise ValueError("unexpected_file_count")
     names: set[str] = set()
     for entry in entries:
@@ -117,12 +127,12 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str | None = None)
             raise ValueError("invalid_file_entry")
         name, size, checksum = entry["name"], entry["size"], entry["sha256"]
         if (not isinstance(name, str) or name in names
-                or name not in required_files(False) | required_files(True)
+                or name not in allowed_linux | allowed_windows
                 or type(size) is not int or not 1 <= size <= MAX_FILE_BYTES
                 or not isinstance(checksum, str) or not HEX256.fullmatch(checksum)):
             raise ValueError("invalid_file_identity")
         names.add(name)
-    if names not in (required_files(False), required_files(True)):
+    if names not in (allowed_linux, allowed_windows):
         raise ValueError("mixed_or_missing_platform_files")
     if {p.name for p in folder.iterdir()} != names | {MANIFEST}:
         raise ValueError("unlisted_or_missing_bundle_files")

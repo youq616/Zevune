@@ -65,6 +65,14 @@ python scripts/zevune_wallet.py --help
 
 **这不是完整在线钱包：控制台仅扫描可信本地账本，不直接访问 RPC、广播或验证远程节点最终性。** 本地余额不是外部收款证明。`zvlab:` 是临时带校验和显示格式，不是正式主网地址。参见 [操作与故障边界](docs/LOCAL_WALLET_CONSOLE.zh-CN.md) 和 [加密钱包存储](docs/WALLET_DURABILITY.zh-CN.md)。
 
+## 钱包备份版本目录
+
+`wallet_backup.py` 提供 `init`、`list`、`create`、`verify`、`restore` 五个命令，管理只新增、不可覆盖的
+加密钱包备份版本。核验和恢复要求独立保存的**精确末端回执**及可信后端摘要，实际调用原 Rust
+钱包执行认证与复制。列表只显示未认证元数据，不自动选择“最新”版本、不解除预留、不广播或删除旧副本。
+新 v3 本地程序包附带该工具和操作指南，校验器继续读取旧 v2 包。使用说明与恢复边界见
+[钱包备份目录模块](docs/WALLET_BACKUP_CATALOG.zh-CN.md)。具体平台验收以对应提交的 CI 和 PR 为准。
+
 ## 本机网络操作工具与参考账本
 
 `integration/cometbft/cmd/zevune-network` 提供 `init`、`run`、`sync`、`submit` 和 `version`，不再只能通过测试函数启动网络。它只接受数字本机地址 `127.0.0.1`，固定四名验证者，保留原有签名状态和日志，不自动重新创世。共识引擎意外退出会返回失败，而不是留下看似仍在运行的操作进程。
