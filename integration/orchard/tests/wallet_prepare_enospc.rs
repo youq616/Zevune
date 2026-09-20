@@ -131,7 +131,10 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     assert_eq!(saved.generation, 2);
     assert!(source.pending_payment().unwrap().is_none());
     assert!(source.view().unwrap().pending_id().is_none());
-    assert_eq!(source.view().unwrap().available_balance().unwrap(), TEST_SUPPLY);
+    assert_eq!(
+        source.view().unwrap().available_balance().unwrap(),
+        TEST_SUPPLY
+    );
     source
         .check_payment_to(&recipient, 60_000, 1_000, 10)
         .unwrap();
@@ -159,9 +162,15 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     assert_eq!(source.view().err(), Some(StoreError::Unavailable));
     assert_eq!(source.receipt().err(), Some(StoreError::Unavailable));
     assert_eq!(source.storage_status().err(), Some(StoreError::Unavailable));
-    assert_eq!(source.pending_payment().err(), Some(StoreError::Unavailable));
+    assert_eq!(
+        source.pending_payment().err(),
+        Some(StoreError::Unavailable)
+    );
     assert_eq!(source.sync(&history), Err(StoreError::Unavailable));
-    assert_eq!(source.check_payment_to(&recipient, 1, 1, 10), Err(StoreError::Unavailable));
+    assert_eq!(
+        source.check_payment_to(&recipient, 1, 1, 10),
+        Err(StoreError::Unavailable)
+    );
     assert_eq!(
         source.prepare_payment(address, 1, 1, 10, &prover).err(),
         Some(StoreError::Unavailable)
@@ -173,7 +182,10 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
         Some(StoreError::Unavailable)
     );
     let refused = control.join("unavailable.journal");
-    assert_eq!(source.backup_new(&refused).err(), Some(StoreError::Unavailable));
+    assert_eq!(
+        source.backup_new(&refused).err(),
+        Some(StoreError::Unavailable)
+    );
     assert_eq!(
         source.compact_copy_new(&refused, saved).err(),
         Some(StoreError::Unavailable)
@@ -208,14 +220,15 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     // An independently pinned PRE-ATTEMPT backup contains no signed outbox.
     // This explicit recovery is justified only for this observed partial-write,
     // no-return/no-broadcast fixture, not for a general uncertain payment result.
-    let mut trusted =
-        WalletStore::open(&backup_path, password.as_ref(), Some(saved)).unwrap();
+    let mut trusted = WalletStore::open(&backup_path, password.as_ref(), Some(saved)).unwrap();
     assert_eq!(trusted.backup_new(&restored_path).unwrap(), saved);
     drop(trusted);
     same(&restored_path, &original);
-    let mut recovered =
-        WalletStore::open(&restored_path, password.as_ref(), Some(saved)).unwrap();
-    assert_eq!(recovered.view().unwrap().balance(), Err(WalletError::NotSynced));
+    let mut recovered = WalletStore::open(&restored_path, password.as_ref(), Some(saved)).unwrap();
+    assert_eq!(
+        recovered.view().unwrap().balance(),
+        Err(WalletError::NotSynced)
+    );
     assert_eq!(
         recovered.pending_payment().err(),
         Some(StoreError::Wallet(WalletError::NotSynced))
@@ -224,7 +237,10 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     assert_eq!(recovered.receipt().unwrap(), saved);
     assert!(recovered.pending_payment().unwrap().is_none());
     assert!(recovered.view().unwrap().pending_id().is_none());
-    assert_eq!(recovered.view().unwrap().available_balance().unwrap(), TEST_SUPPLY);
+    assert_eq!(
+        recovered.view().unwrap().available_balance().unwrap(),
+        TEST_SUPPLY
+    );
     same(&restored_path, &original);
     let payment = recovered
         .prepare_payment_to(&recipient, 60_000, 1_000, 10, &prover)
@@ -237,7 +253,10 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     drop(recovered);
     let mut recovered =
         WalletStore::open(&restored_path, password.as_ref(), Some(pending)).unwrap();
-    assert_eq!(recovered.view().unwrap().balance(), Err(WalletError::NotSynced));
+    assert_eq!(
+        recovered.view().unwrap().balance(),
+        Err(WalletError::NotSynced)
+    );
     recovered.sync(&history).unwrap();
     assert_eq!(recovered.receipt().unwrap(), pending);
     assert!(recovered.pending_payment().unwrap().unwrap().bytes() == payment.bytes());
@@ -270,14 +289,20 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
     let confirmed_history = genesis.wallet_history(&mut pool).unwrap();
     recovered.sync(&confirmed_history).unwrap();
     bob.sync(&confirmed_history).unwrap();
-    assert_eq!(recovered.view().unwrap().available_balance().unwrap(), 39_000);
+    assert_eq!(
+        recovered.view().unwrap().available_balance().unwrap(),
+        39_000
+    );
     assert_eq!(bob.balance().unwrap(), 60_000);
     assert!(recovered.pending_payment().unwrap().is_none());
     assert!(recovered.view().unwrap().pending_id().is_none());
     let final_receipt = recovered.receipt().unwrap();
     assert_eq!(final_receipt.generation, 4);
     let final_bytes = fs::read(&restored_path).unwrap();
-    assert_eq!(recovered.sync(&history), Err(StoreError::Wallet(WalletError::Rollback)));
+    assert_eq!(
+        recovered.sync(&history),
+        Err(StoreError::Wallet(WalletError::Rollback))
+    );
     assert_eq!(recovered.receipt().unwrap(), final_receipt);
     same(&restored_path, &final_bytes);
     drop(recovered);
@@ -290,7 +315,10 @@ fn wallet_prepare_enospc_rejects_partial_outbox_and_recovers() {
         .sync(&genesis.wallet_history(&mut pool).unwrap())
         .unwrap();
     assert_eq!(reopened.receipt().unwrap(), final_receipt);
-    assert_eq!(reopened.view().unwrap().available_balance().unwrap(), 39_000);
+    assert_eq!(
+        reopened.view().unwrap().available_balance().unwrap(),
+        39_000
+    );
     assert!(reopened.pending_payment().unwrap().is_none());
     drop(reopened);
     drop(pool);
