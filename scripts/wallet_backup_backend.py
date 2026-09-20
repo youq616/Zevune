@@ -34,8 +34,21 @@ def unique(pairs):
     return result
 
 
-def _identity(info):
-    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+def file_object_identity(info):
+    """Comparable across path/handle queries; timestamps are not file IDs.
+
+    Preserve the full timestamp baseline separately within each query route.
+    Windows metadata APIs need not expose an identical timestamp tuple.
+    """
+    return (info.st_dev, info.st_ino, info.st_size, stat.S_IFMT(info.st_mode),
+            info.st_nlink, getattr(info, "st_file_attributes", 0) & 0x400)
+
+
+def metadata_identity(info):
+    return file_object_identity(info) + (info.st_mtime_ns, info.st_ctime_ns)
+
+
+_identity = metadata_identity
 
 
 class Backend:
@@ -53,7 +66,8 @@ class Backend:
             raise BackendError("invalid_backend_file")
         digest = hashlib.sha256()
         with self.path.open("rb") as stream:
-            if _identity(os.fstat(stream.fileno())) != _identity(before):
+            opened = os.fstat(stream.fileno())
+            if file_object_identity(opened) != file_object_identity(before):
                 raise BackendError("backend_changed")
             remaining = MAX_BINARY + 1
             while remaining:
@@ -62,7 +76,7 @@ class Backend:
                     break
                 digest.update(part)
                 remaining -= len(part)
-            if remaining == 0 or _identity(os.fstat(stream.fileno())) != _identity(before):
+            if remaining == 0 or _identity(os.fstat(stream.fileno())) != _identity(opened):
                 raise BackendError("backend_changed")
         if _identity(self.path.lstat()) != _identity(before) or digest.hexdigest() != self.digest:
             raise BackendError("backend_digest_mismatch")

@@ -18,7 +18,7 @@ import stat
 import subprocess
 import sys
 
-from wallet_backup_backend import Backend
+from wallet_backup_backend import Backend, file_object_identity, metadata_identity
 from zevune_wallet import hidden_password, checked_storage_status
 
 HEADER = 72
@@ -62,7 +62,7 @@ def regular(info):
 
 
 def identity(info):
-    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    return metadata_identity(info)
 
 
 def directory(path: Path) -> Path:
@@ -90,10 +90,11 @@ def read_file(path: Path, maximum: int):
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
     fd = os.open(path, flags)
     with os.fdopen(fd, "rb") as stream:
-        require(regular(os.fstat(stream.fileno())) and identity(os.fstat(stream.fileno())) == identity(before), "file_changed")
+        opened = os.fstat(stream.fileno())
+        require(regular(opened) and file_object_identity(opened) == file_object_identity(before), "file_changed")
         data = stream.read(maximum + 1)
         after = os.fstat(stream.fileno())
-    require(len(data) <= maximum and len(data) == before.st_size and identity(before) == identity(after)
+    require(len(data) <= maximum and len(data) == before.st_size and identity(opened) == identity(after)
             and identity(path.lstat()) == identity(before), "file_changed")
     return data, identity(before)
 
@@ -201,7 +202,8 @@ class Catalog:
         fd = os.open(path, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0))
         self.lock = os.fdopen(fd, "r+b", buffering=0)
         try:
-            require(identity(os.fstat(fd)) == identity(info), "catalog_lock_changed")
+            opened = os.fstat(fd)
+            require(file_object_identity(opened) == file_object_identity(info), "catalog_lock_changed")
             if os.name == "nt":
                 import msvcrt
                 msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
@@ -212,6 +214,7 @@ class Catalog:
                 raise CatalogError("unsupported_lock_platform")
             require(self.lock.read(len(LOCK_BYTES) + 1) == LOCK_BYTES, "invalid_catalog_lock")
             self.lock_marker = identity(info)
+            self.lock_handle_marker = identity(opened)
             self.check()
             return self
         except BaseException:
@@ -222,7 +225,7 @@ class Catalog:
     def check(self):
         self._root()
         require(identity((self.root / ".lock").lstat()) == self.lock_marker
-                and identity(os.fstat(self.lock.fileno())) == self.lock_marker, "catalog_lock_changed")
+                and identity(os.fstat(self.lock.fileno())) == self.lock_handle_marker, "catalog_lock_changed")
         data, marker = json_file(self.root / "CATALOG.json")
         require(data == CATALOG and marker == self.catalog_marker, "catalog_changed")
 

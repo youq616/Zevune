@@ -344,5 +344,120 @@ class BackendBoundaryTests(unittest.TestCase):
                     backend.call(9, b"unused-synthetic-password", ["unused.wallet"], frames()[1])
 
 
+
+class StatView:
+    """A metadata-query fixture, not a wallet or an authentication substitute."""
+    def __init__(self, original, **changes):
+        self.original = original
+        self.changes = changes
+
+    def __getattr__(self, name):
+        return self.changes[name] if name in self.changes else getattr(self.original, name)
+
+
+class MetadataRouteTests(unittest.TestCase):
+    def test_stable_path_and_handle_timestamps_need_not_be_identical(self):
+        # Cross-query timestamps are not file IDs. Each route must remain
+        # unchanged relative to its OWN baseline; identity/size must still agree.
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home).resolve()
+            path = root / "input"
+            path.write_bytes(b"public metadata fixture")
+            b.init(root / "catalog")
+            real_fstat = os.fstat
+            def handle_view(fd):
+                info = real_fstat(fd)
+                return StatView(info, st_mtime_ns=info.st_mtime_ns + 100,
+                                st_ctime_ns=info.st_ctime_ns + 200)
+            with patch.object(os, "fstat", side_effect=handle_view):
+                with self.subTest(operation="read"):
+                    self.assertEqual(b.read_file(path, 100)[0], b"public metadata fixture")
+                with self.subTest(operation="lock"):
+                    with b.Catalog(root / "catalog") as catalog:
+                        catalog.check()
+                with self.subTest(operation="backend"):
+                    transport.Backend(path, hashlib.sha256(path.read_bytes()).hexdigest())._check()
+
+    def test_handle_changes_still_fail_on_each_read_route(self):
+        # Stable cross-route differences must not hide a change WITHIN a route.
+        with tempfile.TemporaryDirectory() as home:
+            path = Path(home).resolve() / "input"
+            path.write_bytes(b"public metadata fixture")
+            real_fstat = os.fstat
+            for action in (lambda: b.read_file(path, 100),
+                           lambda: transport.Backend(path, hashlib.sha256(path.read_bytes()).hexdigest())._check()):
+                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_nlink"):
+                    calls = 0
+                    def changing(fd):
+                        nonlocal calls
+                        calls += 1
+                        info = real_fstat(fd)
+                        return StatView(info, **{field: getattr(info, field) + int(calls > 1)})
+                    with self.subTest(field=field), patch.object(os, "fstat", side_effect=changing):
+                        with self.assertRaises((ValueError, RuntimeError)):
+                            action()
+
+    def test_path_metadata_changes_are_not_ignored(self):
+        with tempfile.TemporaryDirectory() as home:
+            path = Path(home).resolve() / "input"
+            path.write_bytes(b"public metadata fixture")
+            original_lstat = Path.lstat
+            for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_nlink"):
+                for backend in (False, True):
+                    calls = 0
+                    def changing(target, *args, **kwargs):
+                        nonlocal calls
+                        info = original_lstat(target, *args, **kwargs)
+                        if target == path:
+                            calls += 1
+                            if calls > 1:
+                                return StatView(info, **{field: getattr(info, field) + 1})
+                        return info
+                    with self.subTest(field=field, backend=backend), patch.object(Path, "lstat", new=changing):
+                        with self.assertRaises((ValueError, RuntimeError)):
+                            if backend:
+                                transport.Backend(path, hashlib.sha256(path.read_bytes()).hexdigest())._check()
+                            else:
+                                b.read_file(path, 100)
+
+    def test_lock_handle_changes_are_not_ignored(self):
+        with tempfile.TemporaryDirectory() as home:
+            path = Path(home).resolve() / "catalog"
+            b.init(path)
+            real_fstat = os.fstat
+            for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_nlink"):
+                with b.Catalog(path) as catalog:
+                    descriptor = catalog.lock.fileno()
+                    def changing(fd):
+                        info = real_fstat(fd)
+                        return StatView(info, **{field: getattr(info, field) + 1}) if fd == descriptor else info
+                    with self.subTest(field=field), patch.object(os, "fstat", side_effect=changing):
+                        with self.assertRaises(ValueError):
+                            catalog.check()
+
+    def test_repeated_native_snapshots_and_catalog_locks(self):
+        # Actual OS calls (including Windows), no patched metadata. Public field
+        # names only: never log file paths, IDs, timestamps or wallet contents.
+        differing = set()
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home).resolve()
+            for number in range(64):
+                path = root / str(number)
+                b.write_new(path, b"public fixture")
+                before = path.lstat()
+                with path.open("rb") as stream:
+                    opened = os.fstat(stream.fileno())
+                    self.assertTrue(os.path.samestat(before, opened))
+                    for field in ("st_mtime_ns", "st_ctime_ns"):
+                        if getattr(before, field) != getattr(opened, field):
+                            differing.add(field)
+                self.assertEqual(b.read_file(path, 100)[0], b"public fixture")
+                catalog_path = root / ("catalog-" + str(number))
+                b.init(catalog_path)
+                with b.Catalog(catalog_path) as catalog:
+                    catalog.check()
+        print("Native metadata route differences (field names only): " + (",".join(sorted(differing)) or "none observed"))
+
+
 if __name__ == "__main__":
     unittest.main()
