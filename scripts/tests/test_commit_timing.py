@@ -57,6 +57,39 @@ class TestCommitTiming(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.validate(data)
 
+    def test_single_sample_limit_is_inclusive(self):
+        # One hour is the Rust recorder's inclusive bound, not the much
+        # smaller observed latency or a new CI timeout.
+        maximum = 3_600_000_000_000
+        data = fixture()
+        data["profile"]["accepted_commit_max_ns"] = maximum
+        data["profile"]["accepted_commit_total_ns"] = maximum * 8192
+        module.validate(data)
+
+    def test_consistent_but_impossible_sample_is_refused(self):
+        # Previously accepted: internally consistent aggregates can still
+        # violate the producing recorder's one-hour sample limit.
+        data = fixture()
+        data["profile"]["accepted_commit_max_ns"] = 3_600_000_000_001
+        data["profile"]["accepted_commit_total_ns"] = 3_600_000_000_001
+        with self.assertRaises(ValueError):
+            module.validate(data)
+
+    def test_uniformly_scaled_impossible_phases_are_refused(self):
+        # Preserve every existing count, max <= total <= max * count, and
+        # the non-overlap sum. Large but otherwise consistent data must fail.
+        data = fixture()
+        scale = 3_600_000_000_001
+        p = data["profile"]
+        p["accepted_commit_total_ns"] *= scale
+        p["accepted_commit_max_ns"] *= scale
+        for phase in p["phases"]:
+            for group in ("ordinary", "rotating"):
+                for suffix in ("_total_ns", "_max_ns"):
+                    phase[group + suffix] *= scale
+        with self.assertRaises(ValueError):
+            module.validate(data)
+
     def test_strict_json_and_bounds(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "test.json"

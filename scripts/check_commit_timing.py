@@ -22,6 +22,9 @@ PHASES = (
 )
 BLOCKS = 8192
 LIMIT = 16 * 1024
+# The producing Rust recorder rejects any sample longer than one hour.
+# Bound maxima separately from cumulative time across multiple commits.
+MAX_SAMPLE_NS = 3_600_000_000_000
 
 
 def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -47,7 +50,7 @@ def read(path: Path, bound: int) -> dict[str, Any]:
     return data
 
 
-def number(value: Any, limit: int = 3_600_000_000_000_000_000) -> int:
+def number(value: Any, limit: int = BLOCKS) -> int:
     if type(value) is not int or not 0 <= value <= limit:
         raise ValueError("invalid bounded integer")
     return value
@@ -73,8 +76,8 @@ def validate(data: dict[str, Any]) -> dict[str, Any]:
             or number(p["paid"]) != 2 or number(p["rotated"]) != 2
             or p["last_failed_attempt"] is not None):
         raise ValueError("incomplete profile")
-    total = number(p["accepted_commit_total_ns"])
-    maximum = number(p["accepted_commit_max_ns"])
+    total = number(p["accepted_commit_total_ns"], BLOCKS * MAX_SAMPLE_NS)
+    maximum = number(p["accepted_commit_max_ns"], MAX_SAMPLE_NS)
     if total == 0 or maximum > total or total > maximum * BLOCKS:
         raise ValueError("invalid total timing")
     phases = p["phases"]
@@ -87,8 +90,8 @@ def validate(data: dict[str, Any]) -> dict[str, Any]:
         ordinary = 0 if name in ("rotation_prepare", "directory_sync") else BLOCKS - 2
         for group, expected in (("ordinary", ordinary), ("rotating", 2)):
             count = number(item[group + "_count"])
-            duration = number(item[group + "_total_ns"])
-            largest = number(item[group + "_max_ns"])
+            duration = number(item[group + "_total_ns"], expected * MAX_SAMPLE_NS)
+            largest = number(item[group + "_max_ns"], MAX_SAMPLE_NS)
             if count != expected or largest > duration or duration > largest * count or largest > maximum:
                 raise ValueError("invalid phase count/timing")
             summed += duration
