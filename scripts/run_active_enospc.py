@@ -24,6 +24,8 @@ import sys
 import tempfile
 import time
 
+import wallet_prepare_evidence
+
 CASES = {
     "active_tail_enospc_preserves_state_and_recovers": "source/00000000.journal",
     "active_new_segment_enospc_preserves_state_and_recovers": "source/00000001.journal",
@@ -32,8 +34,9 @@ WALLET_CASES = {
     "wallet_sync_enospc_preserves_outbox_and_recovers": "source/wallet.journal",
     "wallet_compact_enospc_preserves_source_and_recovers": "compacted/wallet.journal",
 }
-SUITE_CASES = {"active": CASES, "wallet": WALLET_CASES}
-SUITE_TEST_FILES = {"active": "active_enospc.rs", "wallet": "wallet_enospc.rs"}
+SUITE_CASES = {"active": CASES, "wallet": WALLET_CASES, "wallet_prepare": wallet_prepare_evidence.CASES}
+SUITE_TEST_FILES = {"active": "active_enospc.rs", "wallet": "wallet_enospc.rs",
+                    "wallet_prepare": "wallet_prepare_enospc.rs"}
 TMPFS_BYTES = 8 * 1024 * 1024
 TMPFS_INODES = 256
 CASE_SECONDS = 180
@@ -338,6 +341,9 @@ def validate_receipt(receipt: dict, case: str, suite: str = "active") -> None:
     cases = suite_cases(suite)
     if case not in cases:
         raise ValueError("unexpected_test_case")
+    if suite == "wallet_prepare":
+        wallet_prepare_evidence.validate_receipt(receipt, case)
+        return
     if suite == "wallet":
         validate_wallet_receipt(receipt, case)
         return
@@ -579,7 +585,11 @@ def run_case(binary: Path, case: str, base: Path, uid: int, gid: int, deadline: 
                 or info.st_nlink != receipt["target_nlink"] or info.st_size != receipt["after_len"]
                 or digest != receipt["after_sha256"]):
             raise ValueError("traced_target_identity_mismatch")
-        if suite == "wallet":
+        if suite == "wallet_prepare":
+            stage = "wallet_prepare_file_identities"
+            wallet_prepare_evidence.verify_files(mount, control, receipt, case, uid,
+                                                 read_file=file_identity, read_chain=wallet_public_pin)
+        elif suite == "wallet":
             stage = "wallet_file_identities"
             verify_wallet_files(mount, control, receipt, case, uid)
         else:

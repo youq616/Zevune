@@ -2,9 +2,9 @@ name: active-storage-faults
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/wallet_prepare_evidence.py', 'scripts/tests/test_wallet_prepare_enospc.py', 'docs/WALLET_PREPARE_FAILURES.zh-CN.md', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
   pull_request:
-    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
+    paths: ['integration/orchard/**', 'scripts/run_active_enospc.py', 'scripts/wallet_prepare_evidence.py', 'scripts/tests/test_wallet_prepare_enospc.py', 'docs/WALLET_PREPARE_FAILURES.zh-CN.md', 'scripts/tests/test_active_enospc.py', 'docs/ACTIVE_STORAGE_FAILURES.zh-CN.md', 'docs/WALLET_STORAGE_FAILURES.zh-CN.md', '.github/workflows/active-storage-faults.yml']
 permissions:
   contents: read
 jobs:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [active, wallet]
+        suite: [active, wallet, wallet_prepare]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -34,7 +34,7 @@ jobs:
           def git(expression):
               return subprocess.check_output(['git', '--no-replace-objects', 'rev-parse', expression], text=True).strip()
           suite = os.environ['ZEVUNE_ENOSPC_SUITE']
-          if suite not in ('active', 'wallet'):
+          if suite not in ('active', 'wallet', 'wallet_prepare'):
               raise SystemExit('Unknown ENOSPC suite')
           folder = pathlib.Path(os.environ['RUNNER_TEMP']) / ('zevune-enospc-evidence-' + suite)
           folder.mkdir()
@@ -58,6 +58,7 @@ jobs:
       - name: Verify bounded harness and canonical Rust source
         run: |
           python -m unittest discover -s scripts/tests -p test_active_enospc.py -v
+          python -m unittest discover -s scripts/tests -p test_wallet_prepare_enospc.py -v
           cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
           git diff --exit-code
       - name: Actually verify root watchdog termination of a TERM-ignoring namespace
@@ -66,17 +67,17 @@ jobs:
       - name: Build only the explicit ignored ENOSPC test target as the runner
         run: |
           test "$(id -u)" -ne 0
-          case "$ZEVUNE_ENOSPC_SUITE" in active|wallet) ;; *) exit 1 ;; esac
+          case "$ZEVUNE_ENOSPC_SUITE" in active|wallet|wallet_prepare) ;; *) exit 1 ;; esac
           cargo +1.98.1 test --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --test "${ZEVUNE_ENOSPC_SUITE}_enospc" --no-run --message-format=json-render-diagnostics > "$RUNNER_TEMP/zevune-enospc-build.jsonl"
           git diff --exit-code
-      - name: Explicitly execute both ignored tests in private bounded filesystems
+      - name: Explicitly execute every selected ignored test in private bounded filesystems
         timeout-minutes: 10
         run: |
           python - <<'PY'
           import json, os, pathlib, subprocess, sys
           temporary = pathlib.Path(os.environ['RUNNER_TEMP'])
           suite = os.environ['ZEVUNE_ENOSPC_SUITE']
-          if suite not in ('active', 'wallet'):
+          if suite not in ('active', 'wallet', 'wallet_prepare'):
               raise SystemExit('Unknown ENOSPC suite')
           target = suite + '_enospc'
           records = []
