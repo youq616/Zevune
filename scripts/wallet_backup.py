@@ -138,9 +138,9 @@ def write_new(path: Path, data: bytes):
     # Never delete partial output after an error; it may already be durable.
 
 
-def wallet_snapshot(path: Path, expected: str):
-    """Public framing and exact-tip check; NOT decryption or authorization."""
-    raw, marker = read_file(path, MAX_WALLET)
+def wallet_bytes_summary(raw: bytes, expected: str):
+    """Bounded public framing/exact-tip check, NOT decryption or authorization."""
+    require(type(raw) is bytes and len(raw) <= MAX_WALLET, "invalid_wallet_bytes")
     pin = bytes.fromhex(receipt(expected))
     count, remainder = divmod(len(raw) - HEADER, RECORD)
     require(raw[:8] == b"ZVWJNL01" and 1 <= count <= 256 and not remainder
@@ -154,7 +154,13 @@ def wallet_snapshot(path: Path, expected: str):
                 and record[-32:] == digest, "wallet_public_chain_mismatch")
         previous = digest
     require(previous == pin[40:], "wallet_tip_or_framing_mismatch")
-    return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "identity": marker}
+    return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+def wallet_snapshot(path: Path, expected: str):
+    """Read a stable file and check public framing; authentication is separate."""
+    raw, marker = read_file(path, MAX_WALLET)
+    return {**wallet_bytes_summary(raw, expected), "identity": marker}
 
 
 def same_wallet(path: Path, expected: str, before: dict):
