@@ -83,8 +83,11 @@ critical 而 plan nominal；总体取较严重者。整理步骤要求先认证�
 
 Linux 以保留的目录句柄调用 `fstatvfs`，使用 `f_bavail × f_frsize`，不将 root 预留块计入普通用户
 可用空间；可报告只读标志及可用 inode。文件系统未提供有限 inode 库存时，该项为 unknown。
-Windows 使用 `shutil.disk_usage` 的调用者可用字节，不假定 used + free 等于 total；分配单元、
-inode 与只读标志均明确 unknown，不伪造为 0 或 false。磁盘查询失败会令命令失败。
+Windows 直接调用 `GetDiskFreeSpaceExW`，明确读取第一个输出（调用者可用字节）和第二个输出
+（调用者可用总额度）；二者可受用户配额限制，`total_bytes` 不一定等于整个卷容量。第三个输出的
+卷级空闲量不读取，也不以 `shutil.disk_usage` 的 free 冒充调用者余量。参数使用明确的64位存储，
+查询失败不回退。分配单元、inode 与只读标志均明确 unknown，不伪造为 0 或 false。
+磁盘查询失败会令命令失败；本模块没有创建或强制执行配额。
 
 Linux 数据预算按每个文件的分配单元向上取整，追加预算不抵扣原尾页可能存在的空隙。
 Windows 没有测量分配单元，明确是逻辑数据字节估算。保留量由用户指定，用于额外余量而非精确
@@ -96,7 +99,6 @@ Windows 没有测量分配单元，明确是逻辑数据字节估算。保留量
 操作系统 atime、后端打开/锁元数据及其他进程行为不属于该承诺。
 
 官方接口依据：[Python os.statvfs/fstatvfs](https://docs.python.org/3/library/os.html#os.statvfs)、
-[Python shutil.disk_usage](https://docs.python.org/3/library/shutil.html#shutil.disk_usage)、
 [Microsoft GetDiskFreeSpaceExW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdiskfreespaceexw)。
 这些接口文档不是项目安全或验收背书。
 
@@ -107,7 +109,9 @@ v2（5）、v3（8）、v4（10）、v5（12）payload，缺失、多余、篡�
 运行不需要 `-B`，入口在本地导入前禁写字节码；作为库导入不改宿主策略。
 
 单测覆盖整数和阈值边界、逐文件取整、满记录/只读/低余量/inode、实际平台查询与身份变化拒绝、
-错误输入脱敏、普通入口无缓存，以及真实 Git 来源和程序包兼容。合成数据只验证数学和拒绝，
+错误输入脱敏、普通入口无缓存，以及真实 Git 来源和程序包兼容。Windows回归专门区分调用者
+余量与卷级空闲量，覆盖超过4GiB的64位输出、零配额余量和查询失败不回退；这是OS输出参数的
+合成回归，不是实际启用磁盘配额的试验。合成数据只验证数学和拒绝，
 不当作通过认证的替代后端。原生端到端检查使用实际钱包和待发送付款，验证四计划不改变文件、
 原待发送签名和预留不变、错误 pin/密码/后端/目标拒绝。
 

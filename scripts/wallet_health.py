@@ -18,7 +18,6 @@ import getpass
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 
 import wallet_backup as catalog
@@ -49,11 +48,31 @@ def directory_id(path: Path):
     return info.st_dev, info.st_ino
 
 
+def windows_capacity(path: Path) -> tuple[int, int]:
+    """Query the quota-aware caller fields explicitly, not volume-wide free.
+
+    shutil.disk_usage does not provide this output-parameter contract. Request
+    only the first two GetDiskFreeSpaceExW outputs; use 64-bit storage and never
+    fall back to an unqualified free-space value on query failure.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    query = ctypes.WinDLL("kernel32", use_last_error=True).GetDiskFreeSpaceExW
+    pointer = ctypes.POINTER(ctypes.c_ulonglong)
+    query.argtypes = [wintypes.LPCWSTR, pointer, pointer, pointer]
+    query.restype = wintypes.BOOL
+    available, total = ctypes.c_ulonglong(), ctypes.c_ulonglong()
+    if not query(str(path), ctypes.byref(available), ctypes.byref(total), None):
+        raise OSError("windows_capacity_query_failed")
+    return bounded(total.value), bounded(available.value)
+
+
 def probe(directory: Path) -> dict:
     """Read caller-available bytes; no write probe, recursive walk or cache.
 
-    Linux f_bavail excludes reserved blocks; Windows disk_usage delegates to
-    GetDiskFreeSpaceEx. Quotas, ACLs and future availability are not validated.
+    Linux f_bavail excludes reserved blocks; Windows explicitly queries the
+    caller's quota-aware free/total bytes. ACLs and future writes are not tested.
     """
     path = catalog.directory(directory)
     before = directory_id(path)
@@ -77,11 +96,10 @@ def probe(directory: Path) -> dict:
         readonly = bool(stats.f_flag & os.ST_RDONLY)
         method = "linux_fstatvfs_unprivileged_available"
     else:
-        usage = shutil.disk_usage(path)
-        total, available_bytes = bounded(usage.total), bounded(usage.free)
+        total, available_bytes = windows_capacity(path)
         catalog.require(available_bytes <= total, "invalid_volume_sample")
         unit = inodes = readonly = None
-        method = "windows_disk_usage_caller_available"
+        method = "windows_getdiskfreespaceex_caller_available"
     catalog.require(directory_id(path) == before, "volume_directory_changed")
     return {"method": method, "total_bytes": total, "available_bytes": available_bytes,
             "allocation_unit_bytes": unit, "available_inodes": inodes, "read_only": readonly}

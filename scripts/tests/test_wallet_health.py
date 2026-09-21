@@ -4,6 +4,8 @@ These synthetic public frames do not authenticate. Complete success paths are
 exercised separately with the real pinned Rust wallet, never an accepting double.
 """
 import contextlib
+import ctypes
+from ctypes import wintypes
 import hashlib
 import io
 import json
@@ -15,7 +17,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import wallet_health as health
@@ -122,6 +124,9 @@ class OSProbeTests(unittest.TestCase):
         self.assertEqual(set(result), {"method", "total_bytes", "available_bytes", "allocation_unit_bytes", "available_inodes", "read_only"})
         self.assertLessEqual(0, result["available_bytes"])
         self.assertLessEqual(result["available_bytes"], result["total_bytes"])
+        method = ("linux_fstatvfs_unprivileged_available" if sys.platform == "linux"
+                  else "windows_getdiskfreespaceex_caller_available")
+        self.assertEqual(result["method"], method)
         self.assertEqual(list(self.root.iterdir()), before)
 
     @unittest.skipUnless(sys.platform == "linux", "real Linux directory descriptor")
@@ -141,13 +146,71 @@ class OSProbeTests(unittest.TestCase):
         with patch.object(health.os, "fstatvfs", side_effect=OSError("private sentinel")), self.assertRaises(OSError):
             health.probe(self.root)
 
-    def test_windows_caller_free_does_not_assume_used_plus_free_equals_total(self):
-        usage = SimpleNamespace(total=10000, used=9000, free=400)
-        with patch.object(health.sys, "platform", "win32"), patch.object(health.shutil, "disk_usage", return_value=usage):
+    @contextlib.contextmanager
+    def windows_api(self, available=4096, total=32768, volume_free=16384, success=1):
+        # Synthetic OS output-parameter fixture only, not a wallet verifier or
+        # an actual quota-enforcement test. The old shutil route returns the
+        # volume's free bytes and must never satisfy the caller-available query.
+        def fill(path, caller, caller_total, volume):
+            self.assertEqual(path, str(self.root))
+            self.assertIsNotNone(caller)
+            self.assertIsNotNone(caller_total)
+            self.assertIsNone(volume)  # Do not even request volume-wide free.
+            ctypes.cast(caller, ctypes.POINTER(ctypes.c_ulonglong))[0] = available
+            ctypes.cast(caller_total, ctypes.POINTER(ctypes.c_ulonglong))[0] = total
+            return success
+        function = Mock(side_effect=fill)
+        library = SimpleNamespace(GetDiskFreeSpaceExW=function)
+        legacy = SimpleNamespace(total=total, used=total - volume_free, free=volume_free)
+        with patch.object(health.sys, "platform", "win32"), \
+                patch.object(ctypes, "WinDLL", create=True, return_value=library) as loader, \
+                patch.object(shutil, "disk_usage", return_value=legacy) as old_route:
+            yield function, loader, old_route
+
+    def test_windows_reports_caller_quota_not_volume_free(self):
+        with self.windows_api() as (function, loader, old_route):
             result = health.probe(self.root)
-        self.assertEqual(result["available_bytes"], 400)
-        self.assertIsNone(result["allocation_unit_bytes"])
-        self.assertIsNone(result["read_only"])
+        self.assertEqual(result["available_bytes"], 4096)
+        budget = health.estimate([8192], result, 0, 1)
+        self.assertEqual(health.assessment(255, 1, 16, budget)["severity"], "critical")
+        function.assert_called_once()
+        loader.assert_called_once_with("kernel32", use_last_error=True)
+        old_route.assert_not_called()
+        self.assertEqual(function.argtypes, [wintypes.LPCWSTR,
+                         ctypes.POINTER(ctypes.c_ulonglong), ctypes.POINTER(ctypes.c_ulonglong),
+                         ctypes.POINTER(ctypes.c_ulonglong)])
+        self.assertIs(function.restype, wintypes.BOOL)
+        self.assertEqual(result["method"], "windows_getdiskfreespaceex_caller_available")
+        for key in ("allocation_unit_bytes", "available_inodes", "read_only"):
+            self.assertIsNone(result[key])
+
+    def test_windows_volume_free_may_exceed_callers_total_quota(self):
+        with self.windows_api(available=0, total=1024, volume_free=16384):
+            result = health.probe(self.root)
+        self.assertEqual((result["total_bytes"], result["available_bytes"]), (1024, 0))
+
+    def test_windows_output_parameters_retain_full_64_bit_values(self):
+        with self.windows_api(available=(1 << 33) + 7, total=1 << 44, volume_free=1 << 40):
+            result = health.probe(self.root)
+        self.assertEqual((result["total_bytes"], result["available_bytes"]),
+                         (1 << 44, (1 << 33) + 7))
+
+    def test_windows_query_failure_has_no_shutil_fallback(self):
+        with self.windows_api(success=0) as (_, _, old_route):
+            with self.assertRaises(OSError):
+                health.probe(self.root)
+            old_route.assert_not_called()
+        with self.windows_api(), \
+                patch.object(ctypes, "WinDLL", create=True, side_effect=OSError("SENTINEL")), \
+                self.assertRaises(OSError):
+            health.probe(self.root)
+
+    def test_windows_rejects_inconsistent_or_unbounded_caller_values(self):
+        for available, total in ((1025, 1024), (1 << 63, 1 << 63), (0, 1 << 63)):
+            with self.subTest(available=available, total=total), \
+                    self.windows_api(available=available, total=total, volume_free=0), \
+                    self.assertRaises(ValueError):
+                health.probe(self.root)
 
     def test_probe_rejects_changed_directory_and_unsupported_platform(self):
         original = health.directory_id(self.root)
