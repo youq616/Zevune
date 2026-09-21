@@ -50,6 +50,8 @@ class BundleManifestTests(unittest.TestCase):
                 "scripts/zevune_wallet.py": b"synthetic script fixture; never executed\n",
                 "scripts/wallet_backup.py": b"synthetic backup CLI; never executed\n",
                 "scripts/wallet_backup_backend.py": b"synthetic transport; never executed\n",
+                "scripts/payment_request.py": b"inert request CLI; never executed\n",
+                "docs/PAYMENT_REQUESTS.zh-CN.md": b"inert guide\n",
                 "scripts/wallet_archive.py": b"synthetic archive CLI; never executed\n",
                 "docs/WALLET_ARCHIVE.zh-CN.md": b"synthetic archive guide\n",
                 "docs/WALLET_BACKUP_CATALOG.zh-CN.md": b"synthetic backup guide\n",
@@ -107,12 +109,12 @@ class BundleManifestTests(unittest.TestCase):
                 output = build.build(bundle)
             self.assertEqual(output["source_commit"], commit)
             self.assertEqual(output["source_tree"], tree)
-            self.assertEqual(output["format"], "zevune-local-bundle-4")
+            self.assertEqual(output["format"], "zevune-local-bundle-5")
             self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
             self.assertTrue((root / "reports/evidence.txt").is_file())
             self.assertEqual(compiler_inputs, ["go", "cargo"])
-            self.assertEqual(len(output["files"]), 10)
-            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py"):
+            self.assertEqual(len(output["files"]), 12)
+            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py"):
                 self.assertEqual((bundle / name).read_bytes(), source["scripts/" + name])
             self.assertEqual((bundle / "WALLET_BACKUP_CATALOG.zh-CN.md").read_bytes(),
                              source["docs/WALLET_BACKUP_CATALOG.zh-CN.md"])

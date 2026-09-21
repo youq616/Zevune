@@ -85,7 +85,11 @@ class Backend:
     def call(self, op: int, password: bytes, paths: list[str], receipt: str):
         if op not in (2, 6, 9):
             raise BackendError("unsupported_catalog_backend_operation")
-        request = encode_request(op, password, paths, receipt)
+        return self._exchange(encode_request(op, password, paths, receipt))
+
+    def _exchange(self, request: bytes):
+        # Shared bounded transport, not an operation-selection or trust API.
+        # Each public caller constructs its own fixed-op request before entry.
         before = self._check()
         environment = {key: value for key, value in os.environ.items()
                        if key.upper() in {"SYSTEMROOT", "WINDIR", "TEMP", "TMP"}}
