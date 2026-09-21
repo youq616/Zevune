@@ -68,7 +68,7 @@ def windows_capacity(path: Path) -> tuple[int, int]:
     return bounded(total.value), bounded(available.value)
 
 
-def probe(directory: Path) -> dict:
+def probe(directory: Path, *, expected_identity: tuple[int, int] | None = None) -> dict:
     """Read caller-available bytes; no write probe, recursive walk or cache.
 
     Linux f_bavail excludes reserved blocks; Windows explicitly queries the
@@ -76,6 +76,7 @@ def probe(directory: Path) -> dict:
     """
     path = catalog.directory(directory)
     before = directory_id(path)
+    catalog.require(expected_identity is None or before == expected_identity, "volume_directory_changed")
     catalog.require(sys.platform in ("linux", "win32"), "unsupported_health_platform")
     if sys.platform == "linux":
         descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -193,11 +194,14 @@ def inspect(wallet: Path, expected: str, password: bytes, backend: Backend, *, r
     target = catalog.directory(target_directory) if target_directory is not None else None
     target_id = directory_id(target) if target is not None else None
     before = catalog.wallet_snapshot(wallet, expected)
+    # A regular file can be mounted from a different filesystem without being
+    # a symlink. Never attribute its append budget to its parent volume.
+    catalog.require(before["identity"][0] == parent_id[0], "wallet_parent_filesystem_mismatch")
     status = catalog.authenticate(backend, wallet, expected, password)
     checked_storage_status({"wallet_storage": status})
     catalog.require(status["file_bytes"] == before["bytes"], "wallet_capacity_changed")
     catalog.same_wallet(wallet, expected, before)
-    source_disk = probe(wallet.parent)
+    source_disk = probe(wallet.parent, expected_identity=parent_id)
     source_budget = estimate([catalog.RECORD * saves], source_disk, reserve_bytes, 0)
     state = assessment(status["records_remaining"], saves, warn_records, source_budget)
     report = {"format": "zevune-wallet-health-1", "scope": "authenticated_file_capacity_only",
@@ -209,7 +213,7 @@ def inspect(wallet: Path, expected: str, password: bytes, backend: Backend, *, r
               "read_only": True, "requires_rescan": True, "latest_not_inferred": True,
               "operation_executed": False, "space_reserved": False, "real_funds_allowed": False}
     if operation is not None:
-        disk = source_disk if target_id == parent_id else probe(target)
+        disk = source_disk if target_id == parent_id else probe(target, expected_identity=target_id)
         files, entries, steps = operation_payload(operation, expected, before)
         budget = estimate(files, disk, reserve_bytes, entries)
         # A full source journal can still be copied/compacted. Its append alarm

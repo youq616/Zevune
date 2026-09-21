@@ -212,6 +212,26 @@ class OSProbeTests(unittest.TestCase):
                     self.assertRaises(ValueError):
                 health.probe(self.root)
 
+    def test_probe_binds_the_previously_selected_directory_before_sampling(self):
+        original = health.directory_id(self.root)
+        for changed in ((original[0] + 1, original[1]), (original[0], original[1] + 1)):
+            # Real directory identity, intentionally wrong caller expectation.
+            # Neither platform may query a substitute directory and label it
+            # as the original merely because that substitute remains stable.
+            with self.subTest(changed=changed), \
+                    patch.object(health, "windows_capacity", side_effect=AssertionError("no sample")), \
+                    patch.object(health.os, "fstatvfs", create=True, side_effect=AssertionError("no sample")), \
+                    self.assertRaisesRegex(ValueError, "volume_directory_changed"):
+                health.probe(self.root, expected_identity=changed)
+
+    def test_probe_accepts_exact_directory_binding_on_the_native_platform(self):
+        if sys.platform not in ("linux", "win32"):
+            self.skipTest("native Linux/Windows capacity scope")
+        result = health.probe(self.root, expected_identity=health.directory_id(self.root))
+        self.assertLessEqual(result["available_bytes"], result["total_bytes"])
+        self.assertNotIn("device", result)
+        self.assertNotIn("inode", result)
+
     def test_probe_rejects_changed_directory_and_unsupported_platform(self):
         original = health.directory_id(self.root)
         with patch.object(health, "directory_id", side_effect=[original, (original[0], original[1] + 1)]), self.assertRaises(ValueError):
@@ -231,6 +251,20 @@ class HealthRefusalTests(unittest.TestCase):
         self.raw, self.pin = frames(3)
         self.wallet = self.root / "source.wallet"
         self.wallet.write_bytes(self.raw)
+
+    def test_wallet_on_a_different_filesystem_never_uses_parent_capacity(self):
+        before = catalog.wallet_snapshot(self.wallet, self.pin)
+        marker = before["identity"]
+        different_volume = {**before, "identity": (marker[0] + 1, *marker[1:])}
+        # A metadata-route fixture for a separately mounted file; no accepting
+        # backend or actual mount is synthesized. Refusal must precede auth.
+        with patch.object(catalog, "wallet_snapshot", return_value=different_volume), \
+                patch.object(catalog, "authenticate", side_effect=AssertionError("must reject before auth")) as auth, \
+                self.assertRaisesRegex(ValueError, "wallet_parent_filesystem_mismatch"):
+            health.inspect(self.wallet, self.pin, b"refusal-only", None, reserve_bytes=0)
+        auth.assert_not_called()
+        self.assertEqual(self.wallet.read_bytes(), self.raw)
+        self.assertEqual(list(self.root.iterdir()), [self.wallet])
 
     def test_public_frame_cannot_substitute_for_authentication(self):
         with patch.object(catalog, "authenticate", side_effect=RuntimeError("AEAD required")), self.assertRaises(RuntimeError):
