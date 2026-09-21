@@ -105,6 +105,9 @@ python .\wallet_backup.py --no-real-funds restore C:\Zevune\received C:\Zevune\r
 读取一个有界密文，按独立回执与钱包公开摘要重建唯一清单逐字节比较，不解释不可信JSON对象。
 元数据和密码认证仍是不同步骤。
 
+直接运行两个备份CLI时禁用本地模块字节码缓存，避免在已核验程序包中生成`__pycache__`；
+不用用户额外设置`-B`或环境变量。作为库导入时不修改宿主解释器的缓存策略。
+
 Python `struct` 的 `>` 使用标准大端大小且无隐式填充，依据官方文档：
 https://docs.python.org/3/library/struct.html 。这只是编码依据，不是项目安全认证。
 

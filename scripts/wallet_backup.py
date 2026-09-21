@@ -7,6 +7,14 @@ No networking, signing, automatic retry, pruning or source replacement occurs.
 """
 from __future__ import annotations
 
+import sys
+
+# A verified bundle has a fixed file inventory. CLI execution, including
+# read-only inspection, must not create __pycache__ beside its payloads.
+# Importing this module as a library does not change interpreter policy.
+if __name__ == "__main__":
+    sys.dont_write_bytecode = True
+
 import argparse
 import getpass
 import hashlib
@@ -16,7 +24,6 @@ from pathlib import Path
 import re
 import stat
 import subprocess
-import sys
 
 from wallet_backup_backend import Backend, file_object_identity, metadata_identity
 from zevune_wallet import hidden_password, checked_storage_status

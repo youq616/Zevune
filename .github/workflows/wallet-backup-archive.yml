@@ -2,9 +2,9 @@ name: wallet-backup-archive
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/orchard/**', 'scripts/wallet_archive.py', 'scripts/check_wallet_archive_backend.py', 'scripts/tests/test_wallet_archive.py', 'scripts/tests/test_wallet_archive_source.py', 'docs/WALLET_ARCHIVE.zh-CN.md', '.github/workflows/wallet-backup-archive.yml', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+    paths: ['integration/orchard/**', 'scripts/wallet_archive.py', 'scripts/check_wallet_archive_backend.py', 'scripts/tests/test_wallet_archive.py', 'scripts/tests/test_wallet_archive_source.py', 'scripts/tests/test_wallet_archive_cli_files.py', 'docs/WALLET_ARCHIVE.zh-CN.md', '.github/workflows/wallet-backup-archive.yml', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
   pull_request:
-    paths: ['integration/orchard/**', 'scripts/wallet_archive.py', 'scripts/check_wallet_archive_backend.py', 'scripts/tests/test_wallet_archive.py', 'scripts/tests/test_wallet_archive_source.py', 'docs/WALLET_ARCHIVE.zh-CN.md', '.github/workflows/wallet-backup-archive.yml', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
+    paths: ['integration/orchard/**', 'scripts/wallet_archive.py', 'scripts/check_wallet_archive_backend.py', 'scripts/tests/test_wallet_archive.py', 'scripts/tests/test_wallet_archive_source.py', 'scripts/tests/test_wallet_archive_cli_files.py', 'docs/WALLET_ARCHIVE.zh-CN.md', '.github/workflows/wallet-backup-archive.yml', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backup_backend.py', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_wallet_backup_source.py', 'scripts/build_local_lab.py', 'scripts/verify_local_lab.py', 'docs/WALLET_BACKUP_CATALOG.zh-CN.md', '.github/workflows/wallet-backup-catalog.yml']
 permissions:
   contents: read
 jobs:
@@ -49,6 +49,7 @@ jobs:
       - name: Archive, catalog, source and backwards-compatible bundle regressions
         run: |
           python -m unittest discover -s scripts/tests -p test_wallet_archive.py -v
+          python -m unittest discover -s scripts/tests -p test_wallet_archive_cli_files.py -v
           python -m unittest discover -s scripts/tests -p test_wallet_archive_source.py -v
           python -m unittest discover -s scripts/tests -p test_wallet_backup.py -v
           python -m unittest discover -s scripts/tests -p test_wallet_backup_source.py -v

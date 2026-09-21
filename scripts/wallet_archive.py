@@ -8,13 +8,20 @@ Rust backend before publishing a catalog manifest; failures retain partial data.
 """
 from __future__ import annotations
 
+import sys
+
+# A verified bundle has a fixed file inventory. CLI execution, including
+# read-only inspection, must not create __pycache__ beside its payloads.
+# Importing this module as a library does not change interpreter policy.
+if __name__ == "__main__":
+    sys.dont_write_bytecode = True
+
 import argparse
 import getpass
 import hashlib
 from pathlib import Path
 import struct
 import subprocess
-import sys
 import json
 
 import wallet_backup as catalog
