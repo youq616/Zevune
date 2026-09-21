@@ -100,11 +100,45 @@ class BundleVerificationTests(unittest.TestCase):
         self.save()
         with self.assertRaises(ValueError):
             self.check()
-        for invalid in ("zevune-local-bundle-4", None, 3, [], {}):
+        for invalid in ("zevune-local-bundle-5", None, 3, [], {}):
             self.manifest["format"] = invalid
             self.save()
             with self.subTest(format=invalid), self.assertRaises(ValueError):
                 self.check()
+
+    def test_v4_portable_payload_and_exact_older_contracts(self):
+        self.assertEqual(self.check()["files_checked"], 5)
+        for version, count in ((3, 8), (4, 10)):
+            known = {item["name"] for item in self.manifest["files"]}
+            for name in sorted(verify.required_files(False, version) - known):
+                raw = b"inert package payload; never executed\n"
+                (self.root / name).write_bytes(raw)
+                self.manifest["files"].append(dict(name=name, size=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+            self.manifest["format"] = f"zevune-local-bundle-{version}"
+            self.save()
+            self.assertEqual(self.check()["files_checked"], count)
+        for name in ("wallet_archive.py", "WALLET_ARCHIVE.zh-CN.md"):
+            path = self.root / name
+            before = path.read_bytes()
+            path.write_bytes(b"tampered")
+            with self.assertRaises(ValueError):
+                self.check()
+            path.write_bytes(before)
+        self.manifest["format"] = "zevune-local-bundle-3"
+        self.save()
+        with self.assertRaises(ValueError):
+            self.check()
+        self.manifest["format"] = "zevune-local-bundle-4"
+        for entry in self.manifest["files"]:
+            if entry["name"].startswith("zevune-"):
+                old = entry["name"]
+                entry["name"] += ".exe"
+                (self.root / old).rename(self.root / entry["name"])
+        self.save()
+        self.assertEqual(self.check()["files_checked"], 10)
+        (self.root / "wallet_archive.py").unlink()
+        with self.assertRaises(ValueError):
+            self.check()
 
     def test_wrong_independent_pin_and_commit_rejected(self):
         for pin in ("0" * 64, "", self.pin.upper(), self.pin + "\n"):

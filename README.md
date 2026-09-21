@@ -70,8 +70,13 @@ python scripts/zevune_wallet.py --help
 `wallet_backup.py` 提供 `init`、`list`、`create`、`verify`、`restore` 五个命令，管理只新增、不可覆盖的
 加密钱包备份版本。核验和恢复要求独立保存的**精确末端回执**及可信后端摘要，实际调用原 Rust
 钱包执行认证与复制。列表只显示未认证元数据，不自动选择“最新”版本、不解除预留、不广播或删除旧副本。
-新 v3 本地程序包附带该工具和操作指南，校验器继续读取旧 v2 包。使用说明与恢复边界见
+v3及后续本地程序包附带该工具和操作指南，校验器继续读取旧v2包。使用说明与恢复边界见
 [钱包备份目录模块](docs/WALLET_BACKUP_CATALOG.zh-CN.md)。具体平台验收以对应提交的 CI 和 PR 为准。
+
+`wallet_archive.py --no-real-funds` 提供加密备份的 `export` / `inspect` / `import`，
+将明确版本封装为无压缩、无路径的单个 `.zvbackup` 文件。导入要求独立归档摘要、精确钱包回执和
+真实后端认证；只读检查不声明认证，失败保留不完整目标，不覆盖活动钱包、不自动重签或广播。
+v4包包含入口和[离线迁移指南](docs/WALLET_ARCHIVE.zh-CN.md)，同时保持v2/v3精确兼容。
 
 ## 本机网络操作工具与参考账本
 
@@ -184,7 +189,7 @@ Windows目录持久化及主机资源边界见[验收限制](reports/p2-active-l
 
 活动归档保留活动目录的原 `genesis`、连续完整记录段及逐文件精确字节，不增加 MANIFEST 或重新分片。独立保留的 `ZVARCP01` 检查点固定128字节，命令行使用256个小写hex字符，绑定可信高度、AppHash及完整物理布局；随不可信归档一起收到的未认证pin不证明来源，也不证明最新状态。
 
-`zevune-pool-recovery` 的 `checkpoint-active`、`backup-active`、`verify-active` 和 `restore-active` 明确选择活动profile，均要求 `--no-real-funds` 和绝对路径。备份与恢复共用只创建新目标的完整复制路径；只读源共享锁、目标原创建句柄持锁验证、每次使用全新验证器完整重放及源/目标前后检查均由冻结合同要求。旧命令仍保持原格式、输出和活动profile拒绝。
+`zevune-pool-recovery` 的 `checkpoint-active`、`backup-active`、`verify-active` 和 `restore-active` 明确选择活动profile，均要求 `--no-real-funds` 和绝对路径。备份与恢复共用只创建新目标的完整复制路径；只读源共享锁、目标原创建句柄持锁验证、新验证器完整重放及源/目标前后核验均由冻结合同要求。旧命令仍保持原格式、输出和活动profile拒绝。
 
 新增的[固定公共验证密钥合同](docs/FIXED_VERIFYING_KEY.zh-CN.md)已通过两路独立设计审核：`wire::AuthorizationVerifier` 只将编译期固定电路的不可变公共密钥保留在进程私有 `OnceLock`，每个新实例仍新建独立空授权缓存。复制中的源、目标和末次源三次完整真实重放、原测试与时间预算全部保留；密钥常驻至进程退出，不能导入或选择外部密钥。新增真实证明回归检查并发使用与缓存隔离，不宣称冷首次初始化竞争、构建panic或归档资源峰值已经测量；实现及完整双平台原生证据已按准确 C7 核对，范围见本阶段记录。
 
