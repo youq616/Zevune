@@ -11,6 +11,7 @@ import sys
 import tempfile
 import payment_request as request
 from zevune_wallet import encode_request, invoke
+from wallet_backup_backend import BackendError
 
 
 def refused(operation):
@@ -19,6 +20,76 @@ def refused(operation):
     except (OSError, ValueError, RuntimeError):
         return
     raise AssertionError('unsafe request accepted')
+
+
+
+def native_refused(operation):
+    """Require the real process failure, not a Python precheck or launch error."""
+    try:
+        operation()
+    except BackendError as error:
+        assert str(error) == 'backend_operation_failed_reconcile_files'
+        return
+    raise AssertionError('native network mismatch was not rejected')
+
+
+class ObservedPrepare(request.RequestBackend):
+    """Test-only observation: every call delegates to the unchanged real backend."""
+    def __init__(self, binary, digest):
+        super().__init__(binary, digest)
+        self.attempts = 0
+
+    def prepare(self, password, paths, pin):
+        self.attempts += 1
+        return super().prepare(password, paths, pin)
+
+
+def network_refusals(root, binary, backend_sha, password, call, wallet, pool, genesis,
+                     domain, pin, recipient):
+    # Generate and authenticate a second REAL LAB2 network, not a synthetic
+    # manifest or checksum-relabelled receiver. Both networks remain unmodified.
+    other_wallet, other_pool, other_genesis = (root / name for name in
+                                             ('other.wallet', 'other-pool', 'other-genesis'))
+    call(0, [other_wallet])
+    other = call(7, [other_wallet, other_pool, other_genesis])
+    other_domain = other['genesis_sha256']
+    assert other['payment_profile'] == 'LAB2' and other_domain != domain
+    assert hashlib.sha256(other_genesis.read_bytes()).hexdigest() == other_domain
+    other_request = root / 'other-network.zvrequest'
+    other_sha = request.create_request(other_request, other_genesis, other_domain,
+                                       other['address'], '25000', '10')['request_sha256']
+    request.inspect_request(other_request, other_sha, other_genesis, other_domain)
+    baseline = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
+    members = {p.name for p in root.iterdir()}
+
+    def unchanged():
+        assert {p.name for p in root.iterdir()} == members, 'network refusal created output'
+        assert {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()} == baseline, 'network refusal changed bytes'
+        assert call(9, [wallet], pin)['receipt'] == pin
+        assert call(9, [other_wallet], other['receipt'])['receipt'] == other['receipt']
+        assert {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()} == baseline
+
+    observed = ObservedPrepare(binary, backend_sha)
+    # These two calls deliberately bypass the Python network precheck, so only
+    # the native genesis/recipient checks can reject them. All other fields are
+    # those used by the positive signing control immediately after these cases.
+    for label, selected_domain, selected_recipient in (
+            ('wrong-genesis-pin', other_domain, recipient),
+            ('wrong-recipient-domain', domain, other['address'])):
+        output = root / (label + '.tx')
+        native_refused(lambda: observed.prepare(password,
+            [str(wallet), str(pool), str(genesis), selected_domain, selected_recipient,
+             '25000', '1000', '10', str(output)], pin))
+        unchanged()
+    assert observed.attempts == 2
+    # A coherent foreign request and genesis pass the Python checks; using the
+    # original ledger MUST actually reach op4 and be refused by the real Rust
+    # backend. An early Python error cannot satisfy native_refused().
+    native_refused(lambda: request.prepare_request(other_request, other_sha,
+        other_genesis, other_domain, wallet, pin, pool, root / 'wrong-ledger.tx',
+        '1000', password, observed))
+    assert observed.attempts == 3
+    unchanged()
 
 
 def run(binary: Path):
@@ -53,6 +124,8 @@ def run(binary: Path):
             refused(operation)
             assert wallet.read_bytes() == source_before and pool.read_bytes() == pool_before
             assert filename.read_bytes() == request_bytes and not output.exists()
+        network_refusals(root, binary, backend_sha, password, call, wallet, pool,
+                         genesis, domain, pin, recipient)
         # A test-only clone created before signing is never broadcast or funded
         # independently; it exercises a discarded genuine successful response.
         copy = root / 'lost-response.wallet'
@@ -91,7 +164,7 @@ def run(binary: Path):
         status = call(3, [copy, pool, genesis, domain], recovered['receipt'])
         assert status['pending'] is True and status['available'] == 0
         assert pool.read_bytes() == pool_before and filename.read_bytes() == request_bytes
-    print('Payment request real-backend lifecycle passed: explicit signing, safe refusals, exact durable pending recovery and discarded-response reconciliation. No broadcast or retained private fixtures.')
+    print('Payment request real-backend lifecycle passed: explicit signing, three real native network refusals, safe refusals, exact durable pending recovery and discarded-response reconciliation. No broadcast or retained private fixtures.')
 
 
 if __name__ == '__main__':

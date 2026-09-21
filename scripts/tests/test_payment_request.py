@@ -260,5 +260,23 @@ class RequestFilesTests(unittest.TestCase):
             self.assertNotIn(name, help_result.stdout)
 
 
+class NativeRefusalClassificationTests(unittest.TestCase):
+    """Only the refusal classifier is synthetic; no wallet success is simulated."""
+    def test_python_errors_and_launch_failures_are_not_native_refusals(self):
+        from check_payment_request_backend import native_refused
+        for error in (ValueError('python precheck'), OSError('launch failed'),
+                      transport.BackendError('backend_digest_mismatch'),
+                      transport.BackendError('backend_timeout_reconcile_files')):
+            def reject():
+                raise error
+            with self.subTest(kind=type(error).__name__), self.assertRaises((ValueError, OSError, AssertionError)):
+                native_refused(reject)
+
+    def test_success_cannot_satisfy_a_native_refusal(self):
+        from check_payment_request_backend import native_refused
+        with self.assertRaises(AssertionError):
+            native_refused(lambda: None)
+
+
 if __name__ == '__main__':
     unittest.main()
