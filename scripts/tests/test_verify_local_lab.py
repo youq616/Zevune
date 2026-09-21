@@ -100,7 +100,7 @@ class BundleVerificationTests(unittest.TestCase):
         self.save()
         with self.assertRaises(ValueError):
             self.check()
-        for invalid in ("zevune-local-bundle-6", None, 3, [], {}):
+        for invalid in ("zevune-local-bundle-7", None, 3, [], {}):
             self.manifest["format"] = invalid
             self.save()
             with self.subTest(format=invalid), self.assertRaises(ValueError):
@@ -158,6 +158,40 @@ class BundleVerificationTests(unittest.TestCase):
             (self.root / name).write_bytes(original)
         self.manifest["format"] = "zevune-local-bundle-4"
         self.save()
+        with self.assertRaises(ValueError):
+            self.check()
+
+    def test_v6_health_payload_keeps_all_old_exact_contracts(self):
+        for version, count in ((2, 5), (3, 8), (4, 10), (5, 12), (6, 14)):
+            known = {item["name"] for item in self.manifest["files"]}
+            for name in sorted(verify.required_files(False, version) - known):
+                raw = b"inert payload; not an executable validation\n"
+                (self.root / name).write_bytes(raw)
+                self.manifest["files"].append(dict(name=name, size=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+            self.manifest["format"] = f"zevune-local-bundle-{version}"
+            self.save()
+            self.assertEqual(self.check()["files_checked"], count)
+        for name in ("wallet_health.py", "WALLET_HEALTH.zh-CN.md"):
+            path = self.root / name
+            raw = path.read_bytes()
+            path.write_bytes(b"changed")
+            with self.assertRaises(ValueError):
+                self.check()
+            path.write_bytes(raw)
+        for old in (2, 3, 4, 5):
+            self.manifest["format"] = f"zevune-local-bundle-{old}"
+            self.save()
+            with self.assertRaises(ValueError):
+                self.check()
+        self.manifest["format"] = "zevune-local-bundle-6"
+        for entry in self.manifest["files"]:
+            if entry["name"].startswith("zevune-"):
+                old = entry["name"]
+                entry["name"] += ".exe"
+                (self.root / old).rename(self.root / entry["name"])
+        self.save()
+        self.assertEqual(self.check()["files_checked"], 14)
+        (self.root / "wallet_health.py").unlink()
         with self.assertRaises(ValueError):
             self.check()
 

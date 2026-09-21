@@ -1,0 +1,116 @@
+# 钱包存储容量预警与维护计划 v1
+
+这是 P2 的可直接使用的只读运维模块。`wallet_health.py` 在真实 Rust 钱包认证之后，检查当前
+钱包记录额度和磁盘余量，或为一项明确维护操作生成空间预算与步骤。与已有账本磁盘预警不同，
+它面向 `ZVWJNL01` 加密钱包，并与钱包目录备份、离线归档和整理命令配合。
+模块完成不表示 P2 整体、正式在线钱包或生产资金安全已经完成；准确验收以对应 PR 为准。
+
+## 1. 使用前提
+
+使用 Python 3.10+、Linux 或 Windows，以及原 `zevune-wallet-local` 可执行文件。须独立核对
+后端 SHA256 和此前保存的**精确末端钱包回执**（144 个小写十六进制字符）。不能从待检查文件
+自行导出回执，再把它当作独立来源。旧祖先回执、错误密码、未知后端或不完整钱包都拒绝报告成功。
+
+工具复用原 Rust op9：读取/认证完整加密日志并核对状态，不调用签名、付款、同步、备份或整理接口。
+密码经不回显终端输入和后端 stdin 传递，不接受密码命令行参数或环境变量。现有锁仍可能要求
+钱包文件可写，因此只读挂载上的源钱包也可能直接认证失败；不以未认证报告作为降级替代。
+
+所有命令必须显式 `--no-real-funds`。文件及父目录必须存在、规范且不经符号链接/reparse point；
+不递归搜索、不创建测试文件、不预留磁盘，也不联网或后台监控。可信本机、父目录与批准后端
+仍是前提，不保证抵御恶意主机竞态。Python 密码内存不保证安全擦除。
+
+## 2. 检查与预警
+
+Windows PowerShell 示例；从源码运行时在入口前加 `scripts\`，Linux 使用对应本机路径及无 `.exe` 后端。
+先独立保存 `$Pin`、`$BackendSha`，不要把密码放入变量、命令行或环境。
+
+```powershell
+python .\wallet_health.py --no-real-funds check C:\ZevuneData\wallet.journal --pin $Pin --backend .\zevune-wallet-local.exe --backend-sha256 $BackendSha --reserve-bytes 67108864 --saves 4 --warn-records 16
+```
+
+本例额外观察未来 4 次保存所需空间，并要求仍保留 64 MiB 余量。64 MiB 是用户明确选择的策略，
+不是协议最低值、系统保证或隐式默认。`--reserve-bytes` 必填，允许 0；规范十进制整数不接受负数、
+前导零、空白、指数或单位后缀。总预算须可表示为有符号 64 位正范围内整数，超界失败而不截断。
+`--saves` 为 1..256，默认 1；`--warn-records` 为 0..255，默认 16。
+
+保存次数**不是付款笔数**。钱包创建、历史变化及待发送记录都可能消耗保存额度；同一检查点的
+扫描可能不增加记录。原 256 条上限不变。剩余额度不足以容纳所请求保存数是 critical；可容纳但
+执行后剩余不超过 warn-records 是 warning。原 wallet_storage.can_append 仅是日志格式额度，
+不能解释为磁盘、授权或付款许可。
+
+成功输出一个 JSON，包含 `wallet_storage`、`policy`、`source.disk`、`source.budget`、固定告警码、
+总体 severity 与退出码。报告不含密码、原钱包回执、可关联钱包摘要、地址、余额、交易内容或私有路径。
+输出时间为观察时间，不是有效期。`authenticated:true` 只说明精确本地文件认证，不说明历史已同步、
+全局最新、待发送付款已取消或已最终确认。`requires_rescan:true` 始终保持。
+
+| 退出码 | 含义 |
+|---|---|
+| 0 | nominal：本次观察未触发已实现阈值；不是写入许可。 |
+| 10 | warning：记录余量或显式磁盘保留量不足。完整 JSON 仍可读取。 |
+| 20 | critical：请求超过记录额度、数据空间不足、已知只读或目录项不足。完整 JSON 仍可读取。 |
+| 1 | 认证、读取、系统查询或边界核对失败，没有完整报告，不降级为绿色。 |
+| 64 | 命令参数语法错误；错误文本不回显意外输入的私密参数。 |
+
+脚本可据固定码告警，但本工具不会自动执行任何补救动作。不要把非零退出码变成自动重签或盲目恢复。
+
+## 3. 生成一项维护计划
+
+```powershell
+python .\wallet_health.py --no-real-funds plan C:\ZevuneData\wallet.journal --pin $Pin --backend .\zevune-wallet-local.exe --backend-sha256 $BackendSha --reserve-bytes 67108864 --operation compact-copy --target-directory D:\ZevuneRecovery
+```
+
+目标参数是**已经存在的目录**，不是将被创建的文件名。它仅确定测量哪个目标文件系统，不检查
+未来目标名字、目录备份的空位/重复版本、ACL/写权限或具体命令的全部前置条件。报告明确
+`destination_validated:false`、`permissions_validated:false`、`catalog_slots_validated:false`。
+真正操作时仍须运行原命令，并重新验证独立回执、后端、输出不存在和所需确认。
+
+| operation | 数据字节预算与适用前提 |
+|---|---|
+| wallet-copy | 一份完整钱包 W 字节；适用于原直接备份/恢复复制，不计入其他工作负载。 |
+| catalog-backup | 已初始化目录中的新版本：W 加精确规范清单 M，3 个新目录项（版本目录、钱包、清单）。未包含初始化目录的额外文件。 |
+| archive-export | 已有目录版本导出：16 + M + W 字节，1 个新文件。不包含先创建备份版本的空间。 |
+| compact-copy | 创建 72 + 32948 字节的一记录新钱包，1 个新文件；源钱包完全保留，不能抵扣“整理节省”的空间。 |
+
+W 和 M 从经过真实认证的精确源版本计算。四种操作是**互斥的单项预算**，不是已执行的动作或一整串
+任务的总预算。复制+导出等组合应分别规划并累加各自仍保留的输出，不能只取最大值。
+`plan.ordered_steps` 给出固定步骤标识，不含可直接执行的动态 shell 命令，避免自动执行和路径注入。
+
+源检查与目标计划分别保留 severity。源日志已满不妨碍估算新文件复制/整理的目标空间，因此源可能
+critical 而 plan nominal；总体取较严重者。整理步骤要求先认证独立备份、保存新回执、重新扫描并
+比较待发送交易，再明确选择唯一活动副本。**工具不换代、不删除旧文件，也不会撤销旧副本的密钥能力。**
+
+## 4. 系统空间语义和估算限制
+
+Linux 以保留的目录句柄调用 `fstatvfs`，使用 `f_bavail × f_frsize`，不将 root 预留块计入普通用户
+可用空间；可报告只读标志及可用 inode。文件系统未提供有限 inode 库存时，该项为 unknown。
+Windows 使用 `shutil.disk_usage` 的调用者可用字节，不假定 used + free 等于 total；分配单元、
+inode 与只读标志均明确 unknown，不伪造为 0 或 false。磁盘查询失败会令命令失败。
+
+Linux 数据预算按每个文件的分配单元向上取整，追加预算不抵扣原尾页可能存在的空隙。
+Windows 没有测量分配单元，明确是逻辑数据字节估算。保留量由用户指定，用于额外余量而非精确
+计算文件系统元数据。压缩/稀疏/写时复制、日志、配额、文件数量、权限、其他进程与后续数据变化
+都可能改变实际所需或可用空间；任何估算都不能证明下一次写入一定成功。
+
+源钱包在认证和采样前后核对同一文件身份、长度和完整公开链/摘要。目标目录也前后核对身份。
+这只检查本次观测一致性，不持有跨命令交易或未来空间锁。命令只读是指不主动修改内容或创建文件；
+操作系统 atime、后端打开/锁元数据及其他进程行为不属于该承诺。
+
+官方接口依据：[Python os.statvfs/fstatvfs](https://docs.python.org/3/library/os.html#os.statvfs)、
+[Python shutil.disk_usage](https://docs.python.org/3/library/shutil.html#shutil.disk_usage)、
+[Microsoft GetDiskFreeSpaceExW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdiskfreespaceexw)。
+这些接口文档不是项目安全或验收背书。
+
+## 5. 交付与验证范围
+
+v6 程序包新增 `wallet_health.py` 和本指南，14 个 payload 加1份清单；核验器继续按精确原合同接受
+v2（5）、v3（8）、v4（10）、v5（12）payload，缺失、多余、篡改、混合版本或未知版本拒绝。普通 Python 命令
+运行不需要 `-B`，入口在本地导入前禁写字节码；作为库导入不改宿主策略。
+
+单测覆盖整数和阈值边界、逐文件取整、满记录/只读/低余量/inode、实际平台查询与身份变化拒绝、
+错误输入脱敏、普通入口无缓存，以及真实 Git 来源和程序包兼容。合成数据只验证数学和拒绝，
+不当作通过认证的替代后端。原生端到端检查使用实际钱包和待发送付款，验证四计划不改变文件、
+原待发送签名和预留不变、错误 pin/密码/后端/目标拒绝。
+
+本模块不是磁盘写满、物理断电或配额强制试验，也不新增 Windows ACL 完整审计、持续监控或容量预测。
+原生产 Rust/Go、密码学、同步、锁、存储额度、依赖锁、已有增长和故障门槛不变；Issue #23 仍开放，
+`real_funds_allowed=false`，代码复审及 CI 不替代外部专业安全审计。
