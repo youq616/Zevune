@@ -213,7 +213,9 @@ def inspect(wallet: Path, expected: str, password: bytes, backend: Backend, *, r
               "read_only": True, "requires_rescan": True, "latest_not_inferred": True,
               "operation_executed": False, "space_reserved": False, "real_funds_allowed": False}
     if operation is not None:
-        disk = source_disk if target_id == parent_id else probe(target, expected_identity=target_id)
+        # Equal directory inode/device does not identify per-mount policy.
+        # In particular, a read-only bind alias needs its own path observation.
+        disk = probe(target, expected_identity=target_id)
         files, entries, steps = operation_payload(operation, expected, before)
         budget = estimate(files, disk, reserve_bytes, entries)
         # A full source journal can still be copied/compacted. Its append alarm

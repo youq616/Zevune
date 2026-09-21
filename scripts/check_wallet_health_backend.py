@@ -12,6 +12,7 @@ from pathlib import Path
 import secrets
 import sys
 import tempfile
+from unittest.mock import patch
 
 import wallet_health as health
 from zevune_wallet import encode_request, invoke
@@ -60,6 +61,37 @@ def run(executable):
         assert report["wallet_storage"]["records_used"] == 1
         assert report["source"]["disk"]["available_bytes"] >= 0
         assert report["operation_executed"] is False and report["space_reserved"] is False
+        assert inventory(root) == before
+
+        # Metadata/OS-policy fixture for a read-only bind-mount alias: equal
+        # (dev, ino) need not imply identical per-mount flags. Authentication
+        # still delegates to the genuine Rust wallet, with no accepting double.
+        # No privileged mount or physical read-only filesystem is claimed here.
+        real_id, real_probe = health.directory_id, health.probe
+        source_id = real_id(root)
+        sampled = []
+
+        def alias_id(path):
+            actual = real_id(path)
+            return source_id if path == target else actual
+
+        def alias_probe(path, *, expected_identity=None):
+            assert expected_identity == source_id
+            sampled.append(path)
+            # Obtain a real bounded sample on each actual test directory. Only
+            # alias identity and its read-only flag are the controlled fixture.
+            with patch.object(health, "directory_id", real_id):
+                observed = real_probe(path, expected_identity=real_id(path))
+            return {**observed, "read_only": True} if path == target else observed
+
+        with patch.object(health, "directory_id", side_effect=alias_id), \
+                patch.object(health, "probe", side_effect=alias_probe):
+            aliased = health.inspect(source, first, password, backend, reserve_bytes=0,
+                                     operation="wallet-copy", target_directory=target)
+        assert sampled == [root, target], "distinct target path was not independently sampled"
+        assert aliased["plan"]["disk"]["read_only"] is True
+        assert "filesystem_read_only" in aliased["plan"]["issues"]
+        assert aliased["plan"]["severity"] == "critical" and aliased["exit_code"] == 20
         assert inventory(root) == before
 
         domain = call(7, [source, pool, genesis])["genesis_sha256"]
