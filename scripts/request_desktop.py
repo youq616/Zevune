@@ -12,6 +12,7 @@ if __name__ == "__main__":
     sys.dont_write_bytecode = True
 
 import argparse
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,8 +26,12 @@ UNTRUSTED = "仅检查格式、网络标签及独立摘要；未认证收款人�
 
 
 def bounded(value: str, name: str) -> str:
+    # Use the running Python Unicode database, not a partial bidi blacklist.
+    # Reject controls, format controls, lone surrogates and line/paragraph
+    # separators. Preserve visible Unicode and combining marks exactly; this
+    # is not a general confusable-character detector or filename normalization.
     request.storage.require(type(value) is str and 0 < len(value) <= LIMITS[name]
-                            and not any(ord(c) < 32 or ord(c) == 127 or c in '\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069' for c in value),
+                            and not any(unicodedata.category(c) in {"Cc", "Cf", "Cs", "Zl", "Zp"} for c in value),
                             "invalid_desktop_field")
     return value
 
