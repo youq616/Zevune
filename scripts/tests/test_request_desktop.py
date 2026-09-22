@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unicodedata
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -58,6 +59,48 @@ class DesktopInputTests(unittest.TestCase):
         for field in ('genesis', 'target'):
             with self.assertRaises(ValueError):
                 desktop.prepare_intent({**self.fields, field: 'relative'})
+        self.assertEqual(set(p.name for p in self.root.iterdir()), {'genesis'})
+
+    def test_reported_invisible_characters_are_rejected_in_every_field(self):
+        # Independent examples from the review, plus the remaining C1 and
+        # multi-line/surrogate edge cases. Never log the pasted input itself.
+        points = (0x80, 0x85, 0x9F, 0xAD, 0x61C, 0x200B, 0x200E, 0x200F,
+                  0x2028, 0x2029, 0x2060, 0xFEFF, 0xD800, 0xDFFF, 0xE0001)
+        for point in points:
+            for field in desktop.LIMITS:
+                with self.subTest(point=f'U+{point:04X}', field=field):
+                    with self.assertRaisesRegex(ValueError, '^invalid_desktop_field$'):
+                        desktop.bounded('a' + chr(point) + 'b', field)
+
+    def test_all_control_format_surrogate_and_line_separator_categories_refused(self):
+        # Exercise every such code point in the running Python Unicode database,
+        # not only the handful of bidi controls previously hard-coded in the UI.
+        blocked = {'Cc', 'Cf', 'Cs', 'Zl', 'Zp'}
+        seen = set()
+        for point in range(sys.maxunicode + 1):
+            value = chr(point)
+            category = unicodedata.category(value)
+            if category in blocked:
+                seen.add(category)
+                for field in desktop.LIMITS:
+                    with self.subTest(point=f'U+{point:04X}', field=field):
+                        with self.assertRaisesRegex(ValueError, '^invalid_desktop_field$'):
+                            desktop.bounded('a' + value + 'b', field)
+        self.assertEqual(seen, blocked)
+
+    def test_unicode_paths_remain_exact_and_invalid_paths_fail_before_io(self):
+        # Preserve visible international text and combining marks, not an ASCII
+        # whitelist or silent normalization of the chosen filename.
+        text = str(self.root / '收款 café e\u0301 Ελληνικά 😀.zvrequest')
+        self.assertEqual(str(desktop.absolute(text, 'target')), text)
+        self.assertEqual(desktop.bounded('收款 e\u0301', 'source'), '收款 e\u0301')
+        for field in ('genesis', 'target'):
+            for point in (0x85, 0x61C, 0x200B, 0x200E, 0x200F, 0x2028, 0x2029):
+                values = {**self.fields, field: str(self.root / ('a' + chr(point) + 'b'))}
+                with self.subTest(point=f'U+{point:04X}', field=field):
+                    with patch.object(desktop.request.storage, 'new_file', side_effect=AssertionError('must reject before filesystem access')):
+                        with self.assertRaisesRegex(ValueError, '^invalid_desktop_field$'):
+                            desktop.prepare_intent(values)
         self.assertEqual(set(p.name for p in self.root.iterdir()), {'genesis'})
 
     def test_wrong_network_and_noncanonical_numbers_rejected_without_output(self):
