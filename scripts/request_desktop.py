@@ -59,13 +59,17 @@ class Intent:
 
 def prepare_intent(values: dict[str, str]) -> Intent:
     """Read/validate for confirmation without creating a file or trusting a hash alone."""
-    genesis = absolute(values["genesis"], "genesis")
-    domain = request.digest(bounded(values["genesis_pin"], "genesis_pin"))
-    target = request.storage.new_file(absolute(values["target"], "target"))
+    # Validate the ENTIRE create form before probing a target or reading the
+    # genesis file. Inspection-only fields are unused and may remain empty.
+    fields = {name: bounded(values[name], name) for name in
+              ("genesis", "genesis_pin", "target", "recipient", "amount", "expiry")}
+    genesis = absolute(fields["genesis"], "genesis")
+    domain = request.digest(fields["genesis_pin"])
+    target = absolute(fields["target"], "target")
+    recipient = request.checked_recipient(fields["recipient"], domain)
+    amount, _, expiry = request.checked_payment_numbers(fields["amount"], "1", fields["expiry"])
+    target = request.storage.new_file(target)
     request.network(genesis, domain)
-    recipient = request.checked_recipient(bounded(values["recipient"], "recipient"), domain)
-    amount, _, expiry = request.checked_payment_numbers(bounded(values["amount"], "amount"), "1",
-                                                       bounded(values["expiry"], "expiry"))
     return Intent(genesis, domain, target, recipient, amount, expiry)
 
 
