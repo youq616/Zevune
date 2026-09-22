@@ -72,7 +72,7 @@ def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 def required_files(windows: bool, version: int = 2) -> set[str]:
     suffix = ".exe" if windows else ""
-    if type(version) is not int or version not in (2, 3, 4, 5, 6):
+    if type(version) is not int or version not in (2, 3, 4, 5, 6, 7):
         raise ValueError("unsupported_bundle_version")
     files = {name + suffix for name in ("zevune-network", "zevune-pool-worker", "zevune-wallet-local")} | {
         "zevune_wallet.py", "LOCAL_NETWORK_OPERATOR.zh-CN.md"}
@@ -82,8 +82,10 @@ def required_files(windows: bool, version: int = 2) -> set[str]:
         files |= {"wallet_archive.py", "WALLET_ARCHIVE.zh-CN.md"}
     if version >= 5:
         files |= {"payment_request.py", "PAYMENT_REQUESTS.zh-CN.md"}
-    if version == 6:
+    if version >= 6:
         files |= {"wallet_health.py", "WALLET_HEALTH.zh-CN.md"}
+    if version == 7:
+        files |= {"wallet_maintenance.py", "WALLET_MAINTENANCE.zh-CN.md"}
     return files
 
 
@@ -103,7 +105,7 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str | None = None)
               "public_network_supported", "network_anonymity_implemented", "scope", "toolchains", "files"}
     if not isinstance(manifest, dict) or set(manifest) != fields:
         raise ValueError("unsupported_manifest_fields")
-    formats = {"zevune-local-bundle-2": 2, "zevune-local-bundle-3": 3, "zevune-local-bundle-4": 4, "zevune-local-bundle-5": 5, "zevune-local-bundle-6": 6}
+    formats = {"zevune-local-bundle-2": 2, "zevune-local-bundle-3": 3, "zevune-local-bundle-4": 4, "zevune-local-bundle-5": 5, "zevune-local-bundle-6": 6, "zevune-local-bundle-7": 7}
     if type(manifest["format"]) is not str or manifest["format"] not in formats:
         raise ValueError("unsupported_bundle_format")
     version = formats[manifest["format"]]
