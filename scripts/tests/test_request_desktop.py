@@ -103,6 +103,30 @@ class DesktopInputTests(unittest.TestCase):
                             desktop.prepare_intent(values)
         self.assertEqual(set(p.name for p in self.root.iterdir()), {'genesis'})
 
+    def test_all_create_fields_reject_invalid_text_before_any_filesystem_probe(self):
+        # The pure form boundary must run for the full active operation before
+        # new_file or network reads anything, including for late form fields.
+        for field in ('genesis', 'genesis_pin', 'target', 'recipient', 'amount', 'expiry'):
+            for point in (0x85, 0x61C, 0x200B, 0x200E, 0x200F, 0x2028, 0xD800):
+                value = self.fields[field] + chr(point)
+                with self.subTest(field=field, point=f'U+{point:04X}'):
+                    with patch.object(desktop.request.storage, 'new_file', side_effect=AssertionError('must not probe target')), \
+                            patch.object(desktop.request, 'network', side_effect=AssertionError('must not read genesis')):
+                        with self.assertRaisesRegex(ValueError, '^invalid_desktop_field$'):
+                            desktop.prepare_intent({**self.fields, field: value})
+        self.assertEqual(set(p.name for p in self.root.iterdir()), {'genesis'})
+
+    def test_invalid_request_semantics_are_checked_before_create_filesystem_probe(self):
+        # Existing pure recipient and integer validators also precede I/O.
+        for field, value in (('amount', '01'), ('amount', '0'), ('expiry', '0'),
+                             ('expiry', str(1 << 64)), ('recipient', address('1' * 64))):
+            with self.subTest(field=field, value=value):
+                with patch.object(desktop.request.storage, 'new_file', side_effect=AssertionError('must not probe target')), \
+                        patch.object(desktop.request, 'network', side_effect=AssertionError('must not read genesis')):
+                    with self.assertRaises(ValueError):
+                        desktop.prepare_intent({**self.fields, field: value})
+        self.assertFalse(Path(self.fields['target']).exists())
+
     def test_wrong_network_and_noncanonical_numbers_rejected_without_output(self):
         for field, value in (('genesis_pin', '0'*64), ('recipient', address('1'*64)),
                              ('amount', '01'), ('amount', '0'), ('expiry', '0'), ('expiry', str(1<<64))):
