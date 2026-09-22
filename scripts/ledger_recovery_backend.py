@@ -88,15 +88,15 @@ def validate_reply(reply, operation, pin, base=None):
                      app_hash=pin.app_hash, segment_count=pin.segments)
         require(set(reply) == set(fixed), "unexpected_active_response_fields")
     else:
-        package = operation == "restore-active-incremental"
+        package = operation in ("pack-active-incremental", "verify-active-incremental", "restore-active-incremental")
         fixed.update(format="zevune-active-incremental-package-1" if package else "zevune-active-incremental-plan-1",
                      base_checkpoint=base.encoded, base_height=base.height, base_bytes=base.length,
                      reused_bytes=base.length, appended_bytes=pin.length-base.length,
                      new_segment_count=pin.segments-base.segments, byte_prefix_verified=True,
-                     incremental_backup_written=False, snapshot_imported=False)
+                     incremental_backup_written=operation == "pack-active-incremental", snapshot_imported=False)
         variable = {"ranges", "unchanged_segment_count"}
         if package:
-            fixed.update(package_format="ZVAIPK01", archive_restored=True)
+            fixed.update(package_format="ZVAIPK01", archive_restored=operation == "restore-active-incremental")
             variable.add("package_bytes")
         require(set(reply) == set(fixed) | variable, "unexpected_incremental_response_fields")
         ranges = reply["ranges"]
@@ -232,6 +232,19 @@ class RecoveryBackend:
 
     def incremental(self, base_path, base, source, pin, deadline, output=None):
         mode = "plan-active-incremental" if output is None else "restore-active-incremental"
+        args = [mode, "--no-real-funds", "--base", str(base_path), "--base-checkpoint", base.encoded,
+                "--source", str(source), "--checkpoint", pin.encoded]
+        if output is not None:
+            args += ["--output", str(output)]
+        return self._run(args, pin, base, deadline)
+
+    def backup(self, source, pin, deadline, output):
+        args = ["backup-active", "--no-real-funds", "--source", str(source),
+                "--checkpoint", pin.encoded, "--output", str(output)]
+        return self._run(args, pin, None, deadline)
+
+    def package(self, base_path, base, source, pin, deadline, output=None):
+        mode = "verify-active-incremental" if output is None else "pack-active-incremental"
         args = [mode, "--no-real-funds", "--base", str(base_path), "--base-checkpoint", base.encoded,
                 "--source", str(source), "--checkpoint", pin.encoded]
         if output is not None:
