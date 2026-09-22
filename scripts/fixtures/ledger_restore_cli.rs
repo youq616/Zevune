@@ -52,12 +52,17 @@ fn archive(mut pool: PoolStore, path: &Path, source: &Path, genesis: &TestGenesi
 
 fn cli(args: &[String], confirm: bool) -> Output {
     let python = std::env::var_os("ZEVUNE_CHAIN_PYTHON").expect("explicit native test Python");
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/ledger_restore.py");
-    let backend = Path::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"));
-    let digest = hex(&Sha256::digest(fs::read(backend).unwrap()));
+    let script = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/ledger_restore.py").canonicalize().unwrap();
+    // Cargo may embed a Windows temporary path using an 8.3 alias. The public
+    // tool deliberately requires an already canonical trusted backend path;
+    // normalize the TEST-selected binary instead of relaxing that requirement.
+    let backend = Path::new(env!("CARGO_BIN_EXE_zevune-pool-recovery"))
+        .canonicalize().unwrap();
+    let digest = hex(&Sha256::digest(fs::read(&backend).unwrap()));
     let mut command = Command::new(python);
     command.arg(script).arg("--no-real-funds").args(args)
-        .args(["--backend", &text(backend), "--backend-sha256", &digest])
+        .args(["--backend", &text(&backend), "--backend-sha256", &digest])
         .env_remove("PYTHONDONTWRITEBYTECODE").env_remove("PYTHONPYCACHEPREFIX")
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().unwrap();
@@ -145,8 +150,19 @@ fn real_multi_package_recovery_and_continued_spend() {
     let mut bad = increments[1].clone(); let last = bad.len()-1; bad[last] ^= 1;
     let bad_package = dir.path("bad.increment"); fs::write(&bad_package, &bad).unwrap();
     let partial = dir.path("partial");
-    failed(&cli(&restore_args(&partial, &base, &pins, &[first.clone(), bad_package]), true), &dir.0);
+    failed(&cli(&restore_args(&partial, &base, &pins, &[first.clone(), bad_package.clone()]), true), &dir.0);
     assert!(partial.join("stage-00").is_dir() && partial.join("stage-01").is_dir());
+    for (i, original) in originals[..2].iter().enumerate() {
+        assert!(bytes(&partial.join(format!("stage-{i:02}"))) == *original,
+                "completed recovery stage changed after rejection");
+    }
+    assert!(fs::read(&bad_package).unwrap() == bad, "rejected incremental input changed");
+    for (i, path) in paths.iter().enumerate() {
+        assert!(bytes(path) == originals[i], "source archive changed after rejection");
+    }
+    for (i, path) in packages.iter().enumerate() {
+        assert!(fs::read(path).unwrap() == increments[i], "source increment changed after rejection");
+    }
     assert!(!partial.join("RECOVERY.json").exists());
     // A valid same-genesis fork is NOT an extension of the previous archive.
     // Reuse genuine signatures, but commit block one with a different block ID.
