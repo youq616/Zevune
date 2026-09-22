@@ -74,21 +74,21 @@ def build(destination: Path) -> dict:
                         str(network), "./cmd/zevune-network"],
                        cwd=staged / "integration/cometbft", env=env, check=True)
         subprocess.run(["cargo", "build", "--locked", "--release", "--features", "local-funding-lab",
-                        "--bin", "zevune-pool-worker", "--bin", "zevune-wallet-local"],
+                        "--bin", "zevune-pool-worker", "--bin", "zevune-wallet-local", "--bin", "zevune-pool-recovery"],
                        cwd=staged / "integration/orchard", env=env, check=True)
         if (checked_output(["git", "rev-parse", "HEAD"], root) != commit
                 or checked_output(["git", "status", "--porcelain", "--untracked-files=no"], root)):
             raise ValueError("Source changed during build")
         destination.mkdir(mode=0o700, parents=False, exist_ok=False)
         shutil.copy2(network, destination)
-        for name in ("zevune-pool-worker", "zevune-wallet-local"):
+        for name in ("zevune-pool-worker", "zevune-wallet-local", "zevune-pool-recovery"):
             shutil.copy2(Path(env["CARGO_TARGET_DIR"]) / "release" / (name + suffix), destination)
-        for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py"):
+        for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py"):
             shutil.copy2(staged / "scripts" / name, destination)
-        for name in ("LOCAL_NETWORK_OPERATOR.zh-CN.md", "WALLET_BACKUP_CATALOG.zh-CN.md", "WALLET_ARCHIVE.zh-CN.md", "PAYMENT_REQUESTS.zh-CN.md", "WALLET_HEALTH.zh-CN.md", "WALLET_MAINTENANCE.zh-CN.md"):
+        for name in ("LOCAL_NETWORK_OPERATOR.zh-CN.md", "WALLET_BACKUP_CATALOG.zh-CN.md", "WALLET_ARCHIVE.zh-CN.md", "PAYMENT_REQUESTS.zh-CN.md", "WALLET_HEALTH.zh-CN.md", "WALLET_MAINTENANCE.zh-CN.md", "LEDGER_RESTORE.zh-CN.md"):
             shutil.copy2(staged / "docs" / name, destination)
         result = manifest_for(destination, commit, versions, source_tree,
-                              bundle_format="zevune-local-bundle-7")
+                              bundle_format="zevune-local-bundle-8")
         manifest = destination / "BUNDLE-MANIFEST.json"
         with manifest.open("x", encoding="utf-8", newline="\n") as file:
             json.dump(result, file, ensure_ascii=True, indent=2)
