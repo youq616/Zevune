@@ -83,12 +83,12 @@ def build(destination: Path) -> dict:
         shutil.copy2(network, destination)
         for name in ("zevune-pool-worker", "zevune-wallet-local", "zevune-pool-recovery"):
             shutil.copy2(Path(env["CARGO_TARGET_DIR"]) / "release" / (name + suffix), destination)
-        for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py"):
+        for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py", "ledger_backup.py"):
             shutil.copy2(staged / "scripts" / name, destination)
-        for name in ("LOCAL_NETWORK_OPERATOR.zh-CN.md", "WALLET_BACKUP_CATALOG.zh-CN.md", "WALLET_ARCHIVE.zh-CN.md", "PAYMENT_REQUESTS.zh-CN.md", "WALLET_HEALTH.zh-CN.md", "WALLET_MAINTENANCE.zh-CN.md", "LEDGER_RESTORE.zh-CN.md"):
+        for name in ("LOCAL_NETWORK_OPERATOR.zh-CN.md", "WALLET_BACKUP_CATALOG.zh-CN.md", "WALLET_ARCHIVE.zh-CN.md", "PAYMENT_REQUESTS.zh-CN.md", "WALLET_HEALTH.zh-CN.md", "WALLET_MAINTENANCE.zh-CN.md", "LEDGER_RESTORE.zh-CN.md", "LEDGER_BACKUP.zh-CN.md"):
             shutil.copy2(staged / "docs" / name, destination)
         result = manifest_for(destination, commit, versions, source_tree,
-                              bundle_format="zevune-local-bundle-8")
+                              bundle_format="zevune-local-bundle-9")
         manifest = destination / "BUNDLE-MANIFEST.json"
         with manifest.open("x", encoding="utf-8", newline="\n") as file:
             json.dump(result, file, ensure_ascii=True, indent=2)
