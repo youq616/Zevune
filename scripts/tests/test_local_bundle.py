@@ -44,6 +44,9 @@ class BundleManifestTests(unittest.TestCase):
             git("config", "user.email", "test@example.invalid")
             git("config", "core.autocrlf", "false")
             source = {
+                "scripts/ledger_restore.py": b"inert chain CLI; never executed\n",
+                "scripts/ledger_recovery_backend.py": b"inert recovery transport; never executed\n",
+                "docs/LEDGER_RESTORE.zh-CN.md": b"inert recovery guide\n",
                 "scripts/wallet_maintenance.py": b"inert maintenance CLI; never executed\n",
                 "docs/WALLET_MAINTENANCE.zh-CN.md": b"inert maintenance guide\n",
                 "scripts/wallet_health.py": b"inert health CLI; never executed\n",
@@ -102,7 +105,7 @@ class BundleManifestTests(unittest.TestCase):
                     release = Path(kwargs["env"]["CARGO_TARGET_DIR"]) / "release"
                     release.mkdir(parents=True)
                     suffix = ".exe" if os.name == "nt" else ""
-                    for name in ("zevune-pool-worker", "zevune-wallet-local"):
+                    for name in ("zevune-pool-worker", "zevune-wallet-local", "zevune-pool-recovery"):
                         (release / (name + suffix)).write_bytes(b"inert Rust output fixture")
                 return subprocess.CompletedProcess(args, 0)
 
@@ -113,12 +116,12 @@ class BundleManifestTests(unittest.TestCase):
                 output = build.build(bundle)
             self.assertEqual(output["source_commit"], commit)
             self.assertEqual(output["source_tree"], tree)
-            self.assertEqual(output["format"], "zevune-local-bundle-7")
+            self.assertEqual(output["format"], "zevune-local-bundle-8")
             self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
             self.assertTrue((root / "reports/evidence.txt").is_file())
             self.assertEqual(compiler_inputs, ["go", "cargo"])
-            self.assertEqual(len(output["files"]), 16)
-            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py"):
+            self.assertEqual(len(output["files"]), 20)
+            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py"):
                 self.assertEqual((bundle / name).read_bytes(), source["scripts/" + name])
             self.assertEqual((bundle / "WALLET_BACKUP_CATALOG.zh-CN.md").read_bytes(),
                              source["docs/WALLET_BACKUP_CATALOG.zh-CN.md"])
