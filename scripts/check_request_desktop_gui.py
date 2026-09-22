@@ -107,6 +107,53 @@ class DesktopWidgetTests(unittest.TestCase):
         self.assertIn('不是认证', self.app.status.get())
         self.assertEqual(self.app.callback_errors, 0)
 
+    def test_invisible_output_path_is_rejected_before_modal_confirmation(self):
+        before = self.genesis.read_bytes()
+        for point in (0x85, 0x61C, 0x200B, 0x200E, 0x200F, 0x2028, 0x2029):
+            with self.subTest(point=f'U+{point:04X}'):
+                path = self.path / ('request' + chr(point) + '.zvrequest')
+                enter(self.app, 'target', path)
+                appeared = []
+                def cancel_unexpected_dialog():
+                    if self.app.confirmation is not None:
+                        appeared.append(True)
+                        self.app.confirmation.cancel.invoke()
+                token = self.root.after(20, cancel_unexpected_dialog)
+                self.app.actions['create'].invoke()
+                self.root.after_cancel(token)
+                self.root.update()
+                self.assertEqual(appeared, [])
+                self.assertIsNone(self.app.confirmation)
+                self.assertIsNone(self.app.last_result)
+                self.assertEqual(self.app.status.get(), desktop.FAILURE)
+                self.assertFalse(path.exists())
+        self.assertEqual(self.genesis.read_bytes(), before)
+        self.assertEqual(set(p.name for p in self.path.iterdir()), {'genesis'})
+
+    def test_invisible_existing_input_path_is_rejected_and_old_result_cleared(self):
+        press_create(self.app)
+        digest = self.app.last_result['request_sha256']
+        original = self.output.read_bytes()
+        self.inspect_created(digest)
+        self.assertIsNotNone(self.app.last_result)
+        for point in (0x85, 0x61C, 0x200B, 0x200E, 0x200F):
+            with self.subTest(point=f'U+{point:04X}'):
+                # The request really exists and has the correct independent
+                # digest; refusal cannot be explained by a missing file.
+                path = self.path / ('request' + chr(point) + '.zvrequest')
+                path.write_bytes(original)
+                enter(self.app, 'source', path)
+                self.app.actions['inspect'].invoke()
+                self.root.update()
+                self.assertIsNone(self.app.last_result)
+                self.assertEqual(self.app.details.get('1.0', 'end').strip(), '')
+                self.assertEqual(self.app.digest.get(), '')
+                self.assertTrue(self.app.copy_button.instate(['disabled']))
+                self.assertEqual(self.app.status.get(), desktop.FAILURE)
+                self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(self.output.read_bytes(), original)
+        self.assertEqual(self.app.callback_errors, 0)
+
     def test_cancel_preserves_files(self):
         press_create(self.app, False)
         self.assertFalse(self.output.exists())
