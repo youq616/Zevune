@@ -185,16 +185,84 @@ class InspectorWidgetTests(unittest.TestCase):
         self.assertIsNone(self.app.job)
         self.assertFalse(self.app.busy)
 
-    def test_thread_construction_and_start_failure_do_not_keep_credentials(self):
-        for location in ('construct', 'start'):
-            target = patch.object(desktop, 'InspectionJob', side_effect=MemoryError('PRIVATE_SENTINEL')) if location=='construct' else \
-                     patch.object(threading.Thread, 'start', side_effect=RuntimeError('PRIVATE_SENTINEL'))
-            with target:
+    def test_thread_construction_failure_has_no_start_attempt_or_credentials(self):
+        with patch.object(desktop, 'InspectionJob', side_effect=MemoryError('PRIVATE_SENTINEL')):
+            press(self.app)
+        self.assertFalse(self.app.busy)
+        self.assertIsNone(self.app.job)
+        self.assertIsNone(self.app.dialog)
+        self.assertEqual(self.app.status.get(), desktop.FAILURE)
+
+    def test_unconfirmed_start_failure_is_not_reported_as_idle_or_closed(self):
+        with patch.object(threading.Thread, 'start', side_effect=RuntimeError('PRIVATE_SENTINEL')):
+            press(self.app)
+        job = self.app.job
+        self.assertIsNotNone(job)
+        self.assertTrue(self.app.busy and job.start_attempted)
+        self.assertIsNone(job.request[0])
+        self.assertIsNone(self.app.dialog)
+        self.assertIsNone(job.poll())
+        self.assertNotIn('PRIVATE_SENTINEL', self.app.status.get())
+        self.app.close()
+        self.assertTrue(self.root.winfo_exists())
+        self.assertIs(self.app.job, job)
+        # No actual OS thread was created by this test injection. Leave the
+        # guarded UI in place until test cleanup destroys the test-only root.
+
+    def test_os_thread_before_ident_interruption_retains_job_until_completion(self):
+        # Exercise the exact CPython start window with a REAL OS thread: hold
+        # bootstrap before ident, then interrupt the parent's _started.wait.
+        # No successful backend is substituted. The late target must not run
+        # authentication after startup was withdrawn.
+        reached, release, booted = threading.Event(), threading.Event(), threading.Event()
+        real_job = desktop.InspectionJob
+        held, calls = [], []
+        def factory(*args):
+            job = real_job(*args)
+            bootstrap = job.thread._bootstrap_inner
+            def delayed_bootstrap():
+                reached.set()
+                try:
+                    release.wait(timeout=3)
+                    bootstrap()
+                finally:
+                    booted.set()
+            def interrupted_wait(*args, **kwargs):
+                assert reached.wait(timeout=2), 'real OS thread was not created'
+                raise KeyboardInterrupt('test_only_interrupted_start')
+            job.thread._bootstrap_inner = delayed_bootstrap
+            job.thread._started.wait = interrupted_wait
+            held.append(job)
+            return job
+        def refuse(*args):
+            calls.append(1)
+            raise RuntimeError('unexpected late authentication')
+        try:
+            with patch.object(desktop, 'InspectionJob', side_effect=factory), \
+                    patch.object(desktop, 'inspect_wallet', side_effect=refuse):
                 press(self.app)
-            self.assertFalse(self.app.busy)
-            self.assertIsNone(self.app.job)
-            self.assertIsNone(self.app.dialog)
-            self.assertEqual(self.app.status.get(), desktop.FAILURE)
+                self.assertEqual(len(held), 1)
+                job = held[0]
+                self.assertIsNone(job.thread.ident)
+                self.assertIs(self.app.job, job, 'uncertain OS thread ownership was dropped')
+                self.assertTrue(self.app.busy)
+                self.root.update()
+                self.assertIs(self.app.job, job, 'poll treated ident=None as completed')
+                self.app.begin()
+                self.assertEqual(len(held), 1, 'a second job was allowed')
+                self.app.close()
+                self.assertTrue(self.root.winfo_exists(), 'window closed before worker acknowledgement')
+                release.set()
+                wait(self.app)
+                self.assertTrue(booted.wait(timeout=2))
+                self.assertFalse(job.thread.is_alive())
+                self.assertEqual(calls, [], 'withdrawn startup still authenticated')
+        finally:
+            release.set()
+            if held:
+                self.assertTrue(booted.wait(timeout=3), 'test OS thread did not finish')
+                held[0].thread.join(timeout=2)
+                self.assertFalse(held[0].thread.is_alive())
 
     def test_callback_failure_never_logs_and_invalidates_result(self):
         output=io.StringIO()

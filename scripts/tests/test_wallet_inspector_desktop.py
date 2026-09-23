@@ -101,7 +101,7 @@ class InspectorTests(unittest.TestCase):
                     contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured):
                 job = desktop.InspectionJob(desktop.prepare(self.form), b'x'*16)
                 self.assertFalse(job.thread.daemon)
-                job.thread.start()
+                job.start()
                 job.thread.join(timeout=2)
                 self.assertFalse(job.thread.is_alive())
                 self.assertIsNone(job.poll().result)
@@ -117,13 +117,33 @@ class InspectorTests(unittest.TestCase):
         with patch.object(desktop, 'inspect_wallet', side_effect=delayed_refusal):
             job = desktop.InspectionJob(desktop.prepare(self.form), b'x'*16)
             try:
-                job.thread.start()
+                job.start()
                 self.assertIsNone(job.poll())
             finally:
                 gate.set()
                 job.thread.join(timeout=3)
             self.assertIsNone(job.poll().result)
         self.assertFalse(job.thread.is_alive())
+
+    def test_unknown_start_withdraws_credentials_and_requires_worker_acknowledgement(self):
+        job = desktop.InspectionJob(desktop.prepare(self.form), b'x'*16)
+        with patch.object(job.thread, 'start', side_effect=RuntimeError('test-only-start-refusal')):
+            with self.assertRaises(RuntimeError):
+                job.start()
+        self.assertTrue(job.start_attempted)
+        self.assertIsNone(job.thread.ident)
+        self.assertIsNone(job.request[0])
+        self.assertIsNone(job.poll())
+        self.assertFalse(job.completed.is_set())
+        # Emulate a late bootstrap, with a REAL worker and no crypto success.
+        # Runtime never retries start: this is exclusively test cleanup.
+        with patch.object(desktop, 'inspect_wallet', side_effect=AssertionError('withdrawn job must not authenticate')) as call:
+            job.thread.start()
+            job.thread.join(timeout=2)
+            self.assertFalse(job.thread.is_alive())
+            self.assertIsNone(job.poll().result)
+            call.assert_not_called()
+        self.assertTrue(job.completed.is_set())
 
     def test_ui_formatting_only_does_not_claim_payment_or_write_success(self):
         # A pure display fixture, not a success backend or authentication test.

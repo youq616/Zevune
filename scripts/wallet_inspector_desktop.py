@@ -146,27 +146,59 @@ class Completion:
     result: Inspection | None  # Failure is fixed data, never an exception/traceback.
 
 
-def _execute(channel, intent, password):
+def _execute(channel, released, request, completed):
+    intent = password = payload = None
     try:
-        result = inspect_wallet(intent, password)
-        outcome = Completion(result if type(result) is Inspection else None)
+        # Thread creation is not admission. A late bootstrap after an interrupted
+        # Thread.start must observe withdrawn credentials, not run native auth.
+        released.wait()
+        payload, request[0] = request[0], None
+        if payload is None:
+            outcome = Completion(None)
+        else:
+            intent, password = payload
+            result = inspect_wallet(intent, password)
+            outcome = Completion(result if type(result) is Inspection else None)
     except BaseException:
-        outcome = Completion(None)  # Do not let threading.excepthook print secrets.
+        outcome = Completion(None)  # Never invoke threading.excepthook with secrets.
     finally:
-        password = intent = None  # Drop references, not a secure-memory wipe claim.
+        intent = password = payload = None  # Reference release, not secure wiping.
+        request[0] = None
     channel.put_nowait(outcome)
+    completed.set()  # Explicit worker acknowledgement; ident=None proves nothing.
 
 
 class InspectionJob:
-    """One operation, one bounded completion, no Tk reference or callback."""
+    """An admission-gated operation with explicit completion ownership."""
     def __init__(self, intent, password):
         self.channel = queue.Queue(maxsize=1)
-        self.thread = threading.Thread(target=_execute, args=(self.channel, intent, password),
+        self.released, self.completed = threading.Event(), threading.Event()
+        self.request = [(intent, password)]
+        self.thread = threading.Thread(target=_execute,
+                                       args=(self.channel, self.released, self.request, self.completed),
                                        name="zevune-read-only-inspection", daemon=False)
+        self.start_attempted = False
         self.consumed = False
 
+    def withdraw_start(self):
+        # Only withdraw an unconfirmed startup, not an already executing op9.
+        # If admission raced with an interruption, the UI still owns the job
+        # until the explicit completion acknowledgement below.
+        self.request[0] = None
+        self.released.set()
+
+    def start(self):
+        reconcile.files.require(not self.start_attempted, "inspection_start_already_attempted")
+        self.start_attempted = True
+        try:
+            self.thread.start()
+            self.released.set()
+        except BaseException:
+            self.withdraw_start()
+            raise
+
     def poll(self):
-        if self.thread.is_alive():
+        if not self.completed.is_set() or self.thread.is_alive():
             return None
         if self.thread.ident is not None:
             self.thread.join(timeout=0)
@@ -343,18 +375,20 @@ class Workbench:
                 self.status.set("已取消或输入已变化，没有启动核查。")
                 return
             self.job = InspectionJob(intent, password)
-            try:
-                self.job.thread.start()
-            except BaseException:
-                # Even an unusual interruption after start must retain the job
-                # until its worker returns. Never silently orphan it via Tk.
-                if self.job.thread.ident is None:
-                    self.job = None
-                raise
+            self.job.start()
             self.status.set("正在只读认证与采样，界面可响应；关闭请求会等待本次核查结束。")
         except BaseException:
             self.status.set(FAILURE)
             self.revision += 1
+            if self.job is not None:
+                self.job.withdraw_start()
+                if not self.job.start_attempted:
+                    self.job = None  # Definitively no start call was attempted.
+                else:
+                    # No portable way to distinguish a failed OS creation from
+                    # a created thread whose bootstrap has not set ident yet.
+                    # Retain ownership; polling only trusts worker completion.
+                    self.status.set("线程启动未确认，已撤回尚未开始的认证请求。等待线程收尾；若始终未启动，请结束本应用进程后重开。")
         finally:
             password = None
             if self.job is not None:
