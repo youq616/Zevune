@@ -299,6 +299,92 @@ class InspectorWidgetTests(unittest.TestCase):
                 held[0].thread.join(timeout=2)
                 self.assertFalse(held[0].thread.is_alive())
 
+    def test_interrupted_modal_wait_destroys_dialog_and_releases_credentials(self):
+        held = []
+        def interrupted(window):
+            dialog = self.app.dialog
+            self.assertIs(window, dialog.window)
+            self.assertIs(self.root.grab_current(), window)
+            dialog.entry.insert(0, 'INERT_MODAL_PASSWORD')
+            held.append(dialog)
+            raise KeyboardInterrupt('PRIVATE_WAIT_SENTINEL')
+        output = io.StringIO()
+        with patch.object(self.root, 'wait_window', side_effect=interrupted), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')), \
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            self.app.inspect_button.invoke()
+        self.assertEqual(len(held), 1)
+        self.assertIsNone(self.app.dialog, 'interrupted modal retained its password dialog')
+        self.assertIsNone(held[0].password)
+        self.assertFalse(held[0].window.winfo_exists())
+        self.assertIsNone(self.root.grab_current())
+        self.assertFalse(self.app.busy)
+        self.assertIsNone(self.app.job)
+        self.assertEqual(output.getvalue(), '')
+        self.assertEqual(self.app.status.get(), desktop.FAILURE)
+
+    def test_accepted_password_not_retained_after_wait_raises(self):
+        held = []
+        def interrupted(window):
+            dialog = self.app.dialog
+            dialog.entry.insert(0, 'INERT_MODAL_PASSWORD')
+            dialog.confirm.invoke()
+            self.assertTrue(dialog.password is not None)
+            held.append(dialog)
+            raise RuntimeError('PRIVATE_AFTER_ACCEPT_SENTINEL')
+        with patch.object(self.root, 'wait_window', side_effect=interrupted), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')):
+            self.app.inspect_button.invoke()
+        self.assertEqual(len(held), 1)
+        self.assertTrue(held[0].password is None, 'accepted credentials survive an aborted wait')
+        self.assertIsNone(self.app.dialog)
+        self.assertIsNone(self.app.job)
+        self.assertFalse(self.app.busy)
+        self.assertEqual(self.app.status.get(), desktop.FAILURE)
+
+    def test_partial_dialog_initialization_releases_window_and_grab(self):
+        original = set(self.root.winfo_children())
+        with patch.object(self.app.ttk.Button, 'focus_set', side_effect=tk.TclError('PRIVATE_BUILD_SENTINEL')), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')):
+            self.app.inspect_button.invoke()
+        self.assertEqual(set(self.root.winfo_children()), original, 'partial dialog escaped constructor cleanup')
+        self.assertIsNone(self.root.grab_current())
+        self.assertIsNone(self.app.dialog)
+        self.assertIsNone(self.app.job)
+        self.assertFalse(self.app.busy)
+        self.assertEqual(self.app.status.get(), desktop.FAILURE)
+
+    def test_unconfirmed_modal_cleanup_blocks_reentry_and_close_can_finish(self):
+        held = []
+        def interrupted(window):
+            dialog = self.app.dialog
+            dialog.entry.insert(0, 'INERT_MODAL_PASSWORD')
+            held.append(dialog)
+            raise KeyboardInterrupt('PRIVATE_WAIT_SENTINEL')
+        output = io.StringIO()
+        with patch.object(self.root, 'wait_window', side_effect=interrupted), \
+                patch.object(tk.Toplevel, 'destroy', side_effect=tk.TclError('PRIVATE_DESTROY_SENTINEL')), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')), \
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            self.app.inspect_button.invoke()
+        self.assertEqual(len(held), 1)
+        dialog = held[0]
+        self.assertIs(self.app.dialog, dialog)
+        self.assertTrue(self.app.busy)
+        self.assertFalse(self.app.prompt_active)
+        self.assertIsNone(dialog.password)
+        self.assertEqual(dialog.entry.get(), '')
+        self.assertTrue(dialog.window.winfo_exists())
+        self.app.begin()
+        self.assertIs(self.app.dialog, dialog, 'unknown cleanup allowed a replacement prompt')
+        self.assertIsNone(self.app.job)
+        self.assertEqual(output.getvalue(), '')
+        self.assertNotIn('PRIVATE', self.app.status.get())
+        self.app.close()  # Failure injection ended: clean only the owned dialog.
+        self.assertIsNone(self.app.dialog)
+        with self.assertRaises(tk.TclError):
+            self.root.winfo_exists()
+
     def test_callback_failure_never_logs_and_invalidates_result(self):
         output=io.StringIO()
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):

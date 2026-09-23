@@ -212,9 +212,13 @@ class InspectionJob:
 
 
 class PasswordDialog:
-    def __init__(self, app, intent):
+    def __init__(self):
+        # Establish an owned holder before any fallible Tk construction. The
+        # workbench can then discard even a partially built credential window.
+        self.password = self.window = self.entry = None
+
+    def open(self, app, intent):
         tk, ttk = app.tk, app.ttk
-        self.password = None
         self.window = tk.Toplevel(app.root)
         self.window.title("确认只读核查并输入隐藏密码")
         self.window.transient(app.root)
@@ -248,16 +252,48 @@ class PasswordDialog:
         self.window.grab_set()
         self.cancel.focus_set()
 
-    def finish(self, accepted):
-        if accepted is True:
+    def _dismiss(self):
+        # Destroying the owned window also releases its local grab. Do not
+        # release a different dialog's grab or touch the global clipboard.
+        if self.entry is not None:
             try:
-                self.password = password_bytes(self.entry.get())
-            except (ValueError, UnicodeError):
-                self.entry.delete(0, "end")
-                self.message.set("密码输入无效，已清除。请重新输入或取消。")
-                return
-        self.entry.delete(0, "end")
-        self.window.destroy()
+                if self.entry.winfo_exists():
+                    self.entry.delete(0, "end")
+            except BaseException:
+                pass  # Still attempt destruction if the entry operation fails.
+        if self.window is None:
+            return True
+        try:
+            if self.window.winfo_exists():
+                self.window.destroy()
+            return not self.window.winfo_exists()
+        except BaseException:
+            return False  # Unknown cleanup is not permission for another prompt.
+
+    def discard(self):
+        self.password = None
+        return self._dismiss()
+
+    def finish(self, accepted):
+        candidate = None
+        self.password = None
+        try:
+            if accepted is True:
+                try:
+                    candidate = password_bytes(self.entry.get())
+                except (ValueError, UnicodeError):
+                    try:
+                        self.entry.delete(0, "end")
+                        self.message.set("密码输入无效，已清除。请重新输入或取消。")
+                    except BaseException:
+                        self.discard()
+                    return
+            if self._dismiss():
+                # Release a confirmed password only after the input widget and
+                # modal grab are gone. An aborted wait discards this reference.
+                self.password = candidate
+        finally:
+            candidate = None  # Reference release, not secure-memory erasure.
 
 
 class Workbench:
@@ -265,7 +301,7 @@ class Workbench:
         import tkinter as tk
         from tkinter import ttk, filedialog
         self.tk, self.ttk, self.filedialog, self.root = tk, ttk, filedialog, root
-        self.busy = self.closing = False
+        self.busy = self.closing = self.prompt_active = False
         self.dialog = self.job = self.last_result = self.poll_token = None
         self.revision = self.active_revision = self.callback_errors = 0
         self.values = {key: tk.StringVar(root) for key in FIELDS}
@@ -365,12 +401,16 @@ class Workbench:
         self.busy = True
         self.active_revision = self.revision
         self.enable(False)
-        password = None
+        password = dialog = None
         try:
-            self.dialog = PasswordDialog(self, intent)
-            self.root.wait_window(self.dialog.window)
-            password, self.dialog.password = self.dialog.password, None
-            self.dialog = None
+            self.dialog = dialog = PasswordDialog()
+            self.prompt_active = True
+            dialog.open(self, intent)
+            self.root.wait_window(dialog.window)
+            password, dialog.password = dialog.password, None
+            # Keep ownership until finally, including a wait which is interrupted
+            # after confirmation but before its returned password is consumed.
+            self.prompt_active = False
             if self.closing or self.revision != self.active_revision or password is None:
                 self.status.set("已取消或输入已变化，没有启动核查。")
                 return
@@ -391,8 +431,16 @@ class Workbench:
                     self.status.set("线程启动未确认，已撤回尚未开始的认证请求。等待线程收尾；若始终未启动，请结束本应用进程后重开。")
         finally:
             password = None
+            self.prompt_active = False
+            dialog_closed = self.dialog is None or self.dialog.discard()
+            if dialog_closed:
+                self.dialog = None
+            dialog = None
             if self.job is not None:
                 self.poll_token = self.root.after(50, self.poll)
+            elif not dialog_closed:
+                self.busy = True
+                self.status.set("密码窗口清理未确认，禁止新核查。请关闭本应用；若无法关闭，请结束进程后重开。")
             else:
                 self.busy = False
                 if self.closing:
@@ -446,7 +494,7 @@ class Workbench:
         self.discard()
         self.status.set(FAILURE)
         if self.dialog is not None:
-            self.dialog.finish(False)
+            self.dialog.discard()
 
     def close(self):
         if self.closing:
@@ -455,7 +503,13 @@ class Workbench:
         self.discard()
         self.enable(False)
         if self.dialog is not None:
-            self.dialog.finish(False)
+            cleaned = self.dialog.discard()
+            if cleaned and not self.prompt_active and self.job is None:
+                self.dialog = None
+                self.busy = False
+                self.root.destroy()
+            elif not cleaned:
+                self.status.set("密码窗口清理未确认，请结束本应用进程后重开。未启动新的核查。")
         elif self.job is not None:
             self.status.set("已请求关闭；正在等待本次只读核查收尾，不接受新操作。")
         else:
