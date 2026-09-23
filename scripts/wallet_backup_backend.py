@@ -14,6 +14,7 @@ import re
 import stat
 import subprocess
 import threading
+import time
 
 from zevune_wallet import encode_request
 
@@ -94,13 +95,16 @@ class Backend:
         environment = {key: value for key, value in os.environ.items()
                        if key.upper() in {"SYSTEMROOT", "WINDIR", "TEMP", "TMP"}}
         environment["RAYON_NUM_THREADS"] = "2"
-        # Three bounded streams avoid both unlimited communicate() buffering and
-        # a stalled stdin writer blocking the parent's deadline.
+        # Allocate before acquiring the child; Thread construction/start also
+        # belongs inside cleanup. Limits, operation whitelist and stdin-only
+        # secret transport are unchanged.
+        output, errors = bytearray(), bytearray()
+        bad = threading.Event()
+        threads = []
+        stop_deadline = stream_deadline = None
         proc = subprocess.Popen([str(self.path), "--no-real-funds"], stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 cwd=self.path.parent, env=environment, shell=False)
-        output, errors = bytearray(), bytearray()
-        bad = threading.Event()
 
         def stop():
             bad.set()
@@ -108,6 +112,21 @@ class Backend:
                 proc.kill()
             except OSError:
                 pass
+
+        def reap():
+            nonlocal stop_deadline
+            if proc.poll() is not None:
+                return
+            if stop_deadline is None:
+                stop_deadline = time.monotonic() + 5
+                stop()
+            proc.wait(timeout=max(0, stop_deadline - time.monotonic()))
+
+        def close_owned(stream):
+            try:
+                stream.close()
+            except (OSError, ValueError):
+                stop()
 
         def drain(stream, target, limit):
             try:
@@ -119,30 +138,41 @@ class Backend:
                         return
             except (OSError, ValueError):
                 stop()
+            finally:
+                close_owned(stream)
 
         def feed():
             try:
                 proc.stdin.write(request)
-                proc.stdin.close()
             except (OSError, ValueError):
                 stop()
+            finally:
+                close_owned(proc.stdin)
 
-        threads = [threading.Thread(target=drain, args=(proc.stdout, output, 4096), daemon=True),
-                   threading.Thread(target=drain, args=(proc.stderr, errors, 1024), daemon=True),
-                   threading.Thread(target=feed, daemon=True)]
-        try:
+        def join_streams():
+            nonlocal stream_deadline
+            if stream_deadline is None:
+                # Preserve the old aggregate three-times-two-second budget.
+                # Finally cannot renew it, including partial Thread startup.
+                stream_deadline = time.monotonic() + 6
             for thread in threads:
+                if thread.ident is not None:
+                    thread.join(timeout=max(0, stream_deadline - time.monotonic()))
+            if any(thread.is_alive() for thread in threads):
+                raise BackendError("backend_stream_not_closed")
+
+        try:
+            for target, args in ((drain, (proc.stdout, output, 4096)),
+                                 (drain, (proc.stderr, errors, 1024)), (feed, ())):
+                thread = threading.Thread(target=target, args=args, daemon=True)
+                threads.append(thread)
                 thread.start()
             try:
                 code = proc.wait(timeout=TIMEOUT)
             except subprocess.TimeoutExpired as error:
-                stop()
-                proc.wait(timeout=5)
+                reap()
                 raise BackendError("backend_timeout_reconcile_files") from error
-            for thread in threads:
-                thread.join(timeout=2)
-            if any(thread.is_alive() for thread in threads):
-                raise BackendError("backend_stream_not_closed")
+            join_streams()
             if bad.is_set() or code != 0 or errors:
                 raise BackendError("backend_operation_failed_reconcile_files")
             if self._check() != before:
@@ -154,11 +184,15 @@ class Backend:
                 raise BackendError("unexpected_backend_response")
             return response
         finally:
-            if proc.poll() is None:
-                stop()
-                proc.wait(timeout=5)
-            # A malicious descendant inheriting a pipe is outside the pinned
-            # backend contract; do not block closing a pipe owned by its reader.
-            if not any(thread.is_alive() for thread in threads):
-                for stream in (proc.stdin, proc.stdout, proc.stderr):
-                    stream.close()
+            try:
+                reap()
+            finally:
+                try:
+                    join_streams()
+                finally:
+                    # A running stream thread owns its close, including a
+                    # delayed thread outside the join window. Never block the
+                    # main thread acquiring its BufferedReader/Writer lock.
+                    for i, stream in enumerate((proc.stdout, proc.stderr, proc.stdin)):
+                        if i >= len(threads) or not threads[i].is_alive():
+                            close_owned(stream)
