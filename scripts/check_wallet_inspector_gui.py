@@ -130,6 +130,41 @@ class InspectorWidgetTests(unittest.TestCase):
         press(self.app, accept=False, during=check)
         self.assertEqual(self.root.clipboard_get(), 'unchanged')
 
+    def test_all_selectable_inspector_fields_disable_selection_export(self):
+        # Includes the password and frozen-review dialog, not just output.
+        def verify_options():
+            pending = [self.root]
+            while pending:
+                widget = pending.pop()
+                pending.extend(widget.winfo_children())
+                if 'exportselection' in widget.keys():
+                    self.assertFalse(int(widget.cget('exportselection')),
+                                     'inspector widget silently exports selection')
+        verify_options()
+        press(self.app, accept=False, during=verify_options)
+
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'X11 PRIMARY semantics only')
+    def test_selecting_receipt_keeps_unrelated_primary_and_clipboard(self):
+        # Inert text only: this exercises Tk selection, not authentication.
+        receipt_widget = next(widget for widget in self.app.copy_button.master.winfo_children()
+                              if widget.winfo_class() == 'TEntry')
+        owner = tk.Entry(self.root, exportselection=True)
+        owner.place(x=0, y=0, width=1, height=1)
+        self.addCleanup(owner.destroy)
+        owner.insert(0, 'INERT_EXISTING_PRIMARY')
+        owner.selection_range(0, 'end')
+        self.root.clipboard_clear()
+        self.root.clipboard_append('INERT_EXISTING_CLIPBOARD')
+        self.root.update()
+        self.assertEqual(self.root.selection_get(selection='PRIMARY'), 'INERT_EXISTING_PRIMARY')
+        self.app.receipt.set('INERT_RECEIPT_NOT_AUTHENTICATED')
+        receipt_widget.selection_range(0, 'end')
+        self.root.update()
+        self.assertEqual(self.root.selection_get(selection='PRIMARY'), 'INERT_EXISTING_PRIMARY',
+                         'selecting a display-only receipt exported it without explicit copy')
+        self.assertEqual(self.root.clipboard_get(), 'INERT_EXISTING_CLIPBOARD')
+        self.assertIsNone(self.app.last_result)
+
     def test_changed_intent_during_password_is_not_dispatched(self):
         with patch.object(desktop, 'InspectionJob', side_effect=AssertionError('do not dispatch')):
             press(self.app, during=lambda: self.app.values['reserve'].set('10'))
