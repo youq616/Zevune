@@ -222,11 +222,29 @@ class SourceDeliveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.verify()
 
     def test_extra_hidden_file_and_directory_rejected(self):
-        for name in ('.hidden', '__pycache__', 'extra.py', 'WALLET_INSPECTOR_DESKTOP.PY'):
+        for name in ('.hidden', '__pycache__', 'extra.py', 'WALLET_INSPECTOR_DESKTOP_EXTRA.PY'):
             path=self.folder/name
             path.mkdir()
             with self.subTest(name=name), self.assertRaises(ValueError):self.verify()
             path.rmdir()
+
+    def test_case_changed_payload_name_rejected_on_each_filesystem(self):
+        # Two-step rename creates a real case change even on Windows volumes;
+        # attempting to mkdir an uppercase alias of an existing file cannot.
+        original = self.folder / 'wallet_inspector_desktop.py'
+        holding = self.folder / 'case-rename-stage'
+        changed = self.folder / 'WALLET_INSPECTOR_DESKTOP.PY'
+        expected = original.read_bytes()
+        original.rename(holding)
+        holding.rename(changed)
+        try:
+            self.assertIn(changed.name, {p.name for p in self.folder.iterdir()})
+            with self.assertRaises(ValueError):self.verify()
+        finally:
+            changed.rename(holding)
+            holding.rename(original)
+        self.assertEqual(original.read_bytes(), expected)
+        self.assertTrue(self.verify()['integrity_verified'])
 
     def test_missing_payload_rejected(self):
         (self.folder/'wallet_health.py').unlink()
