@@ -1,0 +1,70 @@
+name: inspector-source-delivery
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['scripts/source_snapshot.py', 'scripts/build_local_lab.py', 'integration/orchard/**', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_verify_local_lab.py', 'scripts/verify_local_lab.py', '.github/workflows/inspector-source-delivery.yml', 'docs/INSPECTOR_SOURCE_DELIVERY.zh-CN.md', 'docs/WALLET_INSPECTOR_DESKTOP.zh-CN.md', 'scripts/check_inspector_source_delivery.py', 'scripts/check_wallet_inspector_backend.py', 'scripts/check_wallet_inspector_gui.py', 'scripts/inspector_source_bundle.py', 'scripts/ledger_recovery_backend.py', 'scripts/ledger_restore.py', 'scripts/tests/test_inspector_delivery_source.py', 'scripts/tests/test_inspector_source_bundle.py', 'scripts/tests/test_wallet_inspector_desktop.py', 'scripts/wallet_archive.py', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/wallet_health.py', 'scripts/wallet_inspector_desktop.py', 'scripts/wallet_reconcile.py', 'scripts/zevune_wallet.py']
+  pull_request:
+    paths: ['scripts/source_snapshot.py', 'scripts/build_local_lab.py', 'integration/orchard/**', 'scripts/tests/test_wallet_backup.py', 'scripts/tests/test_verify_local_lab.py', 'scripts/verify_local_lab.py', '.github/workflows/inspector-source-delivery.yml', 'docs/INSPECTOR_SOURCE_DELIVERY.zh-CN.md', 'docs/WALLET_INSPECTOR_DESKTOP.zh-CN.md', 'scripts/check_inspector_source_delivery.py', 'scripts/check_wallet_inspector_backend.py', 'scripts/check_wallet_inspector_gui.py', 'scripts/inspector_source_bundle.py', 'scripts/ledger_recovery_backend.py', 'scripts/ledger_restore.py', 'scripts/tests/test_inspector_delivery_source.py', 'scripts/tests/test_inspector_source_bundle.py', 'scripts/tests/test_wallet_inspector_desktop.py', 'scripts/wallet_archive.py', 'scripts/wallet_backup.py', 'scripts/wallet_backup_backend.py', 'scripts/wallet_health.py', 'scripts/wallet_inspector_desktop.py', 'scripts/wallet_reconcile.py', 'scripts/zevune_wallet.py']
+permissions:
+  contents: read
+jobs:
+  delivery:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source identity and delivery contract tests
+        run: |
+          python - <<'PY_SOURCE'
+          import json, os, re, subprocess
+          expected = os.environ['ZEVUNE_SOURCE_HEAD']
+          assert re.fullmatch(r'[0-9a-f]{40}', expected)
+          def git(*args):
+              return subprocess.check_output(['git', '--no-replace-objects', *args], text=True).strip()
+          assert git('rev-parse', 'HEAD') == expected
+          tree = git('rev-parse', 'HEAD^{tree}')
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print(json.dumps({'source_head': expected, 'source_tree': tree}))
+          PY_SOURCE
+          python -m unittest discover -s scripts/tests -p test_inspector_source_bundle.py -v
+          python -m unittest discover -s scripts/tests -p test_inspector_delivery_source.py -v
+          python -m unittest discover -s scripts/tests -p test_verify_local_lab.py -v
+      - name: Linux real display support
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes --no-install-recommends python3-tk xvfb xauth
+      - name: Rebuild original authentic wallet with locked dependencies
+        run: |
+          rustup toolchain install 1.98.1 --profile minimal
+          cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local
+      - name: Standalone delivery real Tk and genuine authentication
+        timeout-minutes: 13
+        run: |
+          python - <<'PY_DELIVERY'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          backend = (pathlib.Path('integration/orchard/target/release') / ('zevune-wallet-local' + suffix)).resolve(strict=True)
+          command = [sys.executable, '-B', 'scripts/check_inspector_source_delivery.py', '--source-commit', os.environ['ZEVUNE_SOURCE_HEAD'], '--backend', str(backend)]
+          if os.name != 'nt':
+              command = ['xvfb-run', '-a', *command]
+          subprocess.run(command, check=True, timeout=750)
+          PY_DELIVERY
+      - name: Source and dependency locks unchanged
+        run: git diff --exit-code
