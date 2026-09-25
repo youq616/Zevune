@@ -51,9 +51,16 @@ def linked(info: os.stat_result) -> bool:
         & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
 
 
+def file_identity(info: os.stat_result) -> tuple:
+    # Cross-route identity follows the existing wallet transport contract.
+    # Path and handle APIs may present different permissions/timestamps on
+    # Windows; those are still checked against their OWN complete baseline.
+    return (info.st_dev, info.st_ino, info.st_size, stat.S_IFMT(info.st_mode),
+            info.st_nlink, getattr(info, "st_file_attributes", 0) & 0x400)
+
+
 def stamp(info: os.stat_result) -> tuple:
-    return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
-            info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    return file_identity(info) + (info.st_mode, info.st_mtime_ns, info.st_ctime_ns)
 
 
 def directory_chain(path: Path) -> tuple:
@@ -75,7 +82,8 @@ def read_plain(path: Path, maximum: int) -> tuple[bytes, tuple]:
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     fd = os.open(path, flags)
     try:
-        require(stamp(os.fstat(fd)) == stamp(before), "file_identity_changed")
+        opened = os.fstat(fd)
+        require(file_identity(opened) == file_identity(before), "file_identity_changed")
         data = bytearray()
         while True:
             chunk = os.read(fd, min(65536, maximum + 1 - len(data)))
@@ -83,7 +91,7 @@ def read_plain(path: Path, maximum: int) -> tuple[bytes, tuple]:
                 break
             data.extend(chunk)
             require(len(data) <= maximum, "file_grew_past_limit")
-        require(stamp(os.fstat(fd)) == stamp(before) and len(data) == before.st_size,
+        require(stamp(os.fstat(fd)) == stamp(opened) and len(data) == before.st_size,
                 "file_changed_during_read")
     finally:
         os.close(fd)

@@ -8,6 +8,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -73,7 +74,72 @@ class SourceDeliveryTests(unittest.TestCase):
         self.assertFalse(result['real_funds_allowed'])
         self.assertEqual(before, {p.name: p.read_bytes() for p in self.folder.iterdir()})
         for name, source in delivery.SOURCES.items():
-            self.assertEqual(before[name], git(self.repo, 'cat-file', 'blob', self.commit + ':' + source) + b'\n')
+            expected = subprocess.check_output(['git', '--no-replace-objects', 'cat-file', 'blob',
+                                                self.commit + ':' + source], cwd=self.repo, timeout=30)
+            self.assertEqual(before[name], expected)  # Preserve CRLF and trailing whitespace too.
+
+    @staticmethod
+    def changed_stat(info, **changes):
+        fields = {key: getattr(info, key) for key in (
+            'st_dev', 'st_ino', 'st_mode', 'st_nlink', 'st_size', 'st_mtime_ns', 'st_ctime_ns')}
+        fields['st_file_attributes'] = getattr(info, 'st_file_attributes', 0)
+        fields.update(changes)
+        return SimpleNamespace(**fields)
+
+    def test_stable_path_and_handle_metadata_routes_can_differ(self):
+        # Real file and descriptor, only synthetic stat presentation. This is
+        # not a substitute for successful wallet authentication or native CI.
+        path = self.folder / 'wallet_health.py'
+        expected = path.read_bytes()
+        real_fstat = delivery.os.fstat
+        def route(fd):
+            info = real_fstat(fd)
+            return self.changed_stat(info, st_mtime_ns=info.st_mtime_ns-123,
+                                     st_ctime_ns=info.st_ctime_ns-456,
+                                     st_mode=info.st_mode ^ stat.S_IWUSR)
+        with patch.object(delivery.os, 'fstat', side_effect=route):
+            data, _ = delivery.read_plain(path, delivery.MAX_FILE)
+        self.assertEqual(data, expected)
+
+    def test_change_within_handle_metadata_route_is_rejected(self):
+        path = self.folder / 'wallet_health.py'
+        original = path.read_bytes()
+        real_fstat = delivery.os.fstat
+        calls = []
+        def changing(fd):
+            info = real_fstat(fd)
+            calls.append(1)
+            return self.changed_stat(info, st_mtime_ns=info.st_mtime_ns-123,
+                                     st_ctime_ns=info.st_ctime_ns-456+len(calls))
+        with patch.object(delivery.os, 'fstat', side_effect=changing):
+            with self.assertRaises(ValueError):delivery.read_plain(path, delivery.MAX_FILE)
+        self.assertEqual(len(calls), 2, 'did not reach the after-read handle check')
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_cross_route_file_identity_is_never_relaxed(self):
+        path = self.folder / 'wallet_health.py'
+        before = path.lstat()
+        real_fstat = delivery.os.fstat
+        for field, value in (('st_dev', before.st_dev+1), ('st_ino', before.st_ino+1),
+                             ('st_size', before.st_size+1), ('st_nlink', 2),
+                             ('st_mode', stat.S_IFDIR|0o700), ('st_file_attributes', 0x400)):
+            with self.subTest(field=field):
+                def wrong(fd):return self.changed_stat(real_fstat(fd), **{field:value})
+                with patch.object(delivery.os, 'fstat', side_effect=wrong):
+                    with self.assertRaises(ValueError):delivery.read_plain(path, delivery.MAX_FILE)
+
+    def test_change_within_path_metadata_route_is_rejected(self):
+        path = self.folder / 'wallet_health.py'
+        before = path.lstat()
+        real_fstat = delivery.os.fstat
+        def handle(fd):
+            info = real_fstat(fd)
+            return self.changed_stat(info, st_ctime_ns=info.st_ctime_ns-456)
+        after = self.changed_stat(before, st_ctime_ns=before.st_ctime_ns+1)
+        with patch.object(delivery.os, 'fstat', side_effect=handle), \
+                patch.object(Path, 'lstat', side_effect=[before, after]) as query:
+            with self.assertRaises(ValueError):delivery.read_plain(path, delivery.MAX_FILE)
+        self.assertEqual(query.call_count, 2, 'did not reach the final path check')
 
     def test_wrong_pins_are_rejected_before_any_payload_open(self):
         with patch.object(delivery, 'read_plain', wraps=delivery.read_plain) as reader:
