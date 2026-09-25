@@ -27,6 +27,7 @@ FIELDS = {"wallet": 4096, "ancestor": 144, "backend": 4096, "backend_sha256": 64
           "reserve": 19, "saves": 3, "warn": 3}
 NOTICE = "NO-FUNDS｜只认证当前本地文件并检查容量；不扫描、不签名、不广播、不修改钱包。"
 FAILURE = "核查未完成。请保留原文件和独立回执，核对输入；没有执行恢复、签名或付款。"
+OBSERVATION_FAILURE = "完成状态观察中断，原只读任务仍被持有，禁止新核查。请点击关闭继续收尾；若仍无法关闭，请结束本应用进程后重开。"
 ISSUES = {"wallet_record_limit": "钱包保存额度不足", "wallet_record_headroom_low": "钱包剩余保存额度偏低",
           "filesystem_read_only": "采样文件系统为只读", "directory_entry_budget_insufficient": "目录项预算不足",
           "payload_space_low": "数据空间不足", "disk_reserve_low": "未满足指定保留空间"}
@@ -219,7 +220,10 @@ class PasswordDialog:
 
     def open(self, app, intent):
         tk, ttk = app.tk, app.ttk
-        self.window = tk.Toplevel(app.root)
+        # Toplevel can raise after creating its Tcl window, before __init__
+        # returns. Own the actual widget object before that fallible step too.
+        self.window = tk.Toplevel.__new__(tk.Toplevel)
+        tk.Toplevel.__init__(self.window, app.root)
         self.window.title("确认只读核查并输入隐藏密码")
         self.window.transient(app.root)
         self.window.geometry("780x600")
@@ -303,6 +307,7 @@ class Workbench:
         self.tk, self.ttk, self.filedialog, self.root = tk, ttk, filedialog, root
         self.busy = self.closing = self.prompt_active = False
         self.dialog = self.job = self.last_result = self.poll_token = None
+        self.poll_ticket = None
         self.revision = self.active_revision = self.callback_errors = 0
         self.values = {key: tk.StringVar(root) for key in FIELDS}
         self.values["saves"].set("1")
@@ -437,7 +442,7 @@ class Workbench:
                 self.dialog = None
             dialog = None
             if self.job is not None:
-                self.poll_token = self.root.after(50, self.poll)
+                self.schedule_poll()
             elif not dialog_closed:
                 self.busy = True
                 self.status.set("密码窗口清理未确认，禁止新核查。请关闭本应用；若无法关闭，请结束进程后重开。")
@@ -448,13 +453,55 @@ class Workbench:
                 else:
                     self.enable(True)
 
+    def cancel_poll(self):
+        # Invalidate before cancellation: an interrupted after() may have
+        # registered a callback without returning a token we can cancel.
+        self.poll_ticket = None
+        token, self.poll_token = self.poll_token, None
+        if token is not None:
+            try:
+                self.root.after_cancel(token)
+            except BaseException:
+                pass  # Any late callback is inert; the job is still owned.
+
+    def schedule_poll(self):
+        if self.job is None or self.poll_ticket is not None:
+            return
+        ticket, job = object(), self.job
+        self.poll_ticket = ticket
+        def ready():
+            if self.poll_ticket is not ticket or self.job is not job:
+                return
+            self.poll_ticket = self.poll_token = None
+            self.poll()
+        try:
+            token = self.root.after(50, ready)
+            if self.poll_ticket is ticket:
+                self.poll_token = token
+        except BaseException:
+            self.cancel_poll()
+            self.revision += 1
+            self.discard()
+            self.status.set(OBSERVATION_FAILURE)
+            # No automatic retry loop and no second authentication. An explicit
+            # Close can observe the same worker again, even after closing=True.
+
     def poll(self):
-        self.poll_token = None
+        if self.job is None:
+            self.cancel_poll()
+            return
         completion = self.job.poll()
         if completion is None:
-            self.poll_token = self.root.after(50, self.poll)
+            self.schedule_poll()
             return
+        self.cancel_poll()
         self.job = None
+        if self.dialog is not None:
+            if not self.dialog.discard():
+                self.busy = True
+                self.status.set("密码窗口清理未确认，禁止新核查。请关闭本应用；若无法关闭，请结束进程后重开。")
+                return
+            self.dialog = None
         self.busy = False
         if self.closing:
             self.discard()
@@ -497,22 +544,26 @@ class Workbench:
             self.dialog.discard()
 
     def close(self):
-        if self.closing:
-            return
+        # Repeated explicit Close is a bounded cleanup attempt, not a retry of
+        # authentication. It also works after an observation timer has failed.
         self.closing = True
         self.discard()
         self.enable(False)
         if self.dialog is not None:
-            cleaned = self.dialog.discard()
-            if cleaned and not self.prompt_active and self.job is None:
-                self.dialog = None
-                self.busy = False
-                self.root.destroy()
-            elif not cleaned:
+            if not self.dialog.discard():
+                self.busy = True
                 self.status.set("密码窗口清理未确认，请结束本应用进程后重开。未启动新的核查。")
-        elif self.job is not None:
+                return
+            if self.prompt_active:
+                return  # begin() still owns its modal-wait stack and finally.
+            self.dialog = None
+        if self.job is not None:
             self.status.set("已请求关闭；正在等待本次只读核查收尾，不接受新操作。")
+            if self.poll_ticket is None:
+                self.poll()
         else:
+            self.busy = False
+            self.cancel_poll()
             self.root.destroy()
 
 

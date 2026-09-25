@@ -385,6 +385,149 @@ class InspectorWidgetTests(unittest.TestCase):
         with self.assertRaises(tk.TclError):
             self.root.winfo_exists()
 
+    def test_toplevel_constructor_failure_does_not_leave_unowned_window(self):
+        original = set(self.root.winfo_children())
+        # Toplevel calls iconname AFTER creating a real Tcl window, but before
+        # its constructor returns. No fake widget or accepting backend is used.
+        with patch.object(tk.Toplevel, 'iconname', side_effect=tk.TclError('PRIVATE_CONSTRUCTOR_SENTINEL')), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')):
+            self.app.inspect_button.invoke()
+        self.assertEqual(set(self.root.winfo_children()), original,
+                         'Toplevel constructor leaked an unowned real window')
+        self.assertIsNone(self.app.dialog)
+        self.assertIsNone(self.app.job)
+        self.assertFalse(self.app.busy)
+        self.assertEqual(self.app.status.get(), desktop.FAILURE)
+
+    def test_partial_toplevel_cleanup_failure_retains_ownership_until_close(self):
+        with patch.object(tk.Toplevel, 'iconname', side_effect=tk.TclError('PRIVATE_CONSTRUCTOR_SENTINEL')), \
+                patch.object(tk.Toplevel, 'destroy', side_effect=tk.TclError('PRIVATE_DESTROY_SENTINEL')), \
+                patch.object(desktop, 'InspectionJob', side_effect=AssertionError('no task allowed')):
+            self.app.inspect_button.invoke()
+        dialog = self.app.dialog
+        self.assertIsNotNone(dialog, 'partially constructed Tk window lost its owner')
+        self.assertTrue(dialog.window.winfo_exists())
+        self.assertTrue(self.app.busy)
+        self.assertIsNone(dialog.password)
+        self.app.begin()
+        self.assertIs(self.app.dialog, dialog)
+        self.assertIsNone(self.app.job)
+        self.app.close()
+        self.assertIsNone(self.app.dialog)
+        with self.assertRaises(tk.TclError):
+            self.root.winfo_exists()
+
+    def _poll_failure_close_case(self, *, failure_at, registered, repeated=False, interrupt=False):
+        gate = threading.Event()
+        entered = threading.Event()
+        self.gates.append(gate)
+        calls, scheduled, failed, decisions = [], [], [], []
+        original_after = self.root.after
+        def refuse(*args):
+            calls.append(1)
+            entered.set()
+            gate.wait(timeout=3)
+            raise RuntimeError('PRIVATE_REFUSAL_SENTINEL')
+        def decide():
+            dialog = self.app.dialog
+            decisions.append(dialog)
+            dialog.entry.insert(0, 'synthetic-password-only')
+            dialog.confirm.invoke()
+        def after(ms, func=None, *args):
+            if ms == 50 and func is not None:
+                scheduled.append(1)
+                if len(scheduled) == failure_at or (repeated and len(scheduled) == failure_at + 1):
+                    failed.append(1)
+                    if registered:
+                        original_after(ms, func, *args)
+                    raise (KeyboardInterrupt if interrupt else tk.TclError)('PRIVATE_AFTER_SENTINEL')
+            return original_after(ms, func, *args)
+        output = io.StringIO()
+        with patch.object(desktop, 'inspect_wallet', side_effect=refuse), \
+                patch.object(self.root, 'after', side_effect=after), \
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            original_after(20, decide)
+            self.app.inspect_button.invoke()
+            self.assertEqual(len(decisions), 1)
+            self.assertTrue(entered.wait(timeout=1))
+            until = time.monotonic() + 1
+            while not failed and time.monotonic() < until:
+                self.root.update()
+                time.sleep(0.005)
+            self.assertEqual(failed, [1], 'the intended real-worker observation fault did not occur')
+            job = self.app.job
+            self.assertIsNotNone(job)
+            self.assertTrue(self.app.busy)
+            self.app.begin()
+            self.assertIs(self.app.job, job, 'observation failure admitted another operation')
+            # Explicit close is allowed to resume OBSERVATION, never execution.
+            self.app.close()
+            self.assertTrue(self.root.winfo_exists())
+            self.assertTrue(self.app.closing and self.app.busy)
+            if repeated:
+                self.assertEqual(failed, [1, 1])
+                self.assertIs(self.app.job, job)
+                self.app.close()  # A second explicit close must not be ignored.
+            # Deliver any callback registered before the interrupted return.
+            until = time.monotonic() + 0.13
+            while time.monotonic() < until:
+                self.root.update()
+                time.sleep(0.005)
+            self.assertIs(self.app.job, job)
+            self.assertEqual(calls, [1])
+            gate.set()
+            wait(self.app, limit=2)
+        self.assertIsNone(self.app.job)
+        self.assertIsNone(self.app.last_result)
+        self.assertEqual(self.app.callback_errors, 0)
+        self.assertEqual(output.getvalue(), '')
+        self.assertFalse(job.thread.is_alive())
+        with self.assertRaises(tk.TclError):
+            self.root.winfo_exists()
+
+    def test_close_reobserves_worker_after_initial_timer_failure(self):
+        self._poll_failure_close_case(failure_at=1, registered=False)
+
+    def test_close_ignores_timer_registered_before_interrupted_return(self):
+        self._poll_failure_close_case(failure_at=1, registered=True)
+
+    def test_close_reobserves_worker_after_reschedule_failure(self):
+        self._poll_failure_close_case(failure_at=2, registered=False)
+
+    def test_repeated_close_can_reobserve_after_another_timer_failure(self):
+        self._poll_failure_close_case(failure_at=1, registered=False, repeated=True)
+
+    def test_close_ignores_timer_registered_before_keyboard_interrupt(self):
+        self._poll_failure_close_case(failure_at=1, registered=True, interrupt=True)
+
+    def test_job_completion_does_not_release_unconfirmed_dialog_ownership(self):
+        original_wait = self.root.wait_window
+        held = []
+        def wait_then_refuse_cleanup(window):
+            original_wait(window)
+            held.append(self.app.dialog)
+            self.app.dialog._dismiss = lambda: False  # cleanup refusal only
+        with patch.object(self.root, 'wait_window', side_effect=wait_then_refuse_cleanup), \
+                patch.object(desktop, 'inspect_wallet', side_effect=RuntimeError('PRIVATE_REFUSAL_SENTINEL')):
+            press(self.app)
+            until = time.monotonic() + 2
+            while self.app.job is not None and time.monotonic() < until:
+                self.root.update()
+                time.sleep(0.005)
+        self.assertEqual(len(held), 1)
+        self.assertIsNone(self.app.job, 'refusing worker did not finish')
+        self.assertTrue(self.app.busy, 'worker completion released an unconfirmed dialog')
+        self.assertIs(self.app.dialog, held[0])
+        self.assertIsNone(self.app.dialog.password)
+        self.assertIsNone(self.app.last_result)
+        self.app.begin()
+        self.assertIs(self.app.dialog, held[0])
+        del held[0]._dismiss  # Restore the real widget cleanup before closing.
+        self.app.close()
+        self.assertIsNone(self.app.dialog)
+        with self.assertRaises(tk.TclError):
+            self.root.winfo_exists()
+
     def test_callback_failure_never_logs_and_invalidates_result(self):
         output=io.StringIO()
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
