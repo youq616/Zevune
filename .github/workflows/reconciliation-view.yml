@@ -1,0 +1,76 @@
+name: reconciliation-view
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', '.github/workflows/**']
+  pull_request:
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', '.github/workflows/**']
+permissions:
+  contents: read
+jobs:
+  view:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source and viewer contract tests
+        run: |
+          python - <<'PY_SOURCE'
+          import json, os, re, subprocess
+          expected = os.environ['ZEVUNE_SOURCE_HEAD']
+          assert re.fullmatch(r'[0-9a-f]{40}', expected)
+          def git(*args):
+              return subprocess.check_output(['git', '--no-replace-objects', *args], text=True).strip()
+          assert git('rev-parse', 'HEAD') == expected
+          tree = git('rev-parse', 'HEAD^{tree}')
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print(json.dumps({'source_head': expected, 'source_tree': tree}))
+          PY_SOURCE
+          python -B -m unittest discover -s scripts/tests -p 'test_reconciliation_view*.py' -v
+      - name: Linux display support
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes --no-install-recommends python3-tk xvfb xauth
+      - name: Real Tk result invalidation and explicit clipboard
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a python -B scripts/check_reconciliation_view_gui.py -v
+          else
+            python -B scripts/check_reconciliation_view_gui.py -v
+          fi
+      - name: Build original authentic reconciliation backends
+        run: |
+          rustup toolchain install 1.98.1 --profile minimal
+          cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local --bin zevune-pool-worker --bin zevune-pool-recovery
+      - name: View real pending, empty, included and expired recovery results
+        timeout-minutes: 11
+        run: |
+          python - <<'PY_NATIVE'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          folder = pathlib.Path('integration/orchard/target/release').resolve(strict=True)
+          backends = [str((folder / (name + suffix)).resolve(strict=True)) for name in ('zevune-wallet-local', 'zevune-pool-worker', 'zevune-pool-recovery')]
+          command = [sys.executable, '-B', 'scripts/check_reconciliation_view_backend.py', *backends]
+          if os.name != 'nt':
+              command = ['xvfb-run', '-a', *command]
+          subprocess.run(command, check=True, timeout=600)
+          PY_NATIVE
+      - name: Source and dependency locks unchanged
+        run: git diff --exit-code
