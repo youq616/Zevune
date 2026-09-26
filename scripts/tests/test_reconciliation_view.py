@@ -307,6 +307,27 @@ class ViewTests(unittest.TestCase):
             self.assertEqual(process.returncode,0)
         self.assertEqual(set(p.name for p in tools.iterdir()),before)
 
+    def test_real_cli_text_is_utf8_under_legacy_stdout_encoding(self):
+        expected = self.inspect().render() + "\n"
+        process = subprocess.run(self.command() + ['--text'], capture_output=True, timeout=10,
+                                 env={**os.environ, 'PYTHONIOENCODING': 'cp1252', 'PYTHONUTF8': '0'})
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(process.stdout.decode('utf-8'), expected)
+        self.assertEqual(self.inventory(), self.before)
+
+    def test_text_only_embedding_and_short_binary_output_are_explicit(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):view.write_output("中文")
+        self.assertEqual(out.getvalue(), "中文\n")
+        class ShortOutput:
+            buffer = None
+            def __init__(self):self.buffer = self
+            def write(self, raw):return len(raw) - 1
+            def flush(self):raise AssertionError('short output must not claim completion')
+        with patch.object(view.sys, 'stdout', ShortOutput()), self.assertRaises(OSError):
+            view.write_output("中文")
+        self.assertEqual(self.inventory(), self.before)
+
     def test_cli_interruption_does_not_print_partial_success(self):
         out,err=io.StringIO(),io.StringIO()
         with patch.object(view,'inspect',side_effect=KeyboardInterrupt('PRIVATE')), \

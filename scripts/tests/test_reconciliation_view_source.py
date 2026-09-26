@@ -47,14 +47,14 @@ class ViewSourceTests(unittest.TestCase):
                     for folder in (ROOT/'scripts',ROOT/'scripts/tests'):
                         source=folder/(name.split('.')[0]+'.py')
                         if source.is_file():pending.append(source)
-        blocks=dict(re.findall(r'^  (push|pull_request):\n((?:    [^\n]*\n)+)',WORKFLOW.read_text(),re.M))
+        blocks=dict(re.findall(r'^  (push|pull_request):\n((?:    [^\n]*\n)+)',WORKFLOW.read_text(encoding='utf-8'),re.M))
         self.assertEqual(set(blocks),{'push','pull_request'})
         for block in blocks.values():
             patterns=ast.literal_eval(re.findall(r'^    paths: (.+)$',block,re.M)[0])
             for path in expected:self.assertTrue(any(fnmatch.fnmatchcase(path,p) for p in patterns),path)
 
     def test_native_workflow_and_driver_keep_original_crypto_and_all_four_cases(self):
-        text=WORKFLOW.read_text()
+        text=WORKFLOW.read_text(encoding='utf-8')
         for value in ('persist-credentials: false','os: [ubuntu-latest, windows-latest]',
                       'ref: ${{ github.event.pull_request.head.sha || github.sha }}','cargo +1.98.1 build',
                       '--locked --release --features local-funding-lab', '--bin zevune-pool-recovery',
@@ -62,13 +62,23 @@ class ViewSourceTests(unittest.TestCase):
             self.assertIn(value,text)
         self.assertNotIn('continue-on-error',text)
         self.assertNotIn('upload-artifact',text)
-        driver=(ROOT/'scripts/check_reconciliation_view_backend.py').read_text()
+        driver=(ROOT/'scripts/check_reconciliation_view_backend.py').read_text(encoding='utf-8')
         self.assertIn('saved_recover(*args, **kwargs)',driver)
         self.assertIn('original.run(wallet, worker, recovery)',driver)
         self.assertIn("[('pending', True), ('empty-result', False), ('included', False), ('expired', False)]",driver)
 
+    def test_source_audit_uses_explicit_utf8_under_legacy_defaults(self):
+        original = Path.read_text
+        def legacy_default(path, *args, **kwargs):
+            if not args and 'encoding' not in kwargs:
+                kwargs['encoding'] = 'cp1252'
+            return original(path, *args, **kwargs)
+        # Real source and AST, only the implicit text-decoding default changes.
+        with patch.object(Path, 'read_text', autospec=True, side_effect=legacy_default):
+            self.test_cli_has_no_password_native_or_mutating_interface()
+
     def test_cli_has_no_password_native_or_mutating_interface(self):
-        source=(ROOT/'scripts/reconciliation_view.py').read_text()
+        source=(ROOT/'scripts/reconciliation_view.py').read_text(encoding='utf-8')
         tree=ast.parse(source)
         calls={n.func.attr for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute)}
         self.assertFalse(calls & {'write_bytes','write_text','write_new','mkdir','unlink','rename','recover',

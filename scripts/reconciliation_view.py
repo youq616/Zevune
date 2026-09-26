@@ -203,6 +203,22 @@ class Parser(argparse.ArgumentParser):
         self.exit(64, "Invalid reconciliation-view arguments. Use --help; never supply secrets.\n")
 
 
+def write_output(text: str) -> None:
+    """The CLI's redirected output is UTF-8 even on legacy-codepage Windows.
+
+    Text-only embedding streams retain their own policy. A failed/short write
+    remains a failed call; consumers must also require normal exit status zero.
+    """
+    stream = getattr(sys.stdout, "buffer", None)
+    if stream is None:
+        print(text)
+        return
+    raw = (text + "\n").encode("utf-8")
+    if stream.write(raw) != len(raw):
+        raise OSError("incomplete_view_output")
+    stream.flush()
+
+
 def main(argv=None) -> int:
     parser = Parser(description=__doc__)
     parser.add_argument("--no-real-funds", action="store_true", required=True)
@@ -214,7 +230,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         result = inspect(prepare({key: getattr(args, key) for key in FIELDS}))
-        print(result.render() if args.text else json.dumps(result.summary(), sort_keys=True))
+        write_output(result.render() if args.text else json.dumps(result.summary(), sort_keys=True))
         return 0
     except KeyboardInterrupt:
         print("Reconciliation view interrupted. Inputs retained; do not retry payment.", file=sys.stderr)

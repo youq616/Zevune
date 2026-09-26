@@ -73,3 +73,10 @@ main，也不解决P2/P4整体、Issue23/37或网络隐私。
 JSON重复字段拒绝依据Python `object_pairs_hook`，Tk调用语义参照官方文档：
 https://docs.python.org/3/library/json.html
 https://docs.python.org/3/library/tkinter.html#threading-model
+
+## 命令行编码
+
+JSON和中文文本的正常CLI输出均显式使用UTF-8字节，重定向到文件或管道时不依赖Windows系统
+代码页；消费者应按UTF-8解码。嵌入调用传入无buffer的文本流时沿用该文本流策略。写入或flush失败
+仍返回失败；不能只凭部分输出判断成功，必须同时核对正常退出码0。源码检查显式按UTF-8读取，
+不通过更换runner默认编码或跳过Windows绕开检查。cp1252重定向与源码默认编码回归在各平台执行。
