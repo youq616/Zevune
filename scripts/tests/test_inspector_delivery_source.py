@@ -1,16 +1,22 @@
 """The new delivery workflow must cover every runtime and test dependency."""
 import ast
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import os
 import subprocess
 import tempfile
 import sys
 import unittest
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import inspector_source_bundle as delivery
 ROOT=Path(__file__).resolve().parents[2]
 WORKFLOW=ROOT/'.github/workflows/inspector-source-delivery.yml'
+
+
+def repository_path(path, root):
+    """Git workflow paths are POSIX-spelled on every host; retain case."""
+    return path.relative_to(root).as_posix()
 
 
 class DeliverySourceTests(unittest.TestCase):
@@ -26,13 +32,13 @@ class DeliverySourceTests(unittest.TestCase):
                  'check_wallet_inspector_gui.py','check_wallet_inspector_backend.py')]
         pending += [Path(__file__),ROOT/'scripts/tests/test_inspector_source_bundle.py',
                     ROOT/'scripts/tests/test_wallet_inspector_desktop.py',ROOT/'scripts/tests/test_verify_local_lab.py']
-        dependencies=set(delivery.SOURCES.values())|{str(WORKFLOW.relative_to(ROOT)),
+        dependencies=set(delivery.SOURCES.values())|{repository_path(WORKFLOW, ROOT),
                                                     'docs/INSPECTOR_SOURCE_DELIVERY.zh-CN.md'}
         visited=set()
         while pending:
             path=pending.pop()
             if path in visited:continue
-            visited.add(path);dependencies.add(path.relative_to(ROOT).as_posix())
+            visited.add(path);dependencies.add(repository_path(path, ROOT))
             for node in ast.walk(ast.parse(path.read_bytes())):
                 modules=([a.name for a in node.names] if isinstance(node,ast.Import) else
                          [node.module] if isinstance(node,ast.ImportFrom) and node.level==0 and node.module else [])
@@ -46,6 +52,32 @@ class DeliverySourceTests(unittest.TestCase):
         for name,body in blocks.items():
             paths=ast.literal_eval(re.findall(r'^    paths: (.+)$',body,re.M)[0])
             self.assertTrue(dependencies <= set(paths),(name,dependencies-set(paths)))
+
+    def test_repository_paths_keep_exact_case_with_both_path_flavours(self):
+        for kind, root in ((PureWindowsPath, 'D:/source'), (PurePosixPath, '/source')):
+            root = kind(root)
+            for name in ('.github/workflows/inspector-source-delivery.yml',
+                         'scripts/wallet_health.py', 'docs/Case-保留.md'):
+                with self.subTest(flavour=kind.__name__, name=name):
+                    self.assertEqual(repository_path(root / name, root), name)
+            with self.assertRaises(ValueError):
+                repository_path(kind('elsewhere'), root)
+
+    def test_windows_spelling_runs_the_actual_dependency_guard(self):
+        original = WORKFLOW
+        class WindowsSpelling:
+            def relative_to(self, root):
+                return PureWindowsPath(original.relative_to(root).as_posix())
+            def read_text(self):
+                return original.read_text()
+        with patch.dict(globals(), WORKFLOW=WindowsSpelling()):
+            self.test_events_cover_all_static_transitive_test_and_runtime_inputs()
+        # A required path genuinely removed from both triggers must still fail.
+        class MissingInput(WindowsSpelling):
+            def read_text(self):
+                return original.read_text().replace("'scripts/wallet_health.py', ", '')
+        with patch.dict(globals(), WORKFLOW=MissingInput()), self.assertRaises(AssertionError):
+            self.test_events_cover_all_static_transitive_test_and_runtime_inputs()
 
     def test_actual_workflow_guard_rejects_wrong_commit_and_dirty_source(self):
         source=WORKFLOW.read_text()

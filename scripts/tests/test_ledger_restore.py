@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import threading
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -193,55 +194,118 @@ class LedgerRestoreTests(unittest.TestCase):
             self.assertIsNotNone(children[0].poll())
             self.assertTrue(children[0].stdout.closed and children[0].stderr.closed)
 
-    def test_timeout_joins_delayed_drainers_and_closes_both_pipes(self):
-        # Real rejected/terminated child, never a successful replay double.
-        # Hold each reader briefly AFTER its real drain to expose cleanup that
-        # checks is_alive once and otherwise abandons the owned pipe handles.
+    def _assert_timeout_after_readers_started(self, slow_preflight=False):
+        # Exercise the real wait timeout, not a pre-launch deadline refusal.
+        # Only this transport's test clock pauses during hashing/OS startup;
+        # subprocess/threading retain their real clocks and bounded waits.
         executable = Path(sys.executable).resolve(strict=True)
         backend = RecoveryBackend(executable, hashlib.sha256(executable.read_bytes()).hexdigest())
         actual_thread, actual_popen = threading.Thread, subprocess.Popen
-        readers, children = [], []
-        release = threading.Event()
+        actual_check, monotonic = backend.binary._check, time.monotonic
+        readers, children, waits, timeouts, joins, checks = [], [], [], [], [], []
+        original_waits = []
+        armed_at = [None]
+
+        def clock():
+            return 100.0 if armed_at[0] is None else 100.0 + monotonic() - armed_at[0]
+
+        def checked():
+            value = actual_check()  # Actual executable identity and SHA256.
+            checks.append(True)
+            if slow_preflight:
+                time.sleep(0.03)  # Deliberately longer than the injected 20ms.
+            return value
 
         def delayed_thread(*args, **kwargs):
             target, call_args = kwargs["target"], kwargs["args"]
+            started, drained, release = threading.Event(), threading.Event(), threading.Event()
             def run():
+                started.set()
                 try:
-                    target(*call_args)
+                    target(*call_args)  # Actual pipe read and close on EOF.
                 finally:
-                    release.wait(0.15)
-            result = actual_thread(target=run, daemon=kwargs.get("daemon", False))
-            readers.append(result)
-            return result
+                    drained.set()
+                    release.wait(3)  # Test fail-safe, not a production budget.
+            reader = actual_thread(target=run, daemon=kwargs.get("daemon", False))
+            original_join = reader.join
+            index = len(readers)
+            readers.append((reader, started, drained, release, original_join))
+            def joined(timeout=None):
+                began = monotonic()
+                self.assertIsNotNone(timeout)
+                self.assertGreater(timeout, 0)
+                self.assertLessEqual(timeout, 2)
+                self.assertTrue(drained.wait(min(timeout, 1)), "real pipe was not drained")
+                self.assertTrue(reader.is_alive(), "delayed reader was not retained until join")
+                joins.append(index)
+                release.set()  # Only production cleanup's join releases it.
+                original_join(timeout=max(0, timeout - (monotonic() - began)))
+            reader.join = joined
+            return reader
 
         def launch(*args, **kwargs):
             child = actual_popen(*args, **kwargs)
             children.append(child)
+            original_wait = child.wait
+            original_waits.append(original_wait)
+            def wait(timeout=None):
+                waits.append(timeout)
+                if len(waits) == 1:
+                    self.assertEqual(len(readers), 2, "both real readers must exist")
+                    for reader, started, _, _, _ in readers:
+                        self.assertTrue(started.wait(1), "reader did not enter its target")
+                        self.assertTrue(reader.is_alive())
+                    self.assertIsNone(child.poll(), "blocking child exited before timeout")
+                    self.assertGreater(timeout, 0)
+                    self.assertLessEqual(timeout, 0.020001)
+                    armed_at[0] = monotonic()
+                    try:
+                        return original_wait(timeout=timeout)
+                    except subprocess.TimeoutExpired:
+                        timeouts.append(True)
+                        raise  # Preserve the actual OS-process wait exception.
+                return original_wait(timeout=timeout)
+            child.wait = wait
             return child
 
         try:
-            with patch.object(transport, "CALL_SECONDS", 0.02), \
+            with patch.object(transport, "time", SimpleNamespace(monotonic=clock)), \
+                    patch.object(transport, "CALL_SECONDS", 0.02), \
+                    patch.object(backend.binary, "_check", side_effect=checked), \
                     patch.object(transport.threading, "Thread", side_effect=delayed_thread), \
                     patch.object(transport.subprocess, "Popen", side_effect=launch):
-                with self.assertRaises(RuntimeError):
+                with self.assertRaisesRegex(transport.BackendError, "^recovery_timeout_retain_outputs$") as raised:
                     backend._run(["-c", "import time; time.sleep(30)"],
-                                 Checkpoint.parse(pin()), None, time.monotonic()+10)
+                                 Checkpoint.parse(pin()), None, 110.0)
+            self.assertIsInstance(raised.exception.__cause__, subprocess.TimeoutExpired)
+            self.assertEqual(checks, [True])
+            self.assertEqual(timeouts, [True])
             self.assertEqual(len(children), 1)
+            self.assertEqual(joins, [0, 1], "both delayed readers require a real join")
             self.assertIsNotNone(children[0].returncode)
-            self.assertTrue(all(not t.is_alive() for t in readers), "reader cleanup was abandoned")
+            self.assertTrue(all(not item[0].is_alive() for item in readers))
             self.assertTrue(children[0].stdout.closed and children[0].stderr.closed)
         finally:
-            # The red regression deliberately exercises the old leak; its
-            # fixture still cleans up its own descriptors on assertion failure.
-            release.set()
-            for reader in readers:
-                reader.join(timeout=2)
-            for child in children:
+            # Also collect resources when a regression assertion fails.
+            for _, _, _, release, _ in readers:
+                release.set()
+            for child, wait in zip(children, original_waits):
                 if child.poll() is None:
                     child.kill()
-                    child.wait(timeout=5)
+                wait(timeout=5)
+            for reader, _, _, _, join in readers:
+                if reader.ident is not None:
+                    join(timeout=2)
+                    self.assertFalse(reader.is_alive(), "test left a reader")
+            for child in children:
                 child.stdout.close()
                 child.stderr.close()
+
+    def test_timeout_joins_delayed_drainers_and_closes_both_pipes(self):
+        self._assert_timeout_after_readers_started()
+
+    def test_timeout_cleanup_still_reached_after_slow_real_executable_check(self):
+        self._assert_timeout_after_readers_started(slow_preflight=True)
 
     def test_reader_start_failure_reaps_child_and_closes_owned_pipes(self):
         executable = Path(sys.executable).resolve(strict=True)
@@ -276,7 +340,7 @@ class LedgerRestoreTests(unittest.TestCase):
         executable = Path(sys.executable).resolve(strict=True)
         backend = RecoveryBackend(executable, hashlib.sha256(executable.read_bytes()).hexdigest())
         real_check, real_popen = backend.binary._check, subprocess.Popen
-        for call_limit, outer_deadline in ((300, 110), (10, 1000)):
+        for call_limit, outer_deadline in ((300, 110), (10, 1000), (0.02, 1000)):
             clock, children = [100.0], []
             def delayed_check():
                 result = real_check()
@@ -287,7 +351,7 @@ class LedgerRestoreTests(unittest.TestCase):
                 children.append(child)
                 return child
             with self.subTest(call_limit=call_limit), \
-                    patch.object(transport.time, "monotonic", side_effect=lambda: clock[0]), \
+                    patch.object(transport, "time", SimpleNamespace(monotonic=lambda: clock[0])), \
                     patch.object(transport, "CALL_SECONDS", call_limit), \
                     patch.object(backend.binary, "_check", side_effect=delayed_check), \
                     patch.object(transport.subprocess, "Popen", side_effect=launch):
