@@ -49,7 +49,7 @@ def run(wallet: Path, worker: Path, recovery: Path):
             original.reject(lambda: checker.check(checker.prepare(dict(values, backend_sha256='0'*64))))
 
         if output.name == 'included':
-            # The original backend MUST actually replay this damaged real ledger
+            # The original backend MUST verify this damaged real ledger
             # and reject it. Do not alter a trusted checkpoint to bless damage.
             segment = journal / '00000000.journal'
             raw = segment.read_bytes()

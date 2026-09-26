@@ -14,6 +14,7 @@ if __name__ == '__main__':
 from dataclasses import dataclass
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 import time
 
@@ -124,7 +125,7 @@ def check(intent: Intent) -> dict:
     The 300-second budget includes pre/post checks and transport. OS IO/cleanup
     can overrun wall time, but an expired budget never becomes a successful call.
     """
-    files.require(type(intent) is Intent, 'invalid_ledger_check_intent')
+    files.require(type(intent) is Intent and type(intent.evidence) is view.Intent, 'invalid_ledger_check_intent')
     values = dict(directory=str(intent.evidence.directory), report_sha256=intent.evidence.report_sha256,
                   checkpoint=intent.evidence.checkpoint, genesis_sha256=intent.evidence.genesis_sha256,
                   journal=str(intent.journal), backend=str(intent.backend), backend_sha256=intent.backend_sha256)
@@ -194,7 +195,7 @@ def main(argv=None) -> int:
     except KeyboardInterrupt:
         print('Ledger check interrupted. Inputs retained; do not retry payment.', file=sys.stderr)
         return 130
-    except (ValueError, OSError, RuntimeError, TypeError, KeyError, RecursionError):
+    except (ValueError, OSError, RuntimeError, TypeError, KeyError, RecursionError, subprocess.SubprocessError):
         print('Ledger check failed. No settlement or retry permission; preserve all inputs.', file=sys.stderr)
         return 1
 

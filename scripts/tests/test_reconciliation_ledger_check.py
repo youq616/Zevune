@@ -204,6 +204,28 @@ class LedgerCheckTests(unittest.TestCase):
             bad=subprocess.run([sys.executable,check.__file__,*tail],capture_output=True,timeout=10)
             self.assertEqual(bad.returncode,64);self.assertNotIn(b'PRIVATE',bad.stderr+bad.stdout)
 
+    def test_cli_subprocess_cleanup_errors_are_redacted(self):
+        args=['--no-real-funds']
+        for key,value in self.values.items():args.extend(['--'+key.replace('_','-'),value])
+        failures=(subprocess.TimeoutExpired(['PRIVATE_NATIVE_PATH'],1),
+                  subprocess.CalledProcessError(1,['PRIVATE_NATIVE_PATH']),
+                  subprocess.SubprocessError('PRIVATE_NATIVE_PATH'))
+        for failure in failures:
+            out,err=io.StringIO(),io.StringIO()
+            with self.subTest(error=type(failure).__name__), \
+                    patch.object(check,'check',side_effect=failure), \
+                    contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+                code=check.main(args)
+            self.assertEqual(code,1);self.assertEqual(out.getvalue(),'')
+            self.assertNotIn('PRIVATE',err.getvalue())
+        self.assertEqual(self.inventory(),self.before)
+
+    def test_invalid_nested_intent_refused_before_io(self):
+        with patch.object(check,'evidence_snapshot',side_effect=AssertionError('no IO')):
+            for evidence in (None,{},'PRIVATE'):
+                with self.subTest(evidence=evidence),self.assertRaises(ValueError):
+                    check.check(replace(self.intent,evidence=evidence))
+
     def test_cli_interrupt_has_no_partial_success(self):
         args=['--no-real-funds']
         for key,value in self.values.items():args.extend(['--'+key.replace('_','-'),value])
