@@ -63,6 +63,10 @@ class LedgerWidgetTests(unittest.TestCase):
         self.app.confirm_button.invoke()
 
     def test_review_is_pure_default_cancel_and_no_implicit_confirmation(self):
+        # Programmatic invoke is not a user click and does not activate a
+        # Windows top-level. Activate only this test-owned window first.
+        self.root.focus_force()
+        self.root.update()
         with patch.object(desktop.checker, 'check', side_effect=AssertionError('must not run')), \
                 patch.object(desktop, 'LedgerJob', side_effect=AssertionError('must not construct')):
             self.app.review_button.invoke()
@@ -76,6 +80,43 @@ class LedgerWidgetTests(unittest.TestCase):
         self.assertIsNone(self.app.intent)
         self.assertIsNone(self.app.job)
         self.assertEqual(list(self.path.iterdir()), [])
+
+    def test_background_review_remembers_cancel_without_stealing_focus(self):
+        # A separate Tcl application owns the foreground. The product must use
+        # remembered in-window focus, never force itself above another app.
+        other = tk.Tk()
+        try:
+            other.update()
+            other.focus_force()
+            other.update()
+            self.root.update()
+            self.assertIsNone(self.root.focus_get())
+            self.app.review()
+            self.root.update()
+            self.assertIsNone(self.root.focus_get())
+            self.assertIs(other.focus_get(), other)
+            self.assertIs(self.root.focus_lastfor(), self.app.cancel_button)
+            self.assertEqual(self.app.phase, 'review')
+            self.assertIsNone(self.app.job)
+        finally:
+            other.destroy()
+
+    def test_return_never_confirms_and_escape_cancels_review(self):
+        self.root.focus_force()
+        self.root.update()
+        with patch.object(desktop, 'LedgerJob', side_effect=AssertionError('no implicit job')) as factory:
+            self.app.review()
+            self.root.update()
+            self.assertIs(self.root.focus_get(), self.app.cancel_button)
+            self.app.cancel_button.event_generate('<KeyPress-Return>')
+            self.root.update()
+            self.assertIsNone(self.app.job)
+            self.assertIn(self.app.phase, ('idle', 'review'))
+            if self.app.phase == 'review':
+                self.app.cancel_button.event_generate('<KeyPress-Escape>')
+                self.root.update()
+            self.assertEqual(self.app.phase, 'idle')
+            self.assertEqual(factory.call_count, 0)
 
     def test_invalid_form_never_enters_review_or_starts_job(self):
         for key, bad in (('backend_sha256', 'x'), ('checkpoint', 'x'), ('journal', 'relative')):

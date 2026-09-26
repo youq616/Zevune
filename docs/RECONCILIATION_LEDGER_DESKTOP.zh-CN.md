@@ -81,3 +81,13 @@ P2/P4整体、Issue23/37历史及外部专业安全审计不因本模块而完�
 技术依据：Python 官方 `threading` 中的非daemon/Event/join语义，以及 Tk 主线程事件循环规则。
 https://docs.python.org/3/library/threading.html
 https://docs.python.org/3/library/tkinter.html#threading-model
+
+## 前台焦点与默认取消
+
+默认取消指应用窗口内的焦点目标。应用不在前台时，Tk只记住该目标，不应强制抢占其他应用的输入焦点。
+自动测试通过控件invoke调用不等于鼠标激活窗口；前台焦点测试先激活测试自有窗口，再保留实际
+focus_get断言。另用独立真实Tk应用验证后台确认只记住Cancel且不抢焦点，键盘Return不得确认执行，
+Escape取消。产品继续使用原focus_set，不引入focus_force或改变桌面权限；没有跳过Windows测试。
+
+依据：Tk focus与focus -lastfor官方语义。
+https://www.tcl-lang.org/man/tcl8.6/TkCmd/focus.htm
