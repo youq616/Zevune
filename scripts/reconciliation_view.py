@@ -57,7 +57,9 @@ def prepare(values: dict[str, str]) -> Intent:
     for key in ("report_sha256", "genesis_sha256"):
         files.require(files.HEX.fullmatch(clean[key]) is not None, "independent_digest_required")
     checkpoint = Checkpoint.parse(clean["checkpoint"])
-    files.require(checkpoint.genesis == clean["genesis_sha256"], "checkpoint_network_mismatch")
+    # ZVARCP01 stores the pool's genesis commitment. The separate manifest
+    # digest is the LAB2 signing domain: these are distinct protocol fields.
+    files.require(clean["genesis_sha256"] != "0" * 64, "nonzero_signing_manifest_digest_required")
     return Intent(folder, clean["report_sha256"], checkpoint.encoded, clean["genesis_sha256"])
 
 
@@ -129,6 +131,8 @@ class View:
         return dict(asdict(self), format="zevune-reconciliation-view-1", file_integrity_verified=True,
                     state="pending_file_broadcast_unknown" if self.pending_file_present else "no_pending_outcome_unknown",
                     wallet_authenticated=False, transaction_authorization_verified=False, ledger_replayed=False,
+                    checkpoint_genesis_commitment=Checkpoint.parse(self.checkpoint).genesis,
+                    checkpoint_domain_relation_verified=False,
                     current_chain_height=None, original_source_presence_verified=False,
                     broadcast_status="unknown", settlement_status="unknown", retry_authorized=False,
                     finality_verified=False, real_funds_allowed=False, read_only=True)
@@ -144,9 +148,10 @@ class View:
                 f"交易到期高度：{self.expiry_height if self.expiry_height is not None else '未知'}\n"
                 f"到期比较：{expiry}\n钱包保存记录：{self.wallet_records} / 256\n"
                 f"钱包文件字节：{self.wallet_bytes}\n待发送文件字节：{self.transaction_bytes}\n\n"
-                f"副本回执：{self.copy_receipt}\n网络摘要：{self.genesis_sha256}\n"
+                f"副本回执：{self.copy_receipt}\n创世文件摘要（签名域）：{self.genesis_sha256}\n"
                 f"报告摘要：{self.report_sha256}\n\n"
                 "以上仅为本次读取的文件完整性与公开字段；未解密钱包、验证交易授权或重放账本。\n"
+                "检查点创世承诺与签名域是不同字段；本查看器没有验证二者的协议关系。\n"
                 "原钱包是否仍保留、是否已广播、是否已结算均未验证。不要重签、自动重试或清除预留。")
 
 

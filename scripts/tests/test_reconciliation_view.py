@@ -26,7 +26,7 @@ from test_ledger_restore import pin
 def fixture(root, pending=True, *, height=0, expiry=10, source_generation=2, copy_generation=3):
     folder = root / 'result'
     folder.mkdir()
-    genesis = (b'g' * 32).hex()
+    genesis = (b'd' * 32).hex()  # Signing manifest digest != pool genesis commitment.
     checkpoint = pin(height)
     wallet, tip = frames(copy_generation)
     (folder / 'wallet.journal').write_bytes(wallet)
@@ -131,6 +131,23 @@ class ViewTests(unittest.TestCase):
             with self.assertRaises(ValueError):self.inspect()
             self.assertEqual(read.call_count, 1)
             self.assertEqual(read.call_args.args[0], self.marker)
+
+    def test_checkpoint_commitment_and_signing_manifest_are_distinct_pins(self):
+        intent = view.prepare(self.values)
+        self.assertNotEqual(view.Checkpoint.parse(intent.checkpoint).genesis, intent.genesis_sha256)
+        result = view.inspect(intent)
+        self.assertEqual(result.summary()['checkpoint_genesis_commitment'], view.Checkpoint.parse(intent.checkpoint).genesis)
+        self.assertIs(result.summary()['checkpoint_domain_relation_verified'], False)
+        replaced = pin(genesis=b'h' * 32)
+        with self.assertRaises(ValueError):
+            view.inspect(view.prepare(dict(self.values, checkpoint=replaced)))
+        # The transaction uses the manifest signing domain, never the pool hash.
+        path = self.folder / 'pending.tx'
+        raw = path.read_bytes()
+        wrong = raw[:8] + bytes.fromhex(view.Checkpoint.parse(intent.checkpoint).genesis) + raw[40:]
+        path.write_bytes(wrong)
+        self.rewrite(dict(self.report, txid=hashlib.sha256(wrong).hexdigest()))
+        with self.assertRaises(ValueError):self.inspect()
 
     def test_network_and_checkpoint_substitution_refused(self):
         for change in ({'genesis_sha256': 'a'*64}, {'height': 1}, {'height': False}, {'checkpoint': pin(1)}):

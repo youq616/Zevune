@@ -27,6 +27,8 @@ def run(wallet: Path, worker: Path, recovery: Path):
         before = original.inventory(output)
         values = dict(directory=str(output), report_sha256=result['report_sha256'],
                       checkpoint=kwargs['checkpoint'], genesis_sha256=kwargs['genesis_sha256'])
+        checkpoint = view.Checkpoint.parse(values['checkpoint'])
+        assert checkpoint.genesis != values['genesis_sha256'], 'fixture must exercise distinct commitments'
         intent = view.prepare(values)
         # Even with real recovery files, viewing must never call a backend.
         with patch.object(view.reconciliation.Backend, '_exchange', side_effect=AssertionError('view executed backend')):
@@ -40,6 +42,8 @@ def run(wallet: Path, worker: Path, recovery: Path):
             finally:
                 root.destroy()
         assert checked.txid == result['txid'] and checked.pending_file_present == result['pending']
+        assert checked.summary()['checkpoint_genesis_commitment'] == checkpoint.genesis
+        assert checked.summary()['checkpoint_domain_relation_verified'] is False
         assert checked.copy_receipt == result['copy_receipt'] and checked.checkpoint_height == result['height']
         assert checked.summary()['settlement_status'] == 'unknown' and checked.summary()['retry_authorized'] is False
         assert original.inventory(output) == before
