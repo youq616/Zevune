@@ -1,0 +1,72 @@
+name: inspector-source-install
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', '.github/workflows/**']
+  pull_request:
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', '.github/workflows/**']
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source and all installation contracts
+        run: |
+          python - <<'PY_SOURCE'
+          import json, os, re, subprocess
+          expected = os.environ['ZEVUNE_SOURCE_HEAD']
+          assert re.fullmatch(r'[0-9a-f]{40}', expected)
+          def git(*args):
+              return subprocess.check_output(['git', '--no-replace-objects', *args], text=True).strip()
+          assert git('rev-parse', 'HEAD') == expected
+          tree = git('rev-parse', 'HEAD^{tree}')
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print(json.dumps({'source_head': expected, 'source_tree': tree}))
+          PY_SOURCE
+          python -B -m unittest discover -s scripts/tests -p test_inspector_source_install.py -v
+          python -B -m unittest discover -s scripts/tests -p test_inspector_install_source.py -v
+          python -B -m unittest discover -s scripts/tests -p test_inspector_source_bundle.py -v
+          python -B -m unittest discover -s scripts/tests -p test_inspector_delivery_source.py -v
+          python -B -m unittest discover -s scripts/tests -p test_verify_local_lab.py -v
+      - name: Linux display support
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes --no-install-recommends python3-tk xvfb xauth
+      - name: Rebuild the original wallet with unchanged dependency locks
+        run: |
+          rustup toolchain install 1.98.1 --profile minimal
+          cargo +1.98.1 build --manifest-path integration/orchard/Cargo.toml --locked --release --features local-funding-lab --bin zevune-wallet-local
+      - name: Installed source real GUI and genuine authentication
+        timeout-minutes: 13
+        run: |
+          python - <<'PY_INSTALL'
+          import os, pathlib, subprocess, sys
+          suffix = '.exe' if os.name == 'nt' else ''
+          backend = (pathlib.Path('integration/orchard/target/release') / ('zevune-wallet-local' + suffix)).resolve(strict=True)
+          command = [sys.executable, '-B', 'scripts/check_inspector_source_install.py', '--source-commit', os.environ['ZEVUNE_SOURCE_HEAD'], '--backend', str(backend)]
+          if os.name != 'nt':
+              command = ['xvfb-run', '-a', *command]
+          subprocess.run(command, check=True, timeout=750)
+          PY_INSTALL
+      - name: Tracked source and locks unchanged
+        run: git diff --exit-code
