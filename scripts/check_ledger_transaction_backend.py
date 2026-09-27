@@ -11,13 +11,15 @@ from pathlib import Path
 import subprocess
 import shutil
 import sys
+import tempfile
 from unittest.mock import patch
 
 import check_wallet_reconcile_backend as original
 import ledger_transaction_lookup as lookup
+import native_backend_install as installer
 
 
-def run(wallet: Path, worker: Path, recovery: Path):
+def _run(wallet: Path, worker: Path, recovery: Path):
     recovery = recovery.resolve(strict=True)
     backend_digest = hashlib.sha256(recovery.read_bytes()).hexdigest()
     saved_recover = original.reconcile.recover
@@ -139,6 +141,36 @@ def run(wallet: Path, worker: Path, recovery: Path):
     print(json.dumps(dict(operation='ledger_transaction_lookup_native_test', genuine_history_groups=4,
                           original_recovery_driver_completed=True, input_bytes_preserved=True,
                           checks=checks, real_funds_allowed=False), sort_keys=True))
+
+
+def run(wallet: Path, worker: Path, recovery: Path):
+    # Build artifacts may share an inode with the build cache. Exercise the real
+    # installer CLI; never weaken the lookup's independent single-link gate.
+    recovery = recovery.resolve(strict=True)
+    digest = hashlib.sha256(recovery.read_bytes()).hexdigest()
+    source_identity = lookup.metadata_identity(recovery.lstat())
+    with tempfile.TemporaryDirectory(prefix='zevune-native-install-integration-') as temp:
+        workspace = Path(temp).resolve()
+        approved = workspace / ('zevune-pool-recovery' + recovery.suffix)
+        command = [sys.executable, '-B', str(Path(installer.__file__)), '--no-real-funds', 'install',
+                   '--source', str(recovery), '--destination', str(approved), '--backend-sha256', digest]
+        installed = subprocess.run(command, capture_output=True, check=True, timeout=310)
+        reply = json.loads(installed.stdout)
+        assert reply['installed'] is True and reply['source_unchanged'] is True and not installed.stderr
+        assert reply['backend_sha256'] == digest and reply['source_link_count'] == recovery.stat().st_nlink
+        assert reply['executable_started'] is False and reply['protocol_verified'] is False
+        assert approved.stat().st_nlink == 1 and not os.path.samefile(approved, recovery)
+        assert installer.verify(approved, digest)['single_link_verified'] is True
+        lookup.SingleLinkBackend(approved, digest)._check()
+        _run(wallet, worker, approved)  # Entire original native scenario set, now with independent bytes.
+        assert installer.verify(approved, digest)['integrity_verified'] is True
+        assert lookup.metadata_identity(recovery.lstat()) == source_identity
+        assert hashlib.sha256(recovery.read_bytes()).hexdigest() == digest
+    assert not workspace.exists()
+    print(json.dumps(dict(operation='native_backend_install_integration', real_cli_installed=True,
+                          installed_backend_executed_by_test_driver=True, installer_executed_backend=False,
+                          source_link_count=source_identity[4], source_unchanged=True,
+                          fixtures_removed=True, real_funds_allowed=False), sort_keys=True))
 
 
 if __name__ == '__main__':
