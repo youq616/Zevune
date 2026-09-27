@@ -5,9 +5,11 @@ No accepting verifier substitutes. The original ten recovery scenarios remain
 unchanged. Mutations below affect only this driver's temporary public fixtures.
 """
 import hashlib
+import os
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 from unittest.mock import patch
 
@@ -59,6 +61,24 @@ def run(wallet: Path, worker: Path, recovery: Path):
             absent = lookup.lookup(lookup.prepare(dict(values, txid='0' * 64)))
             assert absent['state'] == 'absent_from_verified_history' and absent['occurrence'] is None
             checks.append('other_txid_absent_after_real_replay')
+
+
+            # A real original executable with a second path must be rejected,
+            # even though every executable byte and its approved digest match.
+            copied = directory.parent / ('lookup-recovery' + recovery.suffix)
+            alias = directory.parent / 'lookup-recovery-alias'
+            shutil.copy2(recovery, copied)
+            try:
+                os.link(copied, alias)
+                assert copied.stat().st_nlink == 2
+                with patch.object(subprocess, 'Popen', side_effect=AssertionError('linked backend executed')) as spawn:
+                    original.reject(lambda: lookup.lookup(lookup.prepare(dict(values, backend=str(copied)))))
+                assert spawn.call_count == 0
+                checks.append('hardlinked_original_backend_refused_before_process')
+            finally:
+                if alias.exists():
+                    alias.unlink()
+                copied.unlink()
 
             # Damaged segment reaches the real native verifier and must fail.
             path = journal / '00000000.journal'
@@ -115,7 +135,7 @@ def run(wallet: Path, worker: Path, recovery: Path):
     with patch.object(original.reconcile, 'recover', side_effect=observe):
         original.run(wallet, worker, recovery)
     assert groups == [('pending', False), ('empty-result', False), ('included', True), ('expired', False)], groups
-    assert len(checks) == 5
+    assert len(checks) == 6
     print(json.dumps(dict(operation='ledger_transaction_lookup_native_test', genuine_history_groups=4,
                           original_recovery_driver_completed=True, input_bytes_preserved=True,
                           checks=checks, real_funds_allowed=False), sort_keys=True))

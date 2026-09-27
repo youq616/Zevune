@@ -19,6 +19,7 @@ import subprocess
 import time
 
 import reconciliation_ledger_check as checked
+from wallet_backup_backend import Backend, metadata_identity
 
 files, ledger, view = checked.files, checked.ledger, checked.view
 Checkpoint = view.Checkpoint
@@ -57,6 +58,28 @@ def prepare(values: dict[str, str]) -> Intent:
             files.require(text != '0' * 64, 'nonzero_lookup_domain_and_backend_required')
     return Intent(paths['journal'], values['checkpoint'], values['genesis_sha256'], values['txid'],
                   paths['backend'], values['backend_sha256'])
+
+
+class SingleLinkBackend(Backend):
+    """Keep the original digest/handle gate, additionally reject alternate links.
+
+    The inherited transport invokes this gate both before process creation and
+    after process exit. This is an identity check, not a lock against hostile IO.
+    """
+    def _check(self):
+        before = self.path.lstat()
+        files.require(before.st_nlink == 1, 'single_link_lookup_backend_required')
+        identity = super()._check()
+        after = self.path.lstat()
+        files.require(after.st_nlink == 1 and metadata_identity(before) == identity == metadata_identity(after),
+                      'lookup_backend_changed')
+        return identity
+
+
+class LookupVerifier(checked.LedgerVerifier):
+    def __init__(self, executable: Path, digest: str, journal: Path, pin):
+        super().__init__(executable, digest, journal, pin)
+        self.binary = SingleLinkBackend(executable, digest)
 
 
 @dataclass(frozen=True)
@@ -169,7 +192,7 @@ def lookup(intent: Intent) -> dict:
     checked.header_domain(header, pin, intent.genesis_sha256)
     view._chain(intent.backend.parent)
     checked.remaining(deadline)
-    backend = checked.LedgerVerifier(intent.backend, intent.backend_sha256, intent.journal, pin)
+    backend = LookupVerifier(intent.backend, intent.backend_sha256, intent.journal, pin)
     reply = backend.active(intent.journal, pin, deadline)
     checked.validate_reply(reply, 'verify-active', pin)
     checked.remaining(deadline)

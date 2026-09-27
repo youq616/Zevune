@@ -4,6 +4,7 @@ import contextlib
 import hashlib
 import io
 import os
+import shutil
 from pathlib import Path
 import struct
 import subprocess
@@ -261,6 +262,49 @@ class BoundaryTests(unittest.TestCase):
         with self.assertRaises((ValueError, RuntimeError)):
             lookup.lookup(self.intent)
         self.assertEqual((self.intent.journal / 'genesis').read_bytes(), self.header)
+
+    def copied_backend(self):
+        target = self.root / ('approved' + ('.exe' if os.name == 'nt' else ''))
+        shutil.copy2(self.intent.backend, target)
+        self.assertEqual(target.stat().st_nlink, 1)
+        return replace(self.intent, backend=target)
+
+    def test_hardlinked_native_backend_refused_before_any_process(self):
+        intent = self.copied_backend()
+        alias = self.root / 'alternate-backend-path'
+        os.link(intent.backend, alias)
+        self.assertEqual(intent.backend.stat().st_nlink, 2)
+        with patch.object(subprocess, 'Popen', side_effect=AssertionError('hardlinked process started')) as spawn:
+            with self.assertRaises((ValueError, RuntimeError)):
+                lookup.lookup(intent)
+        self.assertEqual(spawn.call_count, 0)
+        self.assertEqual(alias.read_bytes(), intent.backend.read_bytes())
+
+    def test_single_link_backend_still_reaches_original_process_gate(self):
+        intent = self.copied_backend()
+        class ReachedProcess(RuntimeError):
+            pass
+        with patch.object(subprocess, 'Popen', side_effect=ReachedProcess('refusal only')) as spawn:
+            with self.assertRaises(ReachedProcess):
+                lookup.lookup(intent)
+        self.assertEqual(spawn.call_count, 1)
+        self.assertEqual(spawn.call_args.args[0][0], str(intent.backend))
+
+    def test_link_created_during_digest_check_is_not_an_approved_binary(self):
+        intent = self.copied_backend()
+        alias = self.root / 'late-backend-alias'
+        from wallet_backup_backend import Backend
+        original = Backend._check
+        def checked_then_linked(binary):
+            result = original(binary)  # Actual hash and handle/path checks run first.
+            os.link(binary.path, alias)
+            return result
+        with patch.object(Backend, '_check', checked_then_linked), \
+                patch.object(subprocess, 'Popen', side_effect=AssertionError('changed backend launched')) as spawn:
+            with self.assertRaises((ValueError, RuntimeError)):
+                lookup.lookup(intent)
+        self.assertEqual(spawn.call_count, 0)
+        self.assertTrue(alias.exists())
 
     def test_cli_error_families_are_fixed_and_do_not_emit_success(self):
         for error in (ValueError('PRIVATE'), OSError('PRIVATE'), subprocess.TimeoutExpired(['PRIVATE'], 1),

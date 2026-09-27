@@ -67,3 +67,10 @@ Merkle纳入证明或带签名的付款凭证。查询交易ID、位置和公开
 格式依据：`pool.rs::Record::{encode,decode}`、`pool/replay.rs`、`ACTIVE_ARCHIVE_V1.zh-CN.md`及
 `internal/poolbridge/client.go`。预算依据Python官方`time.monotonic`文档：
 https://docs.python.org/3/library/time.html#time.monotonic
+
+## 独立审核整改：原生程序硬链接
+
+原生可执行文件也必须只有一个硬链接，不能仅依赖摘要一致。查询专用的检查层在原摘要/路径/句柄
+核验前后检查单链接和完整元数据；原传输层在启动前及结束后均调用这一检查层。保持所有原生
+验证与清理规则，不改变其他入口的后端策略。校验期间新增链接或替换文件必须失败；这仍不是防御
+恶意主机的执行锁。真实文件回归及原生程序副本回归验证正确摘要的硬链接文件也无法启动进程。
