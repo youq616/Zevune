@@ -175,6 +175,15 @@ class Workbench(single_ui.Workbench):
         self.copy_button.configure(text='复制本批查询ID（非付款凭证）')
         self.status.set('逐行填写1—32个互异交易ID及独立依据；先核对，再明确确认。')
 
+    def _review_description(self, intent):
+        return review_text(intent)
+
+    def _new_job(self, intent):
+        return BatchJob(intent)
+
+    def _valid_display(self, result):
+        return type(result) is BatchDisplay
+
     def _sync_text(self):
         """Synchronize even before a queued Modified event can run.
 
@@ -205,7 +214,7 @@ class Workbench(single_ui.Workbench):
             self.active_revision = self.revision
             self.intent, self.phase = intent, 'review'
             self.enable(False)
-            self.set_details(review_text(intent))
+            self.set_details(self._review_description(intent))
             self.status.set('请核对全部ID及独立依据。默认取消；确认只启动一次完整批次。')
             self.confirm_button.configure(state='normal')
             self.cancel_button.configure(state='normal')
@@ -230,7 +239,7 @@ class Workbench(single_ui.Workbench):
         try:
             self.enable(False)
             self.discard()
-            self.job = BatchJob(self.intent)
+            self.job = self._new_job(self.intent)
             self.job.start()
             self.status.set('正在核验完整批次；不会显示部分结果，关闭将等待原任务结束。')
         except BaseException:
@@ -266,7 +275,7 @@ class Workbench(single_ui.Workbench):
             return
         self.phase = 'idle'
         self.enable(True)
-        if self.active_revision != self.revision or type(outcome.result) is not BatchDisplay:
+        if self.active_revision != self.revision or not self._valid_display(outcome.result):
             self.status.set(FAILURE)
             return
         self.set_details(outcome.result.text)
@@ -278,7 +287,7 @@ class Workbench(single_ui.Workbench):
         if self.phase != 'idle':
             return
         self._sync_text()
-        if type(self.last) is not BatchDisplay or self.active_revision != self.revision:
+        if not self._valid_display(self.last) or self.active_revision != self.revision:
             return
         self.root.clipboard_clear()
         self.root.clipboard_append('\n'.join(self.last.txids))
