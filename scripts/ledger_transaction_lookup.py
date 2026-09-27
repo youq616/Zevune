@@ -100,16 +100,20 @@ class Scan:
     match: Occurrence | None
 
 
-def scan_segment(raw: bytes, name: str, start_height: int, previous_hash: bytes | None,
-                 txid: str, deadline: float):
+def scan_segment_many(raw: bytes, name: str, start_height: int, previous_hash: bytes | None,
+                      txids: frozenset[str], deadline: float):
     """Parse ONLY the existing Record framing. No Orchard decoder or authorization.
 
-    Every frame is consumed, including bytes after a match. Keep one segment and
-    at most one match, rather than accumulating history or trusting an index.
+    Every frame is consumed, including bytes after all requested IDs match. The
+    original decoder is shared with single-ID scans; retain at most 32 matches.
     """
     checked.remaining(deadline)
+    files.require(type(txids) is frozenset and 1 <= len(txids) <= 32
+                  and all(type(item) is str and files.HEX.fullmatch(item) is not None for item in txids),
+                  'bounded_scan_transaction_ids_required')
     files.require(type(raw) is bytes and 150 <= len(raw) <= ledger.SEGMENT_BYTES, 'invalid_lookup_segment')
-    cursor, height, count, match, first_size = 0, start_height, 0, None, None
+    cursor, height, count, first_size = 0, start_height, 0, None
+    matches = {}
     data = memoryview(raw)
     while cursor < len(raw):
         checked.remaining(deadline)
@@ -138,15 +142,25 @@ def scan_segment(raw: bytes, name: str, start_height: int, previous_hash: bytes 
             files.require(length <= MAX_TRANSACTION_BYTES and position + length <= size,
                           'invalid_lookup_transaction_extent')
             transaction = body[position:position + length]
-            if hashlib.sha256(transaction).hexdigest() == txid:
-                files.require(match is None, 'ambiguous_lookup_transaction')
-                match = Occurrence(height, bytes(body[16:48]).hex(), index, name, cursor, length)
+            digest = hashlib.sha256(transaction).hexdigest()
+            if digest in txids:
+                files.require(digest not in matches, 'ambiguous_lookup_transaction')
+                matches[digest] = Occurrence(height, bytes(body[16:48]).hex(), index, name, cursor, length)
             position += length
         files.require(position == size, 'lookup_record_trailing_bytes')
         count += number
         cursor = end
     checked.remaining(deadline)
-    return height, count, match, previous_hash, first_size
+    return height, count, matches, previous_hash, first_size
+
+
+def scan_segment(raw: bytes, name: str, start_height: int, previous_hash: bytes | None,
+                 txid: str, deadline: float):
+    """Compatibility wrapper: preserve the original single-ID return contract."""
+    files.require(type(txid) is str, 'invalid_scan_transaction_id')
+    height, count, matches, previous_hash, first_size = scan_segment_many(
+        raw, name, start_height, previous_hash, frozenset((txid,)), deadline)
+    return height, count, matches.get(txid), previous_hash, first_size
 
 
 def scan_archive(intent: Intent, pin, captured, header: bytes, deadline: float) -> Scan:
