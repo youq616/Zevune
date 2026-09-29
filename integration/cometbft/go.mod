@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/cometbft/cometbft v0.38.26
 	github.com/youq616/Zevune v0.0.0
+	golang.org/x/crypto v0.33.0
 	golang.org/x/sys v0.30.0
 )
 
@@ -65,7 +66,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	go.etcd.io/bbolt v1.4.0-alpha.0.0.20240404170359-43604f3112c5 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect

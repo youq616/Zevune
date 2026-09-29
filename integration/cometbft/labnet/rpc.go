@@ -66,7 +66,11 @@ func (t *boundedTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.URL.Scheme != "http" || r.URL.Host != t.host || r.URL.User != nil || (r.URL.Path != "" && r.URL.Path != "/") || r.Method != http.MethodPost || r.URL.RawQuery != "" || r.URL.ForceQuery || r.URL.Fragment != "" || r.URL.RawPath != "" || r.URL.Opaque != "" || (r.Host != "" && r.Host != t.host) {
 		return nil, ErrEndpoint
 	}
-	response, err := t.base.RoundTrip(r)
+	// Transport detaches dialing from request cancellation to allow reuse.
+	// The private dialer restores this original context for its handshake;
+	// the legacy numeric TCP dialer ignores the value and remains unchanged.
+	request := r.WithContext(context.WithValue(r.Context(), privateRPCRequestContextKey{}, r.Context()))
+	response, err := t.base.RoundTrip(request)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +97,17 @@ func newPeer(endpoint string) (*peer, error) {
 	if err := ValidateEndpoint(endpoint); err != nil {
 		return nil, err
 	}
+	return newRPCPeer(endpoint, (&net.Dialer{Timeout: 2 * time.Second}).DialContext)
+}
+
+// Both constructors validate their endpoint before entering this common HTTP
+// boundary. Only the private constructor supplies the authenticated SOCKS dialer;
+// the response, timeout and connection limits remain identical to the old path.
+func newRPCPeer(endpoint string, dial func(context.Context, string, string) (net.Conn, error)) (*peer, error) {
 	u, _ := url.Parse(endpoint)
 	transport := &http.Transport{
 		Proxy:              nil,
-		DialContext:        (&net.Dialer{Timeout: 2 * time.Second}).DialContext,
+		DialContext:        dial,
 		DisableCompression: true, MaxConnsPerHost: 2, MaxIdleConnsPerHost: 2,
 		MaxResponseHeaderBytes: 32 * 1024, ResponseHeaderTimeout: 5 * time.Second,
 		IdleConnTimeout: 10 * time.Second,
