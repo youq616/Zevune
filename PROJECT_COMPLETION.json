@@ -1,0 +1,301 @@
+{
+  "format": "zevune-project-completion-1",
+  "scope_document": "docs/DELIVERY_PLAN.zh-CN.md",
+  "target": "C",
+  "real_funds_allowed": false,
+  "public_deployment_authorized": false,
+  "scope_frozen": true,
+  "work_packages": [
+    {
+      "id": "P1",
+      "title": "协议与升级",
+      "criteria": [
+        {
+          "id": "network_identity",
+          "status": "implemented",
+          "reason": "LAB2独立创世域、地址与旧格式拒绝路径已实现；尚不是完整协议冻结。",
+          "sources": [
+            "docs/protocol/GENESIS_DOMAIN_V2.md",
+            "integration/orchard/src/wire.rs"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "protocol_freeze",
+          "status": "in_progress",
+          "reason": "完整交易、共识、经济与升级规范及逐语义向量尚未最终审查。",
+          "sources": [
+            "docs/PROOF_CONTRACT.md",
+            "docs/protocol/signing-domain-vectors.json"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "upgrade_recovery",
+          "status": "not_implemented",
+          "reason": "支持版本的激活、未知版本安全停机和中断恢复演练未交付。",
+          "sources": [
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "持续存储",
+      "criteria": [
+        {
+          "id": "durable_archive",
+          "status": "implemented",
+          "reason": "活动分段、精确检查点、全量恢复和钱包整理已有真实测试。",
+          "sources": [
+            "docs/ACTIVE_ARCHIVE_V1.zh-CN.md",
+            "docs/WALLET_COMPACTION.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "snapshot_incremental",
+          "status": "not_implemented",
+          "reason": "现有增量包恢复仍完整重放；不能当作经过验证的状态快照导入。",
+          "sources": [
+            "docs/ACTIVE_INCREMENTAL_PACKAGE_V1.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "capacity_and_fault_acceptance",
+          "status": "in_progress",
+          "reason": "十万块增长与32+1付款样本已有；完整增长/容量边界与Windows延迟风险尚未最终验收。",
+          "sources": [
+            "docs/ACTIVE_GROWTH_OBSERVABILITY.zh-CN.md",
+            "docs/ACTIVE_STORAGE_FAILURES.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "多机网络",
+      "criteria": [
+        {
+          "id": "remote_node_operations",
+          "status": "not_implemented",
+          "reason": "当前初始化和RPC仍限定四节点数字回环地址，不是多机运行入口。",
+          "sources": [
+            "integration/cometbft/labnet/network.go",
+            "integration/cometbft/labnet/rpc.go"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "authenticated_remote_sync",
+          "status": "in_progress",
+          "reason": "固定验证者签名和重执行同步已有；动态验证者与远端可信引导未交付。",
+          "sources": [
+            "integration/cometbft/labnet/sync.go"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "four_machine_faults",
+          "status": "evidence_missing",
+          "reason": "需要至少四个真实机器环境的付款、重启、分区、延迟和恶意提供者证据。",
+          "sources": [
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "在线钱包",
+      "criteria": [
+        {
+          "id": "local_wallet_and_recovery",
+          "status": "implemented",
+          "reason": "真实证明、加密钱包、pending恢复、离线诊断及桌面入口存在。",
+          "sources": [
+            "scripts/zevune_wallet.py",
+            "docs/WALLET_DURABILITY.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "integrated_online_payment",
+          "status": "not_implemented",
+          "reason": "普通用户付款仍需分开的本地准备与网络提交；不是完整在线钱包。",
+          "sources": [
+            "docs/LOCAL_WALLET_CONSOLE.zh-CN.md",
+            "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "restart_and_confirmation",
+          "status": "in_progress",
+          "reason": "局部对账/历史查询已有；在线支付状态机、伪节点回复及重启端到端验收未完成。",
+          "sources": [
+            "docs/WALLET_RECONCILE.zh-CN.md",
+            "docs/INTEGRATION_ACCEPTANCE.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "网络与查询隐私",
+      "criteria": [
+        {
+          "id": "threat_model_review",
+          "status": "in_progress",
+          "reason": "已明确现有泄漏与对手边界；新的现状规范不等于独立隐私设计通过。",
+          "sources": [
+            "docs/THREAT_MODEL.zh-CN.md",
+            "docs/PRIVACY_BOUNDARIES.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "private_transport",
+          "status": "not_implemented",
+          "reason": "广播、查询和同步没有网络隐私路径及失败时拒绝直连回退实现。",
+          "sources": [
+            "docs/PRIVACY_BOUNDARIES.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "traffic_acceptance",
+          "status": "evidence_missing",
+          "reason": "需要端点关联、时序及启用隐私模式的实测；本机RPC隔离不满足。",
+          "sources": [
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "经济与验证者",
+      "criteria": [
+        {
+          "id": "rules_and_conservation",
+          "status": "in_progress",
+          "reason": "实验固定公开供给和费用检查已有；主网发行、费去向与退出规则未冻结。",
+          "sources": [
+            "docs/FUNDED_TEST_NETWORK.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "validator_transitions",
+          "status": "not_implemented",
+          "reason": "加入/退出、投票权变化、处罚和签名状态连续性未实现完整规则。",
+          "sources": [
+            "integration/cometbft/labnet/network.go"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "permissionless_model",
+          "status": "not_implemented",
+          "reason": "需实现并验证开放参与/防女巫方案；固定四验证者不满足。",
+          "sources": [
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "性能与长期验证",
+      "criteria": [
+        {
+          "id": "end_to_end_distribution",
+          "status": "evidence_missing",
+          "reason": "需从确认付款到收款可再花费的p50/p95/p99、失败率、负载与费用，包含隐私路径。",
+          "sources": [
+            "docs/PERFORMANCE.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "soak_30_days",
+          "status": "evidence_missing",
+          "reason": "需要最终整合版本至少30天连续运行和故障/升级观察；短CI不得替代。",
+          "sources": [
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "failure_closure",
+          "status": "in_progress",
+          "reason": "Issue37已有C9修复并在2026-09-29整合验收关闭；Issue23同步调用延迟根因仍未知。",
+          "sources": [
+            "scripts/tests/test_ledger_restore.py",
+            "docs/ACTIVE_COMMIT_TIMING.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "P8",
+      "title": "审查与发布",
+      "criteria": [
+        {
+          "id": "source_and_distribution",
+          "status": "in_progress",
+          "reason": "当前规范已补建，源码和工具有固定来源；完整依赖许可与可信制品分发尚未完成。",
+          "sources": [
+            "docs/SOURCES.md",
+            "LICENSE-STATUS.md",
+            "scripts/build_local_lab.py"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "independent_security_audit",
+          "status": "evidence_missing",
+          "reason": "代码代理复审不替代最终协议/密码学/隐私的独立专业审查。",
+          "sources": [
+            "SECURITY.md",
+            "docs/DELIVERY_PLAN.zh-CN.md"
+          ],
+          "evidence": []
+        },
+        {
+          "id": "release_and_drills",
+          "status": "evidence_missing",
+          "reason": "最终候选的制品一致性、升级与恢复演练、整包说明和整体验收缺失。",
+          "sources": [
+            "docs/INTEGRATION_ACCEPTANCE.zh-CN.md"
+          ],
+          "evidence": []
+        }
+      ]
+    }
+  ],
+  "candidate_commit": "ae04190a57bff9ccfbeb056e749f30a9a62c2e02",
+  "specifications": {
+    "origin": "new_current_source_reconstruction_not_historical_originals",
+    "runtime_base_commit": "ae04190a57bff9ccfbeb056e749f30a9a62c2e02",
+    "historical_originals_recovered": false,
+    "paths": [
+      "docs/ARCHITECTURE.zh-CN.md",
+      "docs/PERFORMANCE.zh-CN.md",
+      "docs/PROOF_CONTRACT.md",
+      "docs/ROADMAP.md",
+      "docs/SOURCES.md",
+      "docs/THREAT_MODEL.zh-CN.md"
+    ]
+  }
+}

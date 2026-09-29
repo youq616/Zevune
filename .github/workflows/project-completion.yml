@@ -1,0 +1,42 @@
+name: project-completion-record
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['PROJECT_COMPLETION.json', 'PROJECT_STATUS.json', 'README.md', 'docs/**', 'scripts/**', 'integration/**', '.github/workflows/**']
+  pull_request:
+    paths: ['PROJECT_COMPLETION.json', 'PROJECT_STATUS.json', 'README.md', 'docs/**', 'scripts/**', 'integration/**', '.github/workflows/**']
+permissions:
+  contents: read
+jobs:
+  records:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    env:
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source and full maintenance schema
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          head = subprocess.check_output(['git', '--no-replace-objects', 'rev-parse', 'HEAD'], text=True).strip()
+          assert re.fullmatch('[0-9a-f]{40}', os.environ['ZEVUNE_SOURCE_HEAD'])
+          assert head == os.environ['ZEVUNE_SOURCE_HEAD']
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print('source_head=' + head)
+          PY
+          python -B -m unittest discover -s scripts/tests -p test_project_completion.py -v
+      - name: Report actual gaps, not project acceptance
+        run: python -B scripts/check_project_completion.py --report
+      - name: Original source unchanged
+        run: git diff --exit-code HEAD --
