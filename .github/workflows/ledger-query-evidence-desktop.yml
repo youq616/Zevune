@@ -1,0 +1,65 @@
+name: ledger-query-evidence-desktop
+on:
+  push:
+    branches: [main, 'dev/**']
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', 'internal/poolbridge/**', '.github/workflows/**']
+  pull_request:
+    paths: ['scripts/**', 'docs/**', 'integration/orchard/**', 'internal/poolbridge/**', '.github/workflows/**']
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    env:
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source and interpreter
+        run: |
+          python - <<'PY_SOURCE'
+          import json, os, re, subprocess, sys
+          expected = os.environ['ZEVUNE_SOURCE_HEAD']
+          assert re.fullmatch(r'[0-9a-f]{40}', expected)
+          def git(*args):
+              return subprocess.check_output(['git', '--no-replace-objects', *args], text=True).strip()
+          assert git('rev-parse', 'HEAD') == expected
+          tree = git('rev-parse', 'HEAD^{tree}')
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          assert sys.version_info >= (3, 10)
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--'], check=True)
+          print(json.dumps({'source_head': expected, 'source_tree': tree, 'python': sys.version}))
+          PY_SOURCE
+      - name: Actual task and report contracts
+        run: python -B -m unittest discover -s scripts/tests -p 'test_ledger_query*.py' -v
+      - name: Linux display support
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes --no-install-recommends python3-tk xvfb xauth
+      - name: Real comparison desktop
+        run: |
+          python - <<'PY_GUI'
+          import os, subprocess, sys
+          command = [sys.executable, '-B', 'scripts/check_ledger_query_evidence_gui.py', '-v']
+          if os.name != 'nt':
+              command = ['xvfb-run', '-a', *command]
+          subprocess.run(command, check=True, timeout=120)
+          PY_GUI
+      - name: Existing offline integrations
+        run: |
+          python -B scripts/check_ledger_query_audit.py
+          python -B scripts/check_ledger_query_evidence_compare.py
+      - name: Original source unchanged
+        run: git diff --exit-code HEAD --
