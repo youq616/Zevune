@@ -83,7 +83,7 @@
         {
           "id": "remote_node_operations",
           "status": "not_implemented",
-          "reason": "当前初始化和RPC仍限定四节点数字回环地址，不是多机运行入口。",
+          "reason": "节点初始化和运行仍限定四节点数字回环；新增私密RPC客户端候选不构成多机运行入口。",
           "sources": [
             "integration/cometbft/labnet/network.go",
             "integration/cometbft/labnet/rpc.go"
@@ -153,19 +153,23 @@
         {
           "id": "threat_model_review",
           "status": "in_progress",
-          "reason": "已明确现有泄漏与对手边界；新的现状规范不等于独立隐私设计通过。",
+          "reason": "显式onion/SOCKS客户端设计89a2419已获独立非作者复审；实现候选另需代码审查、真实Tor与完整查询隐私验收。",
           "sources": [
             "docs/THREAT_MODEL.zh-CN.md",
-            "docs/PRIVACY_BOUNDARIES.zh-CN.md"
+            "docs/PRIVACY_BOUNDARIES.zh-CN.md",
+            "docs/PRIVATE_RPC_V1.zh-CN.md"
           ],
           "evidence": []
         },
         {
           "id": "private_transport",
-          "status": "not_implemented",
-          "reason": "广播、查询和同步没有网络隐私路径及失败时拒绝直连回退实现。",
+          "status": "in_progress",
+          "reason": "新增显式onion-v3/auth-only SOCKS的sync/submit客户端候选，拒绝DNS/直连回退；尚无实际Tor服务和流量验收，未接受P5。",
           "sources": [
-            "docs/PRIVACY_BOUNDARIES.zh-CN.md"
+            "docs/PRIVATE_RPC_V1.zh-CN.md",
+            "integration/cometbft/labnet/private_rpc.go",
+            "integration/cometbft/labnet/private_socks.go",
+            "integration/cometbft/labnet/sync.go"
           ],
           "evidence": []
         },

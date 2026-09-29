@@ -43,6 +43,7 @@ func (n *Network) header(ctx context.Context, remote rpcSource, height int64) (*
 
 type SyncOptions struct {
 	Endpoint     string
+	SOCKSProxy   string // explicit local SOCKS + onion-only route; empty preserves loopback.
 	Worker       string
 	WorkerSHA256 Hash
 	Journal      string
@@ -215,7 +216,7 @@ func (n *Network) synchronizeReference(ctx context.Context, o SyncOptions, expec
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Limit == 0 || o.Limit > maxSyncBlocks {
 		return SyncResult{}, ErrBounds
 	}
-	remote, err := newPeer(o.Endpoint)
+	remote, err := newPeerForOptions(o)
 	if err != nil {
 		return SyncResult{}, err
 	}
@@ -266,7 +267,7 @@ func (n *Network) submitReference(ctx context.Context, o SyncOptions, raw []byte
 	if ctx == nil || ctx.Err() != nil || n == nil || o.Create || len(raw) == 0 || len(raw) > poolbridge.MaxTransactionBytes || o.Limit == 0 || o.Limit > maxSyncBlocks {
 		return out, ErrBounds
 	}
-	remote, err := newPeer(o.Endpoint)
+	remote, err := newPeerForOptions(o)
 	if err != nil {
 		return out, err
 	}

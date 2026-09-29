@@ -152,7 +152,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	noFunds := f.Bool("no-real-funds", false, "required local-only acknowledgement")
 	worker := f.String("worker", "", "absolute trusted Rust worker path")
 	workerDigest := f.String("worker-sha256", "", "independently verified worker digest")
-	var home, manifest, assetDigest, config, configDigest, endpoint, journal, txfile string
+	var home, manifest, assetDigest, config, configDigest, endpoint, journal, txfile, socksProxy string
 	var index, ports int
 	var create, stopOnEOF bool
 	var limit uint64
@@ -177,7 +177,8 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 				f.StringVar(&destination, "output", "", "new journal backup or restore path; never overwritten")
 			}
 		} else {
-			f.StringVar(&endpoint, "endpoint", "", "numeric loopback HTTP endpoint")
+			f.StringVar(&endpoint, "endpoint", "", "loopback HTTP, or onion v3 with explicit --socks-proxy")
+			f.StringVar(&socksProxy, "socks-proxy", "", "explicit numeric 127.0.0.1 SOCKS port; onion-only, no fallback")
 			f.StringVar(&journal, "journal", "", "wallet reference journal, not node journal")
 			f.Uint64Var(&limit, "limit", 128, "maximum blocks for this call")
 			if command == "sync" {
@@ -197,15 +198,23 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	// Track flag presence separately from its value: passing empty shell
 	// variables must fail, not silently disable a checkpoint or disk inspection.
-	checkpointRequested, diskRequested := false, false
+	checkpointRequested, diskRequested, socksRequested := false, false, false
 	f.Visit(func(v *flag.Flag) {
 		if v.Name == "expected-height" || v.Name == "expected-app-hash" {
 			checkpointRequested = true
+		}
+		if v.Name == "socks-proxy" {
+			socksRequested = true
 		}
 		if v.Name == "disk-reserve-bytes" {
 			diskRequested = true
 		}
 	})
+	// An explicitly empty proxy must not silently disable privacy. Validate
+	// the private route before reading config/transaction files or starting a worker.
+	if socksRequested && labnet.ValidatePrivateRPC(endpoint, socksProxy) != nil {
+		return labnet.ErrEndpoint
+	}
 	// Validate before configuration/file access. Explicit height 0 is a real
 	// genesis checkpoint, not the default/absent value.
 	if err := checkpointFlagSyntax(expectedHeight, expectedAppHash, checkpointRequested); err != nil || (checkpointRequested && create) ||
@@ -287,7 +296,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		}
 		return emit.Encode(result)
 	}
-	o := labnet.SyncOptions{Endpoint: endpoint, Worker: *worker, WorkerSHA256: pin, Journal: journal, Create: create, Limit: limit}
+	o := labnet.SyncOptions{Endpoint: endpoint, SOCKSProxy: socksProxy, Worker: *worker, WorkerSHA256: pin, Journal: journal, Create: create, Limit: limit}
 	if command == "sync" {
 		var result labnet.SyncResult
 		var err error

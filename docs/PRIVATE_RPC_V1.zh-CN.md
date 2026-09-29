@@ -1,6 +1,6 @@
 # P5 第一阶段：显式 onion v3 RPC 传输合同
 
-状态：待独立设计审查及运行时实现；本文件不是 P5 完成证明。基线为已合入 PR38 的 `5b7174c292fbfaf9808d434b809904fac4da5844`，tree `cf477e52899dc580934ced82f6c93eeff864ce56`。原 DELIVERY_PLAN 的 P1—P8 与所有验收门槛保持。
+状态：已有运行时实现候选，尚未阶段验收；本文件不是 P5 完成证明。基线为已合入 PR38 的 `5b7174c292fbfaf9808d434b809904fac4da5844`，tree `cf477e52899dc580934ced82f6c93eeff864ce56`。原 DELIVERY_PLAN 的 P1—P8 与所有验收门槛保持。
 
 ## 本阶段边界
 
@@ -37,6 +37,14 @@ CONNECT只能为 `05 01 00 03 <len> <原onion主机名字节> <U16BE(port)>`。�
 必须将sync/submit调用接到该peer并保留原完整回归；准确候选需独立非作者代码审查及既有必要CI。没有实际运行的检查保持未测。原生Orchard/Go/Rust整合不得被假验证器替代。生产依赖版本、账本格式、同步写入、锁及限额保持；如将x/crypto从间接依赖改为直接依赖，仍固定现有v0.33.0和原校验和。
 
 独立设计审查先于运行时接线；代码审查另按最终准确head进行。该客户端阶段至多使P5.private_transport进入in_progress，不能接受P5.traffic_acceptance或P3.four_machine_faults。后续实际Tor/onion实验、四真实机器、30天运行及专业安全审查必须真实取得。
+
+### 首个实现候选的实测边界（2026-09-29）
+
+设计检查点 `89a2419df8d9e235f038dae5145c75d3b3a0c18f` 已获独立非作者 Codex 复审，PR39 评论 `5891207488` 明确命名该提交并称未发现重大问题。此结论只审查设计，不接受随后代码候选。
+
+本地 Go1.23.2/Linux 对准确 `private_socks.go` 与 `private_socks_test.go` 执行了 `go test -race -v -count=1 private_socks.go private_socks_test.go`，9个顶层测试及其子测试通过，包括实际5秒握手超时。原请求取消测试按 Go1.27.1 `net/http.Transport.getConn` 的 `context.WithoutCancel` 行为真实分离context；实现显式保留原请求生命周期，完成握手后不保留socket关闭者。
+
+本地环境无法取得完整依赖且没有Cargo，完整包测试在依赖前置阶段失败；不得将该子集结果说成完整Go/Rust整合通过。新增HTTP/CLI测试和 `operator_e2e` 真实证明付款、签名状态重执行测试已进入原双平台工作流；准确候选的实际CI及独立代码审查仍须在PR39核对。端到端测试只用本机固定转发SOCKS夹具，验证者/Orchard/worker/CLI保持真实，绝不代表实际Tor或四机器验收。
 
 ## 一手规范（2026-09-29重新核对）
 
