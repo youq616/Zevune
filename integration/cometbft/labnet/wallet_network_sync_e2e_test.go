@@ -48,13 +48,7 @@ func walletNetworkFrame(t *testing.T, p *process) map[string]any {
 			t.Fatal("native wallet-network stage failed")
 		}
 		if r.value["stage"] == "failed" {
-			step, _ := r.value["step"].(string)
-			switch step {
-			case "setup", "network-start", "initial-catchup", "real-payment-and-pending", "explicit-fixture-broadcast", "payment-rescan", "restart-rescan", "false-peer-refusal", "stale-handoff-refusal", "final-rescan":
-				t.Fatal("native wallet-network failed at fixed stage:", step)
-			default:
-				t.Fatal("native wallet-network failed")
-			}
+			t.Fatal("native wallet-network failed with fixed evidence:", walletNetworkFailureReport(r.value))
 		}
 		return r.value
 	case <-time.After(3 * time.Minute):
