@@ -75,6 +75,14 @@ func privateOperatorProxy(t *testing.T, endpoint string) (string, *atomic.Int64)
 }
 
 func TestRealOperatorPrivateRPCPaymentAndAuthenticatedReplay(t *testing.T) {
+	realOperatorPrivateRPCPayment(t, false)
+}
+
+func TestRealOperatorGatewayPrivateRPCPaymentAndAuthenticatedReplay(t *testing.T) {
+	realOperatorPrivateRPCPayment(t, true)
+}
+
+func realOperatorPrivateRPCPayment(t *testing.T, throughGateway bool) {
 	root := t.TempDir()
 	walletHome := filepath.Join(root, "private-wallets")
 	if err := os.Mkdir(walletHome, 0700); err != nil {
@@ -124,7 +132,11 @@ func TestRealOperatorPrivateRPCPaymentAndAuthenticatedReplay(t *testing.T) {
 		defer peers[i].close()
 	}
 	awaitNetworkHeight(t, nodes, peers, 3)
-	proxy, connections := privateOperatorProxy(t, Endpoint(base, 0))
+	target := Endpoint(base, 0)
+	if throughGateway {
+		target = launchGatewayForOperator(t, config, initialized.Pin, target)
+	}
+	proxy, connections := privateOperatorProxy(t, target)
 	ref := filepath.Join(root, "private-reference.journal")
 	route := []string{"--endpoint", privateTestEndpoint, "--socks-proxy", proxy, "--journal", ref}
 	synchronize := func(create bool) SyncResult {

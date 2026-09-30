@@ -2,9 +2,9 @@ name: local-network-operator
 on:
   push:
     branches: [main, 'dev/**']
-    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
+    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'internal/rpcgate/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
   pull_request:
-    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
+    paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'internal/rpcgate/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
 permissions:
   contents: read
 jobs:
@@ -33,7 +33,9 @@ jobs:
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
       - name: Check exact source and build real workers
         run: |
-          test -z "$(gofmt -l integration/cometbft/labnet integration/cometbft/cmd/zevune-network)"
+          test -z "$(gofmt -l internal/rpcgate integration/cometbft/labnet integration/cometbft/cmd/zevune-network integration/cometbft/cmd/zevune-rpc-gateway)"
+          go test -mod=readonly ./internal/rpcgate -count=1 -v
+          go vet -mod=readonly ./internal/rpcgate
           python -m unittest discover -s scripts/tests -v
           cd integration/orchard
           cargo fmt --all -- --check
@@ -41,6 +43,19 @@ jobs:
           git diff --exit-code
       - name: Build from isolated Git objects and verify create-only bundle
         run: python scripts/build_local_lab.py --output "$RUNNER_TEMP/zevune-local-bundle"
+      - name: Build gateway from exact source outside the legacy bundle
+        run: |
+          python - <<'PYBUILD'
+          import os
+          import subprocess
+          from pathlib import Path
+          suffix = '.exe' if os.name == 'nt' else ''
+          target = Path(os.environ['RUNNER_TEMP']) / ('zevune-rpc-gateway' + suffix)
+          subprocess.run(['go', 'build', '-mod=readonly', '-buildvcs=false', '-trimpath', '-o', str(target), './cmd/zevune-rpc-gateway'], cwd='integration/cometbft', check=True)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write('ZEVUNE_RPC_GATEWAY=' + str(target) + '\n')
+          PYBUILD
+          git diff --exit-code
       - name: Register executable paths only
         run: |
           python - <<'PY'
@@ -52,21 +67,23 @@ jobs:
               for key, path in [('ZEVUNE_NETWORK_OPERATOR', bundle / ('zevune-network' + suffix)), ('ZEVUNE_POOL_WORKER', bundle / ('zevune-pool-worker' + suffix)), ('ZEVUNE_FUNDED_SCENARIO', Path('integration/orchard/target/release').absolute() / ('zevune-funded-scenario' + suffix))]:
                   f.write(key + '=' + str(path) + '\n')
           PY
-      - name: Actual operator processes, real payments and rejected false post-state
+      - name: Actual operator and gateway processes, real payments and rejected false post-state
         working-directory: integration/cometbft
         run: |
-          go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network -count=1 -timeout=15m -v
-          go vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network
+          go test -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network ./cmd/zevune-rpc-gateway -count=1 -timeout=15m -v
+          go vet -mod=readonly -tags=operator_e2e ./labnet ./cmd/zevune-network ./cmd/zevune-rpc-gateway
       - name: Race and bounded fuzz checks
         if: runner.os == 'Linux'
         working-directory: integration/cometbft
         run: |
-          go test -mod=readonly -race ./labnet ./cmd/zevune-network -count=1
+          go test -mod=readonly -race ./labnet ./cmd/zevune-network ./cmd/zevune-rpc-gateway -count=1
           go test -mod=readonly -race -tags=operator_e2e ./labnet -run '^TestQuorumSignedWrongPostStateNeverPersists$' -count=1
           go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzCanonicalPublicConfiguration$' -fuzztime=3s -parallel=2
           go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2
           go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzPrivateRPCEndpoint$' -fuzztime=3s -parallel=2
           cd ../..
+          go test -mod=readonly -race ./internal/rpcgate -count=1
+          go test -mod=readonly ./internal/rpcgate -run '^$' -fuzz '^FuzzGatewayRequest$' -fuzztime=3s -parallel=2
           go test -mod=readonly ./internal/poolbridge -run '^$' -fuzz '^FuzzTestGenesisFrame$' -fuzztime=3s -parallel=2
       - name: Check source and dependency locks were not modified
         run: git diff --exit-code
