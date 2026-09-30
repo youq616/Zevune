@@ -43,13 +43,7 @@ fn files(path: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     children.sort();
     children.iter().flat_map(|p| files(p)).collect()
 }
-fn command(
-    op: u8,
-    password: &[u8],
-    pin: StoreReceipt,
-    fields: &[String],
-    success: bool,
-) -> String {
+fn command(op: u8, password: &[u8], pin: StoreReceipt, fields: &[String], success: bool) -> String {
     let mut raw = Zeroizing::new(b"ZVWCLI01".to_vec());
     raw.push(op);
     raw.extend_from_slice(&(password.len() as u16).to_be_bytes());
@@ -103,11 +97,7 @@ fn command(
     }
     output
 }
-fn setup(
-    home: &Home,
-    password: &[u8],
-    active: bool,
-) -> (TestGenesis, StoreReceipt, Vec<String>) {
+fn setup(home: &Home, password: &[u8], active: bool) -> (TestGenesis, StoreReceipt, Vec<String>) {
     let source = home.0.join("wallet");
     let journal = home.0.join("pool");
     let manifest = home.0.join("genesis");
