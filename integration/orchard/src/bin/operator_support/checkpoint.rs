@@ -266,6 +266,9 @@ mod tests {
             Err(WalletError::NotSynced)
         );
         assert_eq!(wallet.receipt().unwrap(), pin);
+        // Windows byte-range locks also reject reads through a second handle
+        // in this process. Release the owned store before whole-file evidence.
+        drop(wallet);
         assert!(fs::read(&wallet_path).unwrap() == before);
         assert!(fs::read(&pool_path).unwrap() == reference);
         // Only now reconstruct the SAME validated history explicitly. This
@@ -273,15 +276,16 @@ mod tests {
         pool = genesis.open_pool(&pool_path).unwrap();
         assert_eq!(pool.summary().unwrap(), initial);
         let history = genesis.wallet_history(&mut pool).unwrap();
+        wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
         wallet.sync(&history).unwrap();
         assert!(wallet.pending_payment().unwrap().unwrap().bytes() == pending.as_slice());
         assert_eq!(wallet.view().unwrap().pending_id(), Some(pending_id));
         assert_eq!(wallet.view().unwrap().available_balance(), Ok(0));
         assert_eq!(wallet.receipt().unwrap(), pin);
+        drop(wallet);
+        drop(pool);
         assert!(fs::read(&wallet_path).unwrap() == before);
         assert!(fs::read(&pool_path).unwrap() == reference);
-        drop(pool);
-        drop(wallet);
         let result = call(&f, password.as_ref(), pin).unwrap();
         assert!(result.contains("\"pending\":true"));
         assert!(result.contains("\"available\":0"));
@@ -309,6 +313,7 @@ mod tests {
         );
         assert_eq!(wallet.view().unwrap().height(), Some(1));
         assert!(wallet.receipt().unwrap() != pin);
+        drop(wallet);
         assert!(fs::read(&wallet_path).unwrap() == reconciled_wallet);
     }
 }
