@@ -16,7 +16,7 @@
 
 endpoint/SOCKS策略完全复用原网络命令：未指定proxy只能规范数字回环；显式proxy只能本机数字127.0.0.1与规范onion v3、强制认证隔离；显式空proxy失败，禁止DNS/环境代理/直连/no-auth降级。私密通道不可用则整个操作失败，钱包不解锁。此阶段不启动Tor或创建onion服务。
 
-所有公开语法、独立pin及程序/配置身份检查先于网络调用和私密输入。网络过程不获得钱包路径、receipt、口令或私密见证。只有网络成功且输出字段/类型/界限均匹配后，才通过原隐藏输入获取密码，构造原opcode11私有stdin帧。检查网络结果中固定scope、原height/root/app_hash/new_blocks/observed_signed_tip/caught_up/base_checkpoint_matched/real_funds_allowed，拒绝重复键、非整数/布尔混淆和多余字段；不能用原status或未约束重扫作降级。
+所有公开语法、独立pin及程序/配置身份检查先于网络调用和私密输入。网络过程不获得钱包路径、receipt、口令或私密见证。只有网络成功且输出字段/类型/界限均匹配后，才通过原隐藏输入获取密码，构造原opcode11私有stdin帧。检查网络结果中固定scope、原height/root/app_hash/new_blocks/observed_signed_tip/caught_up_to_observed_tip/base_checkpoint_matched/real_funds_allowed，拒绝重复键、非整数/布尔混淆和多余字段；不能用原status或未约束重扫作降级。
 
 Go同步返回后原worker已关闭，钱包重新取得原PoolStore锁并完整重放。其间参考文件被更换、回滚或增长时，PR41的准确状态检查在钱包打开/解锁前拒绝；同一真实池锁保持到钱包保存完成。这不是跨Go/Rust进程的连续锁或跨文件原子事务。配置/创世及后端普通替换在前后复查；不声称抵御恶意内核、同权并发内存修改或SHA碰撞。
 
