@@ -275,7 +275,10 @@ mod tests {
         assert!(result.contains("\"balance\":99999"));
         wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
         assert!(wallet.pending_payment().unwrap().is_none());
-        assert_eq!(wallet.view().unwrap().balance(), Err(WalletError::NotSynced));
+        assert_eq!(
+            wallet.view().unwrap().balance(),
+            Err(WalletError::NotSynced)
+        );
         assert_eq!(wallet.view().unwrap().height(), Some(1));
         assert!(wallet.receipt().unwrap() != pin);
     }

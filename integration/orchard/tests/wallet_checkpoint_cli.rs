@@ -165,7 +165,10 @@ fn actual_command_rechecks_exact_tip_before_wallet_mutation_on_both_profiles() {
         assert_eq!(wallet.view().unwrap().height(), Some(1));
         // Persisted ancestry is available on reopen, but scanned balances are
         // intentionally not a trusted restore cache in the existing wallet.
-        assert_eq!(wallet.view().unwrap().balance(), Err(WalletError::NotSynced));
+        assert_eq!(
+            wallet.view().unwrap().balance(),
+            Err(WalletError::NotSynced)
+        );
         drop(wallet);
         // Direct malformed frames bypass frontend validation but cannot mutate.
         let before = fs::read(&wallet_path).unwrap();
