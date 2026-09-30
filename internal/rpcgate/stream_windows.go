@@ -3,7 +3,42 @@ package rpcgate
 import (
 	"os"
 	"syscall"
+	"unsafe"
 )
+
+var queryStreamObject = syscall.NewLazyDLL("ntdll.dll").NewProc("NtQueryObject")
+
+// PUBLIC_OBJECT_BASIC_INFORMATION is the documented, fixed-size result of
+// NtQueryObject(ObjectBasicInformation). Query only the handle's granted access;
+// never trial-Read/Write (which could block, consume input or emit output).
+// https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-ntqueryobject
+func streamAccess(handle syscall.Handle, read bool) error {
+	if err := queryStreamObject.Find(); err != nil {
+		return ErrConfiguration
+	}
+	var basic struct {
+		Attributes, GrantedAccess, HandleCount, PointerCount uint32
+		Reserved                                             [10]uint32
+	}
+	var returned uint32
+	status, _, _ := queryStreamObject.Call(uintptr(handle), 0,
+		uintptr(unsafe.Pointer(&basic)), unsafe.Sizeof(basic), uintptr(unsafe.Pointer(&returned)))
+	// NTSTATUS, not GetLastError, is authoritative. An unavailable/changed
+	// query contract must fail closed, not silently skip the access check.
+	if status != 0 || returned != uint32(unsafe.Sizeof(basic)) {
+		return ErrConfiguration
+	}
+	const fileReadData = 0x00000001
+	const fileWriteData = 0x00000002
+	required := uint32(fileWriteData)
+	if read {
+		required = fileReadData
+	}
+	if basic.GrantedAccess&required != required {
+		return ErrConfiguration
+	}
+	return nil
+}
 
 // Only inherited FILE_FLAG_OVERLAPPED pipes are supported on Windows. Go's
 // NewFile attempts IOCP registration for these handles; prepareStream checks
@@ -18,6 +53,11 @@ func streamPipe(f *os.File, read bool) (*os.File, error) {
 	h := syscall.Handle(f.Fd())
 	typ, err := syscall.GetFileType(h)
 	if err != nil || typ != syscall.FILE_TYPE_PIPE {
+		return nil, ErrConfiguration
+	}
+	// Deadline capability does not prove read/write permission. Check the
+	// original granted direction before duplicating or starting any service.
+	if err := streamAccess(h, read); err != nil {
 		return nil, ErrConfiguration
 	}
 	process, err := syscall.GetCurrentProcess()

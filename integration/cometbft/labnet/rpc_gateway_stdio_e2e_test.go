@@ -5,14 +5,12 @@ package labnet
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -131,23 +129,11 @@ func gatewayListenerOpened(t *testing.T, address string) {
 
 func fillGatewayPipe(t *testing.T, w *os.File) {
 	t.Helper()
-	if err := w.SetWriteDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
-		t.Fatal(err)
+	written, err := gatetest.Saturate(w)
+	if err != nil || written <= 0 {
+		t.Fatal("full-pipe precondition not established", written, err)
 	}
-	block := []byte(strings.Repeat("x", 4096))
-	for size := 0; size < 1024*1024; size += len(block) {
-		_, err := w.Write(block)
-		if errors.Is(err, os.ErrDeadlineExceeded) {
-			if err := w.SetWriteDeadline(time.Time{}); err != nil {
-				t.Fatal(err)
-			}
-			return // no filler worker or pending write remains at command startup
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Fatal("test output pipe did not fill")
+	t.Logf("completed_fill_bytes=%d; parent will not drain before child exits", written)
 }
 
 func gatewayFixedFailure(t *testing.T, p *gatewayCommand) {
@@ -279,6 +265,46 @@ func TestRealGatewayInheritedStandardStreamLifecycle(t *testing.T) {
 			}
 		})
 	}
+	for _, stream := range []string{"stdin", "stdout", "stderr"} {
+		t.Run("wrong_direction_pipe_"+stream, func(t *testing.T) {
+			address := gatewayTestAddress(t)
+			p := newGatewayCommand(t, argsFor(address))
+			r, w, err := gatetest.Pipe() // Windows: genuine overlapped handles
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.all = append(p.all, r, w)
+			if stream == "stdin" {
+				p.cmd.Stdin = w // only FILE_WRITE_DATA, no FILE_READ_DATA
+				p.child = append(p.child, w)
+			} else if stream == "stdout" {
+				p.cmd.Stdout = r // only FILE_READ_DATA, no FILE_WRITE_DATA
+				p.child = append(p.child, r)
+			} else {
+				p.cmd.Stderr = r
+				p.child = append(p.child, r)
+			}
+			p.start(t)
+			p.wait(t, 2*time.Second, false)
+			gatewayListenerClosed(t, address)
+			// Read output only AFTER the nonzero exit. All peer endpoints have
+			// remained open; no EOF, drain or successful signal helped the exit.
+			if err := p.output.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := io.ReadAll(io.LimitReader(p.output, 512))
+			if err != nil || len(raw) != 0 {
+				t.Fatal("wrong-direction command emitted readiness", err)
+			}
+			if stream != "stderr" {
+				gatewayFixedFailure(t, p)
+			}
+			// Absence of a transient bind cannot be proved by a post-exit dial:
+			// the additional owner tests assert ErrConfiguration, and execute's
+			// checked OpenInput/OpenOutput calls precede RunGateway/Start.
+		})
+	}
+
 	if runtime.GOOS == "windows" {
 		for _, stream := range []string{"stdin", "stdout", "stderr"} {
 			t.Run("unsupported_synchronous_pipe_"+stream, func(t *testing.T) {

@@ -34,8 +34,8 @@ jobs:
       - name: Check exact source and build real workers
         run: |
           test -z "$(gofmt -l internal/rpcgate integration/cometbft/labnet integration/cometbft/cmd/zevune-network integration/cometbft/cmd/zevune-rpc-gateway)"
-          go test -mod=readonly ./internal/rpcgate -count=1 -v
-          go vet -mod=readonly ./internal/rpcgate
+          go test -mod=readonly ./internal/rpcgate/... -count=1 -v
+          go vet -mod=readonly ./internal/rpcgate/...
           python -m unittest discover -s scripts/tests -v
           cd integration/orchard
           cargo fmt --all -- --check
@@ -82,7 +82,7 @@ jobs:
           go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzNumericLoopbackEndpoint$' -fuzztime=3s -parallel=2
           go test -mod=readonly ./labnet -run '^$' -fuzz '^FuzzPrivateRPCEndpoint$' -fuzztime=3s -parallel=2
           cd ../..
-          go test -mod=readonly -race ./internal/rpcgate -count=1
+          go test -mod=readonly -race ./internal/rpcgate/... -count=1
           go test -mod=readonly ./internal/rpcgate -run '^$' -fuzz '^FuzzGatewayRequest$' -fuzztime=3s -parallel=2
           go test -mod=readonly ./internal/poolbridge -run '^$' -fuzz '^FuzzTestGenesisFrame$' -fuzztime=3s -parallel=2
       - name: Check source and dependency locks were not modified

@@ -5,13 +5,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -327,7 +325,7 @@ func TestGatewayConfigurationAndReadyFailureCloseListener(t *testing.T) {
 			t.Fatal("invalid config")
 		}
 	}
-	assertClosed := func() {
+	assertClosed := func(t *testing.T) {
 		t.Helper()
 		c, err := net.DialTimeout("tcp4", good.Listen, 200*time.Millisecond)
 		if err == nil {
@@ -338,43 +336,46 @@ func TestGatewayConfigurationAndReadyFailureCloseListener(t *testing.T) {
 	if err := n.RunGateway(context.Background(), good, nil); err != rpcgate.ErrConfiguration {
 		t.Fatal("unvalidated output accepted")
 	}
-	assertClosed()
+	assertClosed(t)
 	for _, blocked := range []bool{false, true} {
-		r, w, err := gatetest.Pipe()
-		if err != nil {
-			t.Fatal(err)
-		}
+		name := "broken_pipe"
 		if blocked {
-			if err := w.SetWriteDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+			name = "saturated_pipe"
+		}
+		t.Run(name, func(t *testing.T) {
+			r, w, err := gatetest.Pipe()
+			if err != nil {
 				t.Fatal(err)
 			}
-			_, err := w.Write(make([]byte, 4*1024*1024))
-			if !errors.Is(err, os.ErrDeadlineExceeded) {
-				t.Fatal("pipe not blocked", err)
+			defer r.Close()
+			defer w.Close()
+			if blocked {
+				written, err := gatetest.Saturate(w)
+				if err != nil || written <= 0 {
+					t.Fatal("full-pipe precondition not established", written, err)
+				}
+				t.Logf("completed_fill_bytes=%d; no parent drain before readiness result", written)
+			} else {
+				r.Close() // a real broken pipe, not a cooperative mock writer
 			}
-			w.SetWriteDeadline(time.Time{})
-		} else {
-			r.Close() // a real broken pipe, not a cooperative mock writer
-		}
-		out, err := rpcgate.OpenOutput(w)
-		if err != nil {
-			r.Close()
-			t.Fatal(err)
-		}
-		budget := 2 * time.Second
-		if blocked {
-			budget = 200 * time.Millisecond
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), budget)
-		err = n.RunGateway(ctx, good, out)
-		cancel()
-		// Assert return and socket cleanup BEFORE closing/draining the pipe peer.
-		if err != rpcgate.ErrReady {
-			t.Error("readiness failure", err)
-		}
-		assertClosed()
-		out.Close()
-		r.Close()
+			out, err := rpcgate.OpenOutput(w)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer out.Close()
+			budget := 2 * time.Second
+			if blocked {
+				budget = 200 * time.Millisecond
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), budget)
+			defer cancel()
+			err = n.RunGateway(ctx, good, out)
+			// Assert return and socket cleanup BEFORE closing/draining the pipe peer.
+			if err != rpcgate.ErrReady {
+				t.Error("readiness failure", err)
+			}
+			assertClosed(t)
+		})
 	}
 	if calls.Load() != 0 {
 		t.Fatal("readiness generated upstream request")

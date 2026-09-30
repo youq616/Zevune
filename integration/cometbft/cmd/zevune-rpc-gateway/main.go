@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"io"
 	"os"
@@ -57,7 +58,7 @@ func parse(args []string) (options, error) {
 	return o, nil
 }
 
-func execute(parent context.Context, args []string, input, output *os.File) error {
+func execute(parent context.Context, args []string, input, output *os.File) (result error) {
 	o, err := parse(args)
 	if err != nil || parent == nil || parent.Err() != nil || output == nil || o.stopOnEOF && input == nil {
 		return rpcgate.ErrConfiguration
@@ -92,13 +93,25 @@ func execute(parent context.Context, args []string, input, output *os.File) erro
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	if in != nil {
-		stopped := make(chan struct{})
-		go func() { _ = in.UntilEOF(ctx); cancel(); close(stopped) }()
+		stopped := make(chan error, 1)
+		go func() { inputErr := in.UntilEOF(ctx); cancel(); stopped <- inputErr }()
 		// Every read has a short real deadline. Join first, then close ownership;
 		// neither an inherited blocking Read nor a detached task survives return.
-		defer func() { cancel(); <-stopped }()
+		defer func() { cancel(); result = inputCompletion(result, <-stopped) }()
 	}
 	return n.RunGateway(ctx, o.gateway, out)
+}
+
+// EOF and an already-requested cancellation are normal. A real input failure
+// must not become exit 0 merely because the watcher also stopped the service.
+func inputCompletion(serviceErr, inputErr error) error {
+	if serviceErr != nil {
+		return serviceErr
+	}
+	if inputErr == nil || errors.Is(inputErr, context.Canceled) || errors.Is(inputErr, context.DeadlineExceeded) {
+		return nil
+	}
+	return rpcgate.ErrService
 }
 
 func run() int {

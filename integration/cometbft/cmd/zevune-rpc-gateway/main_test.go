@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/youq616/Zevune/internal/rpcgate"
 )
 
 func TestStrictGatewayFlags(t *testing.T) {
@@ -20,5 +23,26 @@ func TestStrictGatewayFlags(t *testing.T) {
 	// Rejection does not need a network, wallet, listener or readiness writer.
 	if execute(context.Background(), good, nil, nil) == nil {
 		t.Fatal("missing output")
+	}
+}
+
+func TestInputCompletionDoesNotHideFailure(t *testing.T) {
+	for _, tt := range []struct {
+		name                       string
+		serviceErr, inputErr, want error
+	}{
+		{"eof", nil, nil, nil},
+		{"requested-cancel", nil, context.Canceled, nil},
+		{"requested-deadline", nil, context.DeadlineExceeded, nil},
+		{"input-io-failure", nil, rpcgate.ErrService, rpcgate.ErrService},
+		{"input-unexpected-failure", nil, errors.New("not for diagnostics"), rpcgate.ErrService},
+		{"preserve-ready-failure", rpcgate.ErrReady, rpcgate.ErrService, rpcgate.ErrReady},
+		{"preserve-start-failure", rpcgate.ErrConfiguration, context.Canceled, rpcgate.ErrConfiguration},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := inputCompletion(tt.serviceErr, tt.inputErr); got != tt.want {
+				t.Fatalf("input completion got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

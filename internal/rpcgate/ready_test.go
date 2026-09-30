@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -26,23 +25,10 @@ func streamTestPipe(t *testing.T) (*os.File, *os.File) {
 
 func fillStreamTestPipe(t *testing.T, w *os.File) {
 	t.Helper()
-	if err := w.SetWriteDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
-		t.Fatal(err)
+	written, err := gatetest.Saturate(w)
+	if err != nil || written <= 0 {
+		t.Fatal("full-pipe precondition not established", written, err)
 	}
-	block := []byte(strings.Repeat("x", 4096))
-	for n := 0; n < 1024*1024; n += len(block) {
-		_, err := w.Write(block)
-		if errors.Is(err, os.ErrDeadlineExceeded) {
-			if err := w.SetWriteDeadline(time.Time{}); err != nil {
-				t.Fatal(err)
-			}
-			return
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Fatal("test pipe never filled")
 }
 
 func TestReadinessAndFailureRecordsUseOwnedPipes(t *testing.T) {
