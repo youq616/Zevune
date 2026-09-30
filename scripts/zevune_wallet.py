@@ -24,8 +24,8 @@ MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
        "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
-       "network-address": 8, "storage": 9, "compact": 10, "status-at-checkpoint": 11, "prepare-at-checkpoint": 12}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2, 11: 6, 12: 11}
+       "network-address": 8, "storage": 9, "compact": 10, "status-at-checkpoint": 11, "prepare-at-checkpoint": 12, "pending-at-checkpoint": 13}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2, 11: 6, 12: 11, 13: 7}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -41,6 +41,8 @@ def encode_request(op: int, password: bytes, fields: list[str], pin: str | None 
         checked_preparation_checkpoint(fields[9], fields[10], pin)
         checked_preparation_numbers(fields[5], fields[6], fields[7])
         checked_address(fields[4])
+    if op == 13:
+        checked_preparation_checkpoint(fields[5], fields[6], pin)
     data = bytearray(MAGIC + bytes([op]) + struct.pack(">H", len(password)) + password)
     data.append(int(pin is not None))
     if pin is not None:
@@ -708,6 +710,119 @@ def prepare_network(args) -> dict:
             "broadcast": False, "latest_verified": False, "retry_authorized": False}
 
 
+def checked_checkpoint_recovery(response: dict, height: str, app_hash: str, pin: str) -> dict:
+    """Validate a no-wallet-write export receipt, never certify a remote tip."""
+    checked_preparation_checkpoint(height, app_hash, pin)
+    keys = {"ok", "scope", "result", "checkpoint_matched", "wallet_unchanged", "payment_profile",
+            "signing_domain", "genesis_sha256", "height", "app_hash", "txid", "receipt", "broadcast"}
+    if (not isinstance(response, dict) or set(response) != keys
+            or response["ok"] is not True or response["scope"] != "local_journal_only_no_funds"
+            or response["result"] != "checkpoint_pending_exported_not_broadcast"
+            or response["checkpoint_matched"] is not True or response["wallet_unchanged"] is not True
+            or response["broadcast"] is not False or type(response["height"]) is not int
+            or response["height"] != int(height) or response["app_hash"] != app_hash
+            or not isinstance(response["txid"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", response["txid"]) is None):
+        raise RuntimeError("Unexpected recovery reply; do not re-sign or retry")
+    current = response["receipt"]
+    checked_preparation_checkpoint(height, app_hash, current)
+    if (current[:64] != pin[:64] or int(current[64:80], 16) < int(pin[64:80], 16)
+            or (current[64:80] == pin[64:80] and current != pin)):
+        raise RuntimeError("Recovered outbox has an unexpected wallet ancestry")
+    genesis = response["genesis_sha256"]
+    if (not isinstance(genesis, str) or re.fullmatch(r"[0-9a-f]{64}", genesis) is None
+            or genesis == "0" * 64 or not isinstance(response["payment_profile"], str)
+            or response["payment_profile"] not in {"LAB1", "LAB2"}
+            or response["signing_domain"] != (genesis if response["payment_profile"] == "LAB2" else None)):
+        raise RuntimeError("Invalid recovery network identity")
+    return response
+
+
+def pending_at_checkpoint(args) -> dict:
+    """An independently supplied constraint; this command does NOT authenticate it."""
+    o = vars(args).copy()
+    if o.get("no_real_funds") is not True:
+        raise ValueError("Recovery is available only in the no-funds laboratory")
+    height, app_hash = checked_preparation_checkpoint(o["expected_height"], o["expected_app_hash"], o["pin"])
+    for key in ("wallet", "journal", "genesis", "backend", "output"):
+        o[key] = _sync_path(o[key])
+    _sync_hash(o["genesis_sha256"])
+    _sync_hash(o["backend_sha256"])
+    # Reuse the original new-output path policy. Only genesis/backend exist in
+    # this direct command, so repeated references stand in for absent network
+    # inputs; this dictionary is used for path checks ONLY, never a child call.
+    output_paths = dict(o, config=o["genesis"], network_backend=o["backend"], worker=o["backend"])
+    parent_identity = _prepare_network_output(output_paths)
+    genesis_before = _sync_pinned_file(o["genesis"], o["genesis_sha256"], 1922, contents=True)
+    backend_before = _sync_pinned_file(o["backend"], o["backend_sha256"], 512 * 1024 * 1024)
+    identity = genesis_identity(o["genesis"], o["genesis_sha256"])
+
+    def unchanged():
+        if (_sync_pinned_file(o["genesis"], o["genesis_sha256"], 1922, contents=True) != genesis_before
+                or _sync_pinned_file(o["backend"], o["backend_sha256"], 512 * 1024 * 1024) != backend_before):
+            raise RuntimeError("Pinned recovery inputs changed")
+
+    fields = [str(o["wallet"]), str(o["journal"]), str(o["genesis"]), o["genesis_sha256"],
+              str(o["output"]), height, app_hash]
+    encode_request(13, bytes(16), fields, o["pin"])
+    print("Pinned local network: " + json.dumps(identity, sort_keys=True)
+          + "; supplied checkpoint is not a network certificate. No new signature or broadcast.", file=sys.stderr)
+    if input("Type RECOVER to export the SAME saved pending bytes: ") != "RECOVER":
+        raise ValueError("Recovery not approved")
+    unchanged()
+    if _prepare_network_output(output_paths) != parent_identity:
+        raise ValueError("Recovery output parent changed")
+    password = hidden_password(False)
+    unchanged()
+    if _prepare_network_output(output_paths) != parent_identity:
+        raise ValueError("Recovery output parent changed")
+    response = invoke(o["backend"], encode_request(13, password, fields, o["pin"]), o["backend_sha256"])
+    checked_checkpoint_recovery(response, height, app_hash, o["pin"])
+    if any(response[k] != value for k, value in identity.items()):
+        raise RuntimeError("Recovered payment network mismatch")
+    unchanged()
+    return response
+
+
+def recover_pending_network(args) -> dict:
+    """One real authenticated sync, then opcode13 once; no intermediate wallet scan.
+
+    An export may be complete or partial even if the response is lost. Never
+    delete the target, sign again, update the wallet, retry, or broadcast here.
+    """
+    o = vars(args).copy()
+    checked_preparation_checkpoint("0", o["genesis_sha256"], o["pin"])
+    parent_identity = _prepare_network_output(o)
+    o, network, identity, unchanged, _ = _verified_network_reference(argparse.Namespace(**o))
+    if not network["caught_up_to_observed_tip"]:
+        raise ValueError("Reference catchup incomplete; pending was not recovered")
+    height, app_hash = str(network["height"]), network["app_hash"]
+    fields = [str(o["wallet"]), str(o["journal"]), str(o["genesis"]), o["genesis_sha256"],
+              str(o["output"]), height, app_hash]
+    encode_request(13, bytes(16), fields, o["pin"])
+    print("Pinned recovery network: " + json.dumps(identity, sort_keys=True)
+          + "; verified through observed tip-1 at height " + height
+          + ", not global latest or finality. No new signature or broadcast.", file=sys.stderr)
+    if input("Type RECOVER to export the SAME saved pending bytes: ") != "RECOVER":
+        raise ValueError("Recovery not approved")
+    unchanged()
+    if _prepare_network_output(o) != parent_identity:
+        raise ValueError("Recovery output parent changed")
+    password = hidden_password(False)
+    unchanged()
+    if _prepare_network_output(o) != parent_identity:
+        raise ValueError("Recovery output parent changed")
+    response = invoke(o["backend"], encode_request(13, password, fields, o["pin"]), o["backend_sha256"])
+    checked_checkpoint_recovery(response, height, app_hash, o["pin"])
+    if any(response[k] != value for k, value in identity.items()):
+        raise RuntimeError("Recovered payment network mismatch")
+    unchanged()
+    return {"result": "network_verified_pending_recovered_not_broadcast",
+            "scope": "fixed_validator_pending_recovery_no_funds", "config_sha256": o["config_sha256"],
+            "network": network, "wallet": response, "real_funds_allowed": False,
+            "broadcast": False, "latest_verified": False, "retry_authorized": False}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-real-funds", action="store_true", required=True)
@@ -718,21 +833,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pin", help="Independently saved 144-character receipt; not a finality proof")
     commands = parser.add_subparsers(dest="command", required=True)
     for command in OPS:
-        sub = commands.add_parser(command)
+        sub = commands.add_parser(command, allow_abbrev=command != "pending-at-checkpoint")
         sub.add_argument("wallet", type=Path)
-        if command in {"backup", "restore", "prepare", "pending", "compact", "prepare-at-checkpoint"}:
+        if command in {"backup", "restore", "prepare", "pending", "compact", "prepare-at-checkpoint", "pending-at-checkpoint"}:
             sub.add_argument("output", type=Path)
         if command in {"address", "network-address"}:
             sub.add_argument("--index", default="0")
-        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
+        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint", "prepare-at-checkpoint", "pending-at-checkpoint"}:
             sub.add_argument("--journal", type=Path, required=True)
             sub.add_argument("--genesis", type=Path, required=True)
-        if command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
+        if command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint", "prepare-at-checkpoint", "pending-at-checkpoint"}:
             sub.add_argument("--genesis-sha256", required=True)
-        if command in {"status-at-checkpoint", "prepare-at-checkpoint"}:
+        if command in {"status-at-checkpoint", "prepare-at-checkpoint", "pending-at-checkpoint"}:
             sub.add_argument("--expected-height", required=True)
             sub.add_argument("--expected-app-hash", required=True)
-    for kind in ("sync-network", "prepare-network"):
+    for kind in ("sync-network", "prepare-network", "recover-pending-network"):
         online = commands.add_parser(kind, allow_abbrev=False)
         online.add_argument("wallet", type=Path)
         for name in ("journal", "genesis", "config", "network-backend", "worker"):
@@ -742,12 +857,13 @@ def main(argv: list[str] | None = None) -> int:
         online.add_argument("--socks-proxy")
         online.add_argument("--create-reference", action="store_true")
         online.add_argument("--limit", default="128")
-        if kind == "prepare-network":
+        if kind in {"prepare-network", "recover-pending-network"}:
             online.add_argument("output", type=Path)
+        if kind == "prepare-network":
             online.add_argument("--expiry-blocks", default="20")
     args = parser.parse_args(argv)
     try:
-        if args.command in {"sync-network", "prepare-network"}:
+        if args.command in {"sync-network", "prepare-network", "recover-pending-network"}:
             # Do not allow duplicate flags or abbreviated global pins for this
             # new operation. Old operation parsing/numbering remains unchanged.
             tokens = list(sys.argv[1:] if argv is None else argv)
@@ -764,7 +880,23 @@ def main(argv: list[str] | None = None) -> int:
                     if name not in known or name in seen:
                         raise ValueError("Ambiguous sync flags")
                     seen.add(name)
-            response = prepare_network(args) if args.command == "prepare-network" else sync_network(args)
+            operations = {"sync-network": sync_network, "prepare-network": prepare_network,
+                          "recover-pending-network": recover_pending_network}
+            response = operations[args.command](args)
+            print(json.dumps(response, ensure_ascii=True, indent=2))
+            return 0
+        if args.command == "pending-at-checkpoint":
+            tokens = list(sys.argv[1:] if argv is None else argv)
+            seen = set()
+            known = {"no-real-funds", "backend", "backend-sha256", "pin", "journal", "genesis",
+                     "genesis-sha256", "expected-height", "expected-app-hash"}
+            for token in tokens:
+                if token.startswith("--"):
+                    name = token[2:].split("=", 1)[0]
+                    if name not in known or name in seen:
+                        raise ValueError("Ambiguous checkpoint recovery flags")
+                    seen.add(name)
+            response = pending_at_checkpoint(args)
             print(json.dumps(response, ensure_ascii=True, indent=2))
             return 0
         if args.command == "prepare-at-checkpoint":

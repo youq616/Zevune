@@ -43,13 +43,7 @@ fn files(path: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     children.sort();
     children.iter().flat_map(|p| files(p)).collect()
 }
-fn command(
-    op: u8,
-    password: &[u8],
-    pin: StoreReceipt,
-    fields: &[String],
-    success: bool,
-) -> String {
+fn command(op: u8, password: &[u8], pin: StoreReceipt, fields: &[String], success: bool) -> String {
     let mut raw = Zeroizing::new(b"ZVWCLI01".to_vec());
     raw.push(op);
     raw.extend_from_slice(&(password.len() as u16).to_be_bytes());
@@ -103,11 +97,7 @@ fn command(
     }
     output
 }
-fn setup(
-    home: &Home,
-    password: &[u8],
-    active: bool,
-) -> (TestGenesis, StoreReceipt, Vec<String>) {
+fn setup(home: &Home, password: &[u8], active: bool) -> (TestGenesis, StoreReceipt, Vec<String>) {
     let source = home.0.join("wallet");
     let journal = home.0.join("pool");
     let manifest = home.0.join("genesis");
@@ -278,4 +268,132 @@ fn real_cli_export_failure_preserves_signed_outbox_for_explicit_original_export(
     command(5, password.as_ref(), saved_pin, &export_fields, true);
     assert!(fs::read(output).unwrap() == signed);
     assert!(files(source) == saved);
+}
+
+#[test]
+fn real_cli_recovery_after_export_failure_is_exact_and_never_updates_wallet() {
+    for active in [false, true] {
+        let home = Home::new();
+        let password = Zeroizing::new(rand::random::<[u8; 32]>());
+        let (genesis, pin, mut prepare) = setup(&home, password.as_ref(), active);
+        prepare[8] = home
+            .0
+            .join("missing-parent")
+            .join("not-exported.tx")
+            .to_str()
+            .unwrap()
+            .to_owned();
+        command(12, password.as_ref(), pin, &prepare, false);
+        let source = Path::new(&prepare[0]);
+        let journal = Path::new(&prepare[1]);
+        let saved = files(source);
+        let reference = files(journal);
+        // Establish expected exact bytes independently using the ORIGINAL
+        // pending accessor after a same-checkpoint scan, then close both stores.
+        let mut pool = genesis.open_pool(journal).unwrap();
+        let history = genesis.wallet_history(&mut pool).unwrap();
+        let mut wallet = WalletStore::open(source, password.as_ref(), Some(pin)).unwrap();
+        let saved_pin = wallet.receipt().unwrap();
+        let id = wallet.view().unwrap().pending_id().unwrap();
+        assert_eq!(saved_pin.generation, pin.generation + 1);
+        assert_eq!(
+            wallet.view().unwrap().balance(),
+            Err(WalletError::NotSynced)
+        );
+        wallet.sync(&history).unwrap();
+        let expected = wallet.pending_payment().unwrap().unwrap();
+        assert_eq!(wallet.receipt().unwrap(), saved_pin);
+        drop(wallet);
+        drop(pool);
+        assert!(files(source) == saved);
+        assert!(files(journal) == reference);
+        let mut f = vec![
+            prepare[0].clone(),
+            prepare[1].clone(),
+            prepare[2].clone(),
+            prepare[3].clone(),
+            home.0.join("recovered.tx").to_str().unwrap().to_owned(),
+            prepare[9].clone(),
+            prepare[10].clone(),
+        ];
+        if active {
+            let mut inside = f.clone();
+            inside[4] = journal.join("must-not-alter-pool.tx").to_str().unwrap().to_owned();
+            command(13, password.as_ref(), pin, &inside, false);
+            assert!(!Path::new(&inside[4]).exists());
+            assert!(files(source) == saved);
+            assert!(files(journal) == reference);
+        }
+        for (index, value) in [
+            (5, "1".to_owned()),
+            (6, "ff".repeat(32)),
+            (6, "0".repeat(64)),
+        ] {
+            let mut bad = f.clone();
+            bad[index] = value;
+            command(13, password.as_ref(), pin, &bad, false);
+            assert!(!Path::new(&f[4]).exists());
+            assert!(files(source) == saved);
+            assert!(files(journal) == reference);
+        }
+        // Two separate actual processes explicitly recover, without asking for
+        // another proof, updating the wallet or consuming a journal generation.
+        for name in ["recovered.tx", "same-again.tx"] {
+            f[4] = home.0.join(name).to_str().unwrap().to_owned();
+            let response = command(13, password.as_ref(), pin, &f, true);
+            assert!(response.contains("\"result\":\"checkpoint_pending_exported_not_broadcast\""));
+            assert!(response.contains("\"wallet_unchanged\":true"));
+            assert!(response.contains("\"checkpoint_matched\":true"));
+            assert!(response.contains("\"broadcast\":false"));
+            assert!(response.contains(&format!("\"txid\":\"{}\"", hex(&id))));
+            assert!(!response.contains("\"balance\"") && !response.contains("\"confirmed\""));
+            assert!(fs::read(&f[4]).unwrap() == expected.bytes());
+            assert!(files(source) == saved);
+            assert!(files(journal) == reference);
+            wallet = WalletStore::open(source, password.as_ref(), Some(saved_pin)).unwrap();
+            assert_eq!(wallet.receipt().unwrap(), saved_pin);
+            assert_eq!(wallet.view().unwrap().pending_id(), Some(id));
+            assert_eq!(wallet.view().unwrap().height(), Some(0));
+            assert_eq!(
+                wallet.view().unwrap().balance(),
+                Err(WalletError::NotSynced)
+            );
+            drop(wallet);
+            assert!(files(source) == saved);
+        }
+        let existing = fs::read(&f[4]).unwrap();
+        command(13, password.as_ref(), saved_pin, &f, false);
+        assert!(fs::read(&f[4]).unwrap() == existing);
+        f[4] = prepare[8].clone(); // export I/O error, not a preflight shortcut
+        command(13, password.as_ref(), saved_pin, &f, false);
+        assert!(files(source) == saved);
+        assert!(files(journal) == reference);
+        assert!(!Path::new(&f[4]).exists());
+        // Once genuine committed history consumes the payment, this read-only
+        // API refuses recovery but does NOT silently reconcile the saved wallet.
+        pool = genesis.open_pool(journal).unwrap();
+        let block = pool
+            .prepare(1, [0x49; 32], &[expected.bytes().to_vec()])
+            .unwrap();
+        let tip = pool.commit(block).unwrap();
+        drop(pool);
+        let advanced_reference = files(journal);
+        f[4] = home.0.join("must-not-export.tx").to_str().unwrap().to_owned();
+        command(13, password.as_ref(), saved_pin, &f, false); // stale checkpoint
+        f[5] = tip.height.to_string();
+        f[6] = hex(&tip.app_hash);
+        command(13, password.as_ref(), saved_pin, &f, false); // consumed pending
+        assert!(!Path::new(&f[4]).exists());
+        assert!(files(source) == saved);
+        assert!(files(journal) == advanced_reference);
+        wallet = WalletStore::open(source, password.as_ref(), Some(saved_pin)).unwrap();
+        assert_eq!(wallet.view().unwrap().pending_id(), Some(id));
+        assert_eq!(wallet.receipt().unwrap(), saved_pin);
+        assert_eq!(
+            wallet.view().unwrap().balance(),
+            Err(WalletError::NotSynced)
+        );
+        drop(wallet);
+        assert!(files(source) == saved);
+    }
 }

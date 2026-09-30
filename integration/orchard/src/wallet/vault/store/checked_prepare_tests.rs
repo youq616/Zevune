@@ -79,14 +79,10 @@ fn rejected_intents_do_not_initialize_prover_or_publish_rescan() {
             (1, 1, 101, WalletError::Bounds),
             (TEST_SUPPLY, 1, 10, WalletError::InsufficientFunds),
         ] {
-            let result = wallet.prepare_from_history_with(
-                &history,
-                &recipient,
-                amount,
-                fee,
-                expiry,
-                || panic!("rejected intent constructed prover"),
-            );
+            let result =
+                wallet.prepare_from_history_with(&history, &recipient, amount, fee, expiry, || {
+                    panic!("rejected intent constructed prover")
+                });
             assert!(matches!(result, Err(StoreError::Wallet(e)) if e == expected));
             assert_eq!(wallet.receipt().unwrap(), pin);
             assert!(snapshot(wallet.view().unwrap()).unwrap().as_ref() == initial.as_ref());
@@ -158,14 +154,10 @@ fn both_profiles_save_one_record_and_reject_existing_pending_without_replacing_b
             Err(WalletError::NotSynced)
         );
         // Even CONFIRMING history may not silently clear pending in new prepare.
-        let result = wallet.prepare_from_history_with(
-            &committed_history,
-            &recipient,
-            1,
-            1,
-            10,
-            || panic!("existing pending constructed prover"),
-        );
+        let result =
+            wallet.prepare_from_history_with(&committed_history, &recipient, 1, 1, 10, || {
+                panic!("existing pending constructed prover")
+            });
         assert!(matches!(
             result,
             Err(StoreError::Wallet(WalletError::Pending))

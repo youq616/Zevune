@@ -107,6 +107,36 @@ def main():
                 and r['wallet']['app_hash']==r['network']['app_hash'], 'same_verified_checkpoint')
         return r
 
+    def recover(output, expected, *, false_peer=False, fail=False):
+        a = args(output, false_peer=false_peer)
+        a[a.index('prepare-network')] = 'recover-pending-network'
+        i = a.index('--expiry-blocks'); del a[i:i+2]
+        out, err = io.StringIO(), io.StringIO()
+        frozen = sender.read_bytes()
+        with patch('builtins.input', return_value='RECOVER') as inputs, \
+             patch.object(wallet, 'hidden_password', return_value=password) as secret, \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = wallet.main(a)
+        require(sender.read_bytes() == frozen, 'readonly_recovery_keeps_complete_wallet')
+        if fail:
+            require(code == 1 and not out.getvalue() and not output.exists(), 'recovery_refusal')
+            require(inputs.call_count == 0 and secret.call_count == 0, 'recovery_before_secret')
+            return
+        require(code == 0 and inputs.call_count == 1 and secret.call_count == 1, 'real_recovery_network')
+        r = json.loads(out.getvalue())
+        require(r['result'] == 'network_verified_pending_recovered_not_broadcast'
+                and r['broadcast'] is False and r['real_funds_allowed'] is False
+                and r['retry_authorized'] is False and r['latest_verified'] is False
+                and r['network']['caught_up_to_observed_tip'] is True, 'recovery_scope')
+        require(r['wallet']['result'] == 'checkpoint_pending_exported_not_broadcast'
+                and r['wallet']['wallet_unchanged'] is True and r['wallet']['broadcast'] is False
+                and r['wallet']['receipt'] == expected['receipt']
+                and r['wallet']['txid'] == expected['txid']
+                and r['wallet']['height'] == r['network']['height']
+                and r['wallet']['app_hash'] == r['network']['app_hash'], 'recovery_checkpoint_and_receipt')
+        require(output.read_bytes() == signed and txfile.read_bytes() == signed,
+                'recovery_exact_saved_signed_bytes_no_resign')
+
     STAGE='initial-catchup'
     run(root/'partial.tx',create=True,limit='1',fail=True,no_input=True)
     require(sender.read_bytes()==before and not (root/'partial.tx').exists(),'partial_no_wallet_mutation')
@@ -152,6 +182,12 @@ def main():
     run(root/'second.tx',fail=True)
     require(sender.read_bytes()==saved and not (root/'second.tx').exists(),'pending_cannot_be_replaced')
 
+    STAGE='readonly-pending-recovery'
+    recover(root/'recovered-pending.tx', state)
+    recover(root/'recovered-same-again.tx', state)
+    recover(root/'false-recovery.tx', state, false_peer=True, fail=True)
+    require(sender.read_bytes()==saved, 'recovery_keeps_original_receipt_and_outbox')
+
     write_frame(dict(stage='restart',height=state['height']))
     require(read_frame()=={'stage':'restarted'},'restart_coordination')
     STAGE='restart-rescan'
@@ -161,6 +197,8 @@ def main():
     recovered=call(5,fields+[str(again)],state['receipt'])
     require(again.read_bytes()==signed and recovered['receipt']==state['receipt']
             and sender.read_bytes()==saved,'persistent_exact_pending')
+    recover(root/'recovered-after-restart.tx', state)
+    require(sender.read_bytes()==saved, 'restart_recovery_does_not_publish_scan')
     write_frame(dict(stage='done',real_funds_allowed=False,partial_refused=True,
                      stale_handoff_rejected=True,false_peer_rejected=True,pending_preserved=True))
     require(sys.stdin.buffer.read(1)==b'','supervisor_eof')

@@ -20,6 +20,9 @@ mod checkpoint;
 #[path = "operator_support/checkpoint_prepare.rs"]
 mod checkpoint_prepare;
 
+#[path = "operator_support/checkpoint_pending.rs"]
+mod checkpoint_pending;
+
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const MAX_REQUEST: usize = 16_384;
 fn bad() -> io::Error {
@@ -94,10 +97,11 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         8 => 5,
         11 => 6,
         12 => 11,
+        13 => 7,
         _ => return Err(bad().into()),
     };
     ensure(count == expected && !(op == 0 && pin.is_some()) && !(op == 10 && pin.is_none()))?;
-    ensure(!matches!(op, 11 | 12) || pin.is_some())?;
+    ensure(!matches!(op, 11 | 12 | 13) || pin.is_some())?;
     let mut fields = Vec::with_capacity(count);
     for _ in 0..count {
         let n = u16::from_be_bytes(take(&mut raw, 2)?.try_into()?) as usize;
@@ -226,6 +230,9 @@ fn execute(request: Request<'_>) -> Result<String> {
     }
     if request.op == 12 {
         return checkpoint_prepare::execute(request);
+    }
+    if request.op == 13 {
+        return checkpoint_pending::execute(request);
     }
     let mut timing = PrepareTiming::start();
     let f = &request.fields;

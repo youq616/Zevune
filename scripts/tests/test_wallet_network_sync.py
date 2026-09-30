@@ -98,7 +98,7 @@ class SchemaTests(unittest.TestCase):
             self.check(value)
 
     def test_old_opcodes_are_unchanged(self):
-        self.assertEqual(list(w.OPS.values()), list(range(13)))
+        self.assertEqual(list(w.OPS.values()), list(range(14)))
         self.assertNotIn('sync-network', w.OPS)  # composition, not a new Rust opcode
 
 

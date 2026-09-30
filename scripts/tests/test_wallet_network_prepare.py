@@ -262,7 +262,7 @@ class NetworkPreparationTests(unittest.TestCase):
                 self.assertEqual(w.main(args),1); run.assert_not_called()
 
     def test_old_opcodes_and_single_operations_still_present(self):
-        self.assertEqual(list(w.OPS.values()), list(range(13)))
+        self.assertEqual(list(w.OPS.values()), list(range(14)))
         self.assertNotIn('prepare-network',w.OPS); self.assertNotIn('sync-network',w.OPS)
         self.assertEqual(w.COUNTS[11],6); self.assertEqual(w.COUNTS[12],11)
         self.assertEqual(w.OPS['prepare'],4); self.assertEqual(w.OPS['pending'],5)
