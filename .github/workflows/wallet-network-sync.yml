@@ -74,7 +74,7 @@ jobs:
           paths = {'ZEVUNE_NETWORK_OPERATOR': network, 'ZEVUNE_POOL_WORKER': rust / ('zevune-pool-worker' + suffix),
                    'ZEVUNE_WALLET_LOCAL': rust / ('zevune-wallet-local' + suffix),
                    'ZEVUNE_FUNDED_SCENARIO': rust / ('zevune-funded-scenario' + suffix),
-                   'ZEVUNE_PYTHON': Path(sys.executable),
+                   'ZEVUNE_PYTHON': Path(sys.executable).resolve(strict=True),
                    'ZEVUNE_WALLET_NETWORK_SCENARIO': root / 'scripts/tests/native_wallet_network_sync.py'}
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
               for name, path in paths.items():
