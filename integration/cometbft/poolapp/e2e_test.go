@@ -183,13 +183,15 @@ type child struct {
 	cmd     *exec.Cmd
 	in      io.WriteCloser
 	done    chan error
-	output  bytes.Buffer
+	output  fixtureOutput
+	index   int
+	base    int
 	stopped bool
 }
 
 func spawn(t *testing.T, home string, i, base int) *child {
 	t.Helper()
-	c := &child{done: make(chan error, 1)}
+	c := &child{done: make(chan error, 1), index: i, base: base}
 	c.cmd = exec.Command(os.Args[0], "-test.run=^TestPoolNodeHelper$")
 	c.cmd.Env = append(os.Environ(), "ZEVUNE_POOL_NODE="+home, "ZEVUNE_POOL_INDEX="+strconv.Itoa(i), "ZEVUNE_POOL_PORT="+strconv.Itoa(base))
 	c.cmd.Stdout = &c.output
@@ -216,12 +218,16 @@ func stop(t *testing.T, c *child) {
 	select {
 	case e := <-c.done:
 		if e != nil {
-			t.Errorf("node exit: %v %s", e, c.output.String())
+			t.Errorf("node exit: %s", fixtureError(e))
+		}
+		if e != nil || t.Failed() {
+			fixtureLog(t, "CHILD_EXIT", fixtureProcessEvidence(c, e))
 		}
 	case <-time.After(30 * time.Second):
 		_ = c.cmd.Process.Kill()
-		<-c.done
+		e := <-c.done
 		t.Error("node stop timed out")
+		fixtureLog(t, "CHILD_EXIT", fixtureProcessEvidence(c, e))
 	}
 }
 func freePorts(t *testing.T) int {
@@ -248,13 +254,8 @@ func freePorts(t *testing.T) int {
 	return 0
 }
 func height(c *rpc.HTTP) int64 {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, e := c.Status(ctx)
-	if e != nil {
-		return -1
-	}
-	return r.SyncInfo.LatestBlockHeight
+	h, _ := fixtureHeight(c)
+	return h
 }
 func wait(t *testing.T, c *rpc.HTTP, h int64) {
 	t.Helper()
@@ -393,22 +394,25 @@ func TestPoolNodeHelper(t *testing.T) {
 	n, e := node.NewNode(c, pv, nk, proxy.NewLocalClientCreator(a), node.DefaultGenesisDocProviderFunc(c), cfg.DefaultDBProvider, node.DefaultMetricsProvider(c.Instrumentation), log.NewNopLogger())
 	if e != nil {
 		_ = a.Close()
-		fmt.Fprintln(os.Stderr, e)
+		fixtureNodeEvent("construct_failed", index, base, e)
 		os.Exit(29)
 	}
 	if e = n.Start(); e != nil {
 		_ = a.Close()
-		fmt.Fprintln(os.Stderr, e)
+		fixtureNodeEvent("start_failed", index, base, e)
 		os.Exit(30)
 	}
+	fixtureNodeEvent("started", index, base, nil)
 	_, _ = io.Copy(io.Discard, os.Stdin)
 	if n.IsRunning() {
 		_ = n.Stop()
 		n.Wait()
 	}
-	if a.Close() != nil {
+	if err := a.Close(); err != nil {
+		fixtureNodeEvent("close_failed", index, base, err)
 		os.Exit(31)
 	}
+	fixtureNodeEvent("stopped", index, base, nil)
 	os.Exit(0)
 }
 func TestRealPoolFourProcessConsensus(t *testing.T) {
@@ -443,13 +447,19 @@ func TestRealPoolFourProcessConsensus(t *testing.T) {
 	}
 	// Locate actual inclusion, rather than treating the mempool receipt as finality.
 	included := int64(0)
+	polls := make([]fixturePoll, 0, 50)
+	pollStarted := time.Now()
 	for k := 0; k < 50 && included == 0; k++ {
-		h := height(clients[0])
+		h, statusError := fixtureHeight(clients[0])
+		polls = append(polls, fixturePoll{Attempt: k + 1, Height: h, StatusError: statusError, BlockError: "none", ElapsedMillis: time.Since(pollStarted).Milliseconds()})
 		for n := int64(1); n <= h; n++ {
 			b, e := clients[0].Block(ctx, &n)
 			if e != nil {
+				polls[len(polls)-1].BlockError = fixtureError(e)
+				fixtureInclusionFailure(t, ctx, clients, base, tx, accepted, polls)
 				t.Fatal(e)
 			}
+			polls[len(polls)-1].BlocksRead++
 			for _, raw := range b.Block.Data.Txs {
 				if bytes.Equal(raw, tx) {
 					included = n
@@ -461,6 +471,7 @@ func TestRealPoolFourProcessConsensus(t *testing.T) {
 		}
 	}
 	if included == 0 {
+		fixtureInclusionFailure(t, ctx, clients, base, tx, accepted, polls)
 		t.Fatal("not included")
 	}
 	common := included + 2
