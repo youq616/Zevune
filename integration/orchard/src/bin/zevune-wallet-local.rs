@@ -14,6 +14,9 @@ use zevune_orchard_lab::wallet::{address::Recipient, Payment, WalletProver};
 mod timing;
 use timing::PrepareTiming;
 
+#[path = "operator_support/checkpoint.rs"]
+mod checkpoint;
+
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const MAX_REQUEST: usize = 16_384;
 fn bad() -> io::Error {
@@ -86,9 +89,11 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         5 => 5,
         7 => 3,
         8 => 5,
+        11 => 6,
         _ => return Err(bad().into()),
     };
     ensure(count == expected && !(op == 0 && pin.is_some()) && !(op == 10 && pin.is_none()))?;
+    ensure(op != 11 || pin.is_some())?;
     let mut fields = Vec::with_capacity(count);
     for _ in 0..count {
         let n = u16::from_be_bytes(take(&mut raw, 2)?.try_into()?) as usize;
@@ -212,6 +217,9 @@ fn unused_output(path: &Path) -> Result<()> {
     }
 }
 fn execute(request: Request<'_>) -> Result<String> {
+    if request.op == 11 {
+        return checkpoint::execute(request);
+    }
     let mut timing = PrepareTiming::start();
     let f = &request.fields;
     let source = path(f[0])?;

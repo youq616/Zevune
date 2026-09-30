@@ -24,8 +24,8 @@ MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
        "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
-       "network-address": 8, "storage": 9, "compact": 10}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2}
+       "network-address": 8, "storage": 9, "compact": 10, "status-at-checkpoint": 11}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2, 11: 6}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -35,6 +35,8 @@ def encode_request(op: int, password: bytes, fields: list[str], pin: str | None 
         raise ValueError("Invalid independently saved wallet receipt")
     if op == 10 and pin is None:
         raise ValueError("Compaction requires the exact current source receipt")
+    if op == 11:
+        checked_checkpoint(fields[4], fields[5], pin)
     data = bytearray(MAGIC + bytes([op]) + struct.pack(">H", len(password)) + password)
     data.append(int(pin is not None))
     if pin is not None:
@@ -158,6 +160,50 @@ def checked_payment_numbers(amount: str, fee: str, expiry: str) -> tuple[str, st
     if a == 0 or f == 0 or e == 0 or a + f > (1 << 63) - 1:
         raise ValueError("Invalid bounded test payment intent")
     return values
+
+
+def checked_checkpoint(height: str, app_hash: str, pin: str | None) -> tuple[str, str]:
+    """Validate an independently obtained local checkpoint, not its authority."""
+    if not isinstance(height, str) or len(height) > 20:
+        raise ValueError("Invalid checkpoint height")
+    height = integer(height)
+    if (not isinstance(app_hash, str) or re.fullmatch(r"[0-9a-f]{64}", app_hash) is None
+            or app_hash == "0" * 64):
+        raise ValueError("A nonzero exact reference checkpoint is required")
+    if (not isinstance(pin, str) or re.fullmatch(r"[0-9a-f]{144}", pin) is None
+            or not 1 <= int(pin[64:80], 16) <= 256):
+        raise ValueError("An independently retained wallet receipt is required")
+    return height, app_hash
+
+
+def checked_checkpoint_status(response: dict, height: str, app_hash: str) -> dict:
+    """The Rust guard runs BEFORE wallet mutation. This checks its reply only.
+
+    Never display this response as finality, as an independently authenticated
+    network checkpoint, or as proof that the peer supplied the latest history.
+    """
+    keys = {"ok", "scope", "result", "checkpoint_matched", "payment_profile",
+            "signing_domain", "genesis_sha256", "height", "app_hash", "balance",
+            "available", "pending", "receipt"}
+    if (not isinstance(response, dict) or set(response) != keys
+            or response["ok"] is not True
+            or response["scope"] != "local_journal_only_no_funds"
+            or response["result"] != "checkpoint_matched_wallet_scanned"
+            or response["checkpoint_matched"] is not True
+            or type(response["height"]) is not int or response["height"] != int(integer(height))
+            or response["app_hash"] != app_hash or type(response["pending"]) is not bool):
+        raise RuntimeError("Unexpected checkpoint scan response; reconcile saved wallet state")
+    checked_checkpoint(height, app_hash, response["receipt"])
+    if (any(type(response[k]) is not int for k in ("balance", "available"))
+            or not 0 <= response["available"] <= response["balance"] <= 100_000):
+        raise RuntimeError("Invalid bounded checkpoint wallet amounts")
+    genesis = response["genesis_sha256"]
+    if (not isinstance(genesis, str) or re.fullmatch(r"[0-9a-f]{64}", genesis) is None
+            or genesis == "0" * 64 or not isinstance(response["payment_profile"], str)
+            or response["payment_profile"] not in {"LAB1", "LAB2"}
+            or response["signing_domain"] != (genesis if response["payment_profile"] == "LAB2" else None)):
+        raise RuntimeError("Invalid checkpoint wallet network identity")
+    return response
 
 
 PREPARE_STAGES = {"setup_and_sync", "intent_preflight", "prover_parameters",
@@ -284,13 +330,23 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("output", type=Path)
         if command in {"address", "network-address"}:
             sub.add_argument("--index", default="0")
-        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address"}:
+        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint"}:
             sub.add_argument("--journal", type=Path, required=True)
             sub.add_argument("--genesis", type=Path, required=True)
-        if command in {"status", "prepare", "pending", "network-address"}:
+        if command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint"}:
             sub.add_argument("--genesis-sha256", required=True)
+        if command == "status-at-checkpoint":
+            sub.add_argument("--expected-height", required=True)
+            sub.add_argument("--expected-app-hash", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "status-at-checkpoint":
+            # Reject missing/empty pins before file access or secret input.
+            checked_checkpoint(args.expected_height, args.expected_app_hash, args.pin)
+            if (args.backend_sha256 is None
+                    or re.fullmatch(r"[0-9a-f]{64}", args.backend_sha256) is None
+                    or args.backend_sha256 == "0" * 64):
+                raise ValueError("The checkpoint scan requires a pinned wallet executable")
         if args.command == "compact":
             # Validate before asking for a password or starting any child. No
             # overwriting, in-place truncation, automatic retry or file deletion.
@@ -313,9 +369,9 @@ def main(argv: list[str] | None = None) -> int:
             fields.append(integer(args.index, (1 << 32) - 1))
         if args.command in {"backup", "restore", "compact"}:
             fields.append(str(args.output.absolute()))
-        if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address"}:
+        if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint"}:
             fields.extend([str(args.journal.absolute()), str(args.genesis.absolute())])
-        if args.command in {"status", "prepare", "pending", "network-address"}:
+        if args.command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint"}:
             if re.fullmatch(r"[0-9a-f]{64}", args.genesis_sha256) is None:
                 raise ValueError("A pinned public genesis digest is required")
             fields.append(args.genesis_sha256)
@@ -335,6 +391,8 @@ def main(argv: list[str] | None = None) -> int:
             fields.extend([destination, amount, fee, expiry])
         if args.command in {"prepare", "pending"}:
             fields.append(str(args.output.absolute()))
+        if args.command == "status-at-checkpoint":
+            fields.extend([args.expected_height, args.expected_app_hash])
         print("NO-FUNDS local laboratory. Local journal state is not a consensus certificate.", file=sys.stderr)
         password = hidden_password(args.command == "create")
         request = encode_request(OPS[args.command], password, fields, args.pin)
@@ -347,6 +405,8 @@ def main(argv: list[str] | None = None) -> int:
             checked_prepare_timing(response)
         if args.command == "compact":
             checked_compaction(response, args.pin)
+        if args.command == "status-at-checkpoint":
+            checked_checkpoint_status(response, args.expected_height, args.expected_app_hash)
         if args.command == "storage":
             checked_storage_status(response)
             if response.get("result") != "storage_inspected_not_synced":
