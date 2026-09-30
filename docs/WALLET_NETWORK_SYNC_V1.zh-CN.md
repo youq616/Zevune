@@ -1,6 +1,6 @@
 # P4：已认证网络同步到钱包的直接接线
 
-状态：设计检查点，未实现、未验收。明确堆叠于 PR41 `1582306f1466ef8a6141bbb032784efb4d81232b` / tree `a35a50830b5187230b6e62158da57a2a775498b6`；PR41 自身原生 CI 尚待取得。main `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6` 不变。不改 PR40/PR41 分支，不合并、不部署，不接受真实资金。
+状态：运行时实现候选，未验收。明确堆叠于 PR41 `1582306f1466ef8a6141bbb032784efb4d81232b` / tree `a35a50830b5187230b6e62158da57a2a775498b6`；PR41 自身原生 CI 尚待取得。main `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6` 不变。不改 PR40/PR41 分支，不合并、不部署，不接受真实资金。
 
 ## 唯一闭环
 
@@ -31,3 +31,21 @@ Go同步返回后原worker已关闭，钱包重新取得原PoolStore锁并完整
 新增双平台原生闭环使用真实原网络命令和真实Rust钱包/worker、临时无价值创世与四本机节点，覆盖网络同步→准确重扫、真实付款后的收款余额和pending对账、退出重开再次同步，以及恶意/错误节点响应导致钱包不变。测试可替换交互式密码输入，不能替换签名验证、PoolStore或WalletStore。原私密SOCKS夹具、错误后置状态与原付款/重启回归保留各自工作流；必要的新原生步骤不提高既有30m/15m预算，也不替代旧回归。
 
 设计复审只覆盖设计；实现另需准确SHA的独立非作者复审及实际原生CI。四本机节点/协议代理夹具不是四真实机器或Tor证据；不承诺全网最新状态、eclipse/长程攻击防护、动态验证者、流量隐私或最终项目验收。PROJECT_COMPLETION中完整P4/P5以及四真实机器/30天/专业外审门槛不改。
+
+## 实现候选及可执行验收
+
+设计候选 `495c4efee09dd022297e329351f55dffec1a177a` 的独立审查 `4144528327` 指出严格字段集合使用了错误的简写。`b55594dbd13106cdfa026e828b566e1dc3a05c34` 只将其改为原 `caught_up_to_observed_tip` 并请求新设计复审；独立非作者评论 `5911461086` 对该修订设计明确返回未发现重大问题。该回复只覆盖设计，不批准本运行时。实现及测试使用原完整字段名，并明确拒绝 `caught_up` 别名；不修改上游输出或放宽缺失/多余字段检查。准确设计与代码复审结果分别绑定 PR42 对应提交，不以本文件宣称未取得的审批。
+
+新增逻辑留在原 Python 控制台，使用标准库，不扩展已有离线工具包的依赖或原生操作编号。使用参数形状如下，大写占位项来自可信本机及独立来源，密码仍在网络验证成功后隐藏输入；这不是直接可执行的示例部署：
+
+```text
+python scripts/zevune_wallet.py --no-real-funds --backend WALLET_BINARY --backend-sha256 WALLET_BINARY_PIN --pin WALLET_ANCESTOR_RECEIPT sync-network WALLET_PATH --journal REFERENCE_PATH --genesis PUBLIC_GENESIS --genesis-sha256 GENESIS_PIN --config PUBLIC_NETWORK_CONFIG --config-sha256 CONFIG_PIN --network-backend NETWORK_BINARY --network-backend-sha256 NETWORK_BINARY_PIN --worker POOL_WORKER --worker-sha256 WORKER_PIN --endpoint EXPLICIT_ENDPOINT --limit 128
+```
+
+首次参考账本额外使用 `--create-reference`；onion endpoint 必须同时显式给出 `--socks-proxy 127.0.0.1:PORT`，不可省略或传空。所有路径要求绝对路径；固定配置、创世和程序不得通过符号链接/重解析点别名输入。成功结果分别嵌套该次网络重执行结果和原 checkpoint 钱包结果，明确 `broadcast:false`、`latest_verified:false`、`retry_authorized:false`、`real_funds_allowed:false`。部分追赶可更新已认证前缀的钱包，但不得显示已同步全网最新。
+
+`TestRealWalletNetworkSynchronization` 额外要求 `operator_e2e && wallet_network_e2e`，避免自动挤入原接近时间预算的 operator 全量用例。新 `wallet-network-sync` 双平台任务保留30分钟job/15分钟测试上限，并追加执行原错误后置状态拒绝测试；原operator和funded回归没有删改。新增测试逐个新建02/03部署，Python测试进程内保存随机测试口令；Go只交换公开配置、阶段和交易。初始limit1的真实部分追赶、真实7单位付款、广播前原pending字节一致、收款余额、全节点重启、无签名恶意provider和锁交接期间旧参考账本替换均有断言。该测试只替换隐藏密码UI，不替换任何网络或钱包验证器。
+
+03 fixture由真实钱包命令产生的公开有效note分配创建全新manifest，新的profile在任何网络/参考账本创建之前选择；旧seed journal和donor钱包只留在测试目录而不参与新网络运行。公开账本替换和恢复只发生在临时故障测试，绝不是产品回滚入口。测试脚本不上传钱包或私钥，也不转发任意异常文本。
+
+当前本地仅有Python编译/单元及真实拒绝/超时子进程证据，Go新测试只做gofmt语法检查；无完整Go1.27.1/原生Rust或Windows本地执行。新增原生用例和工作流存在不代表运行通过。完整源码、必要CI、复审、父PR41门槛分别记录；项目整体仍未验收。
