@@ -20,7 +20,9 @@ fn recovery_frame_requires_receipt_exact_seven_fields_and_no_suffix() {
     raw.extend_from_slice(&1u64.to_be_bytes());
     raw.extend_from_slice(&[2; 32]);
     raw.push(7);
-    for field in ["wallet", "journal", "genesis", "digest", "output", "0", "hash"] {
+    for field in [
+        "wallet", "journal", "genesis", "digest", "output", "0", "hash",
+    ] {
         raw.extend_from_slice(&(field.len() as u16).to_be_bytes());
         raw.extend_from_slice(field.as_bytes());
     }
