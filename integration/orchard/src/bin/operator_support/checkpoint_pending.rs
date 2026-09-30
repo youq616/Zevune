@@ -1,7 +1,7 @@
 //! Exact-checkpoint export of an existing outbox. No wallet sync or signing.
 use super::{
-    checkpoint, ensure, export, hex, identity, number, path, receipt, unhex, unused_output, Payment,
-    Request, Result, TestGenesis, WalletStore,
+    checkpoint, ensure, export, hex, identity, number, path, receipt, unhex, unused_output,
+    Payment, Request, Result, TestGenesis, WalletStore,
 };
 use std::io;
 use std::path::Path;

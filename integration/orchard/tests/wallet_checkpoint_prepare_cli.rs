@@ -318,7 +318,11 @@ fn real_cli_recovery_after_export_failure_is_exact_and_never_updates_wallet() {
         ];
         if active {
             let mut inside = f.clone();
-            inside[4] = journal.join("must-not-alter-pool.tx").to_str().unwrap().to_owned();
+            inside[4] = journal
+                .join("must-not-alter-pool.tx")
+                .to_str()
+                .unwrap()
+                .to_owned();
             command(13, password.as_ref(), pin, &inside, false);
             assert!(!Path::new(&inside[4]).exists());
             assert!(files(source) == saved);
@@ -378,7 +382,12 @@ fn real_cli_recovery_after_export_failure_is_exact_and_never_updates_wallet() {
         let tip = pool.commit(block).unwrap();
         drop(pool);
         let advanced_reference = files(journal);
-        f[4] = home.0.join("must-not-export.tx").to_str().unwrap().to_owned();
+        f[4] = home
+            .0
+            .join("must-not-export.tx")
+            .to_str()
+            .unwrap()
+            .to_owned();
         command(13, password.as_ref(), saved_pin, &f, false); // stale checkpoint
         f[5] = tip.height.to_string();
         f[6] = hex(&tip.app_hash);

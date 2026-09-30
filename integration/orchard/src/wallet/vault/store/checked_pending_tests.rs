@@ -262,7 +262,10 @@ fn expiry_minus_one_recovers_but_equality_and_after_refuse_on_both_profiles() {
             temporary.sync(&history).unwrap();
             assert_eq!(temporary.height(), Some(height));
             // Demonstrate equality is NOT a pending-clear by the old sync rule.
-            assert_eq!(temporary.pending_id(), (height <= 10).then_some(payment.id()));
+            assert_eq!(
+                temporary.pending_id(),
+                (height <= 10).then_some(payment.id())
+            );
             if height == 9 {
                 let recovered = wallet.pending_payment_from_history(&history).unwrap();
                 assert_eq!(recovered.id(), payment.id());
