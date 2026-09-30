@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NO-FUNDS local wallet console. No networking, installations or auto-broadcast.
+"""NO-FUNDS wallet console. Network sync is explicit; never auto-broadcast.
 
 Requires Python 3.10+ and a locally built zevune-wallet-local binary. Passwords
 and payment intent are sent only through the child's stdin, never argv or env.
@@ -388,6 +388,326 @@ def invoke(backend: Path, request: bytes, expected_sha: str | None = None) -> di
     return response
 
 
+# Network-to-wallet orchestration uses the EXISTING verifier in zevune-network.
+# No peer/caller hash or serialized receipt can enter as an authenticated tip.
+SYNC_FIELDS = {"scope", "height", "app_hash", "root", "new_blocks",
+               "observed_signed_tip", "caught_up_to_observed_tip",
+               "real_funds_allowed", "base_checkpoint_matched"}
+
+
+def _sync_hash(value: str) -> str:
+    if (not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None
+            or value == "0" * 64):
+        raise ValueError("Independent nonzero digest required")
+    return value
+
+
+def _sync_json(raw: bytes, limit: int) -> dict:
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate field")
+            result[key] = value
+        return result
+
+    def number(text):
+        if len(text) > 20:
+            raise ValueError("Integer out of bounds")
+        return int(text)
+
+    def not_number(_):
+        raise ValueError("Noninteger JSON number")
+
+    if type(raw) is not bytes or not 1 <= len(raw) <= limit:
+        raise ValueError("Invalid bounded response")
+    try:
+        result = json.loads(raw.decode("utf-8"), object_pairs_hook=unique,
+                            parse_int=number, parse_float=not_number,
+                            parse_constant=not_number)
+    except (RecursionError, UnicodeError) as error:
+        raise ValueError("Invalid bounded JSON") from error
+    if type(result) is not dict:
+        raise ValueError("Expected one JSON object")
+    return result
+
+
+def _sync_path(value: Path) -> Path:
+    if (not isinstance(value, Path) or not value.is_absolute() or ".." in value.parts
+            or not 1 <= len(str(value).encode("utf-8")) <= 4096
+            or any(ord(c) < 32 or ord(c) == 127 for c in str(value))):
+        raise ValueError("Invalid absolute sync path")
+    return value
+
+
+def _sync_pinned_file(path: Path, pin: str, limit: int, *, contents=False):
+    """Fixed local source and same-route metadata; no cross-API time equality."""
+    _sync_hash(pin)
+    _sync_path(path)
+
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mode, info.st_nlink,
+                info.st_mtime_ns, info.st_ctime_ns,
+                getattr(info, "st_file_attributes", 0) & 0x400)
+
+    before = path.lstat()
+    if (not stat.S_ISREG(before.st_mode) or not 1 <= before.st_size <= limit
+            or getattr(before, "st_file_attributes", 0) & 0x400
+            or path.resolve(strict=True) != path):
+        raise ValueError("Invalid pinned sync file")
+    digest, size, result = hashlib.sha256(), 0, bytearray()
+    with path.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if (not os.path.samestat(before, opened) or not stat.S_ISREG(opened.st_mode)
+                or opened.st_size != before.st_size):
+            raise ValueError("Pinned file changed")
+        while size <= limit:
+            part = stream.read(min(1024 * 1024, limit + 1 - size))
+            if not part:
+                break
+            size += len(part)
+            digest.update(part)
+            if contents:
+                result.extend(part)
+        if identity(os.fstat(stream.fileno())) != identity(opened):
+            raise ValueError("Pinned file changed")
+    if (size != before.st_size or size > limit or identity(path.lstat()) != identity(before)
+            or digest.hexdigest() != pin):
+        raise ValueError("Pinned file changed or digest mismatch")
+    return bytes(result), identity(before)
+
+
+def checked_network_sync(raw: bytes, *, limit: int, maximum: int, create: bool) -> dict:
+    """Validate the local verifier's result shape; NOT a public certificate API.
+
+    This parser alone authenticates nothing. Only sync_network's actual pinned
+    executable invocation supplies its input. No RPC node result is fed here.
+    """
+    value = _sync_json(raw, 4096)
+    if (set(value) != SYNC_FIELDS or value["scope"] != "fixed_validator_local_test_network"
+            or value["real_funds_allowed"] is not False
+            or value["base_checkpoint_matched"] is not False
+            or type(value["caught_up_to_observed_tip"]) is not bool
+            or any(type(value[k]) is not int for k in ("height", "new_blocks", "observed_signed_tip"))):
+        raise ValueError("Unexpected network verifier result")
+    height, blocks, tip = value["height"], value["new_blocks"], value["observed_signed_tip"]
+    if (not 2 <= tip <= maximum or not 1 <= height < tip
+            or not 0 <= blocks <= min(limit, height)
+            or value["caught_up_to_observed_tip"] != (height + 1 == tip)
+            or (create and blocks != height)):
+        raise ValueError("Inconsistent verified sync range")
+    _sync_hash(value["app_hash"])
+    _sync_hash(value["root"])
+    return value
+
+
+def _sync_network_process(command: list[str]) -> bytes:
+    """No pipe-reader tasks; only the pinned network program knows this stdout.
+
+    The original program emits a fixed bounded public SyncResult or failure.
+    A private temporary *public-only* spool avoids unbounded memory capture and
+    pipe shutdown deadlocks. The 4KiB read limit is NOT a filesystem quota.
+    """
+    import tempfile
+    environment = {k: v for k, v in os.environ.items()
+                   if k.upper() in {"SYSTEMROOT", "WINDIR", "TEMP", "TMP"}}
+    environment["RAYON_NUM_THREADS"] = "2"
+    with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as diagnostic:
+        proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output,
+                                stderr=diagnostic, cwd=Path(command[0]).parent,
+                                env=environment, shell=False)
+        try:
+            code = proc.wait(timeout=300)
+        finally:
+            if proc.poll() is None:
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+                proc.wait(timeout=5)
+        output.seek(0)
+        raw = output.read(4097)
+        diagnostic.seek(0)
+        if code != 0 or diagnostic.read(1) or len(raw) > 4096:
+            raise RuntimeError("Network sync failed; preserve reference and wallet state")
+        return raw
+
+
+def _verified_network_reference(args):
+    """Private verifier invocation shared by scan and explicit preparation.
+
+    No caller result is accepted here; preserves the original PR42 checks.
+    """
+    # Freeze public options before any I/O. No caller-supplied resulting tip.
+    o = vars(args).copy()
+    for name in ("backend_sha256", "network_backend_sha256", "worker_sha256",
+                 "config_sha256", "genesis_sha256"):
+        _sync_hash(o[name])
+    checked_checkpoint("0", o["genesis_sha256"], o["pin"])  # receipt syntax only
+    paths = ("backend", "network_backend", "worker", "config", "genesis", "wallet", "journal")
+    for name in paths:
+        o[name] = _sync_path(o[name])
+    if (o.get("no_real_funds") is not True or type(o["create_reference"]) is not bool
+            or type(o["limit"]) is not str or len(o["limit"]) > 3
+            or not 1 <= int(integer(o["limit"], 128)) <= 128):
+        raise ValueError("Invalid sync bounds")
+    for name in ("endpoint", "socks_proxy"):
+        value = o[name]
+        if value is None and name == "socks_proxy":
+            continue
+        if (not isinstance(value, str) or not 1 <= len(value) <= 256
+                or any(ord(c) < 33 or ord(c) > 126 for c in value)):
+            raise ValueError("Invalid explicit route")
+    if (o["wallet"] == o["journal"] or o["wallet"].is_relative_to(o["journal"])
+            or any(o["journal"] == o[k] or o[k].is_relative_to(o["journal"])
+                   for k in ("config", "genesis", "backend", "network_backend", "worker"))):
+        raise ValueError("Overlapping reference paths")
+    # The network process receives no wallet path, receipt, password or secret.
+    config_before = _sync_pinned_file(o["config"], o["config_sha256"], 16 * 1024, contents=True)
+    config = _sync_json(config_before[0], 16 * 1024)
+    if (set(config) != {"version", "chain_id", "asset_genesis_sha256", "consensus_genesis_sha256", "node_ids"}
+            or type(config["version"]) is not int or config["version"] not in (1, 2)
+            or config["chain_id"] != "zevune-orchard-lab-1"
+            or config["asset_genesis_sha256"] != o["genesis_sha256"]):
+        raise ValueError("Network and wallet genesis differ")
+    # Go Load still verifies all canonical configuration, consensus genesis and
+    # validator fields. This is only cross-backend identity binding, not a clone.
+    genesis_before = _sync_pinned_file(o["genesis"], o["genesis_sha256"], 1922, contents=True)
+    identity = genesis_identity(o["genesis"], o["genesis_sha256"])
+    active = genesis_before[0][:8] == b"ZVTGEN03"
+    if identity["payment_profile"] != "LAB2" or config["version"] != (2 if active else 1):
+        raise ValueError("Unsupported or mismatched network profile")
+    program_names = ("network_backend", "worker", "backend")
+    programs = {k: _sync_pinned_file(o[k], o[k + "_sha256"], 512 * 1024 * 1024)
+                for k in program_names}
+
+    def unchanged():
+        if (_sync_pinned_file(o["config"], o["config_sha256"], 16 * 1024, contents=True) != config_before
+                or _sync_pinned_file(o["genesis"], o["genesis_sha256"], 1922, contents=True) != genesis_before
+                or any(_sync_pinned_file(o[k], o[k + "_sha256"], 512 * 1024 * 1024) != programs[k]
+                       for k in program_names)):
+            raise RuntimeError("Pinned sync inputs changed; reconcile state")
+
+    command = [str(o["network_backend"]), "sync", "--no-real-funds",
+               "--worker", str(o["worker"]), "--worker-sha256", o["worker_sha256"],
+               "--config", str(o["config"]), "--config-sha256", o["config_sha256"],
+               "--endpoint", o["endpoint"], "--journal", str(o["journal"]), "--limit", o["limit"]]
+    if o["socks_proxy"] is not None:
+        command += ["--socks-proxy", o["socks_proxy"]]
+    if o["create_reference"]:
+        command += ["--create"]
+    network = checked_network_sync(_sync_network_process(command), limit=int(o["limit"]),
+                                   maximum=1_000_000 if active else 10_000, create=o["create_reference"])
+    unchanged()
+    return o, network, identity, unchanged, (1_000_000 if active else 10_000)
+
+
+def sync_network(args) -> dict:
+    """One actual authenticated sync, then the existing exact-checkpoint scan.
+
+    Password input and the wallet backend are not reached on network failure.
+    A later failure may leave authenticated reference blocks or a saved wallet
+    update. Neither phase is retried, rolled back, or replaced by legacy status.
+    """
+    o, network, identity, unchanged, _ = _verified_network_reference(args)
+    height, app_hash = str(network["height"]), network["app_hash"]
+    fields = [str(o["wallet"]), str(o["journal"]), str(o["genesis"]), o["genesis_sha256"], height, app_hash]
+    # Public request framing is checked before asking for the actual secret.
+    encode_request(11, bytes(16), fields, o["pin"])
+    password = hidden_password(False)
+    unchanged()
+    response = invoke(o["backend"], encode_request(11, password, fields, o["pin"]), o["backend_sha256"])
+    checked_checkpoint_status(response, height, app_hash)
+    if (any(response[k] != v for k, v in identity.items())
+            or response["receipt"][:64] != o["pin"][:64]
+            or int(response["receipt"][64:80], 16) < int(o["pin"][64:80], 16)
+            or (response["receipt"][64:80] == o["pin"][64:80] and response["receipt"] != o["pin"])
+            or (not response["pending"] and response["available"] != response["balance"])):
+        raise RuntimeError("Wallet sync result mismatch; reconcile saved state")
+    unchanged()
+    return {"result": "network_verified_wallet_scanned", "scope": "fixed_validator_wallet_sync_no_funds",
+            "config_sha256": o["config_sha256"], "network": network, "wallet": response,
+            "real_funds_allowed": False, "broadcast": False, "latest_verified": False,
+            "retry_authorized": False}
+
+
+def _prepare_network_output(o: dict) -> tuple[int, int]:
+    """Only a new output outside every input tree, in a stable real directory.
+
+    Not a filesystem sandbox: trusted local files/parents remain a prerequisite.
+    The Rust operation still performs create_new while holding both stores.
+    """
+    output = _sync_path(o["output"])
+    for key in ("wallet", "journal", "config", "genesis", "backend", "network_backend", "worker"):
+        other = _sync_path(o[key])
+        if output == other or output.is_relative_to(other) or other.is_relative_to(output):
+            raise ValueError("Preparation output overlaps an input")
+    parent = output.parent
+    info = parent.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400
+            or parent.resolve(strict=True) != parent):
+        raise ValueError("Preparation output parent is not a real directory")
+    try:
+        output.lstat()
+    except FileNotFoundError:
+        return info.st_dev, info.st_ino
+    raise ValueError("Preparation output must not exist")
+
+
+def prepare_network(args) -> dict:
+    """Authenticate this call's reference, then invoke the EXISTING opcode12 once.
+
+    No caller-supplied checkpoint/result, preceding wallet sync, or broadcast.
+    A failed wallet invocation or lost output may already have saved a payment;
+    neither an error nor a parser failure authorizes deletion or retry.
+    """
+    o = vars(args).copy()
+    checked_preparation_checkpoint("0", o["genesis_sha256"], o["pin"])
+    window = o["expiry_blocks"]
+    if (not isinstance(window, str) or not 1 <= len(window) <= 3
+            or not 1 <= int(integer(window, 100)) <= 100):
+        raise ValueError("Expiry window must be 1 through 100 blocks")
+    parent_identity = _prepare_network_output(o)
+    # Use only frozen options. The helper has no checkpoint argument and always
+    # invokes the original pinned network verifier; it never opens a wallet.
+    o, network, identity, unchanged, maximum = _verified_network_reference(argparse.Namespace(**o))
+    if not network["caught_up_to_observed_tip"]:
+        raise ValueError("Reference catchup incomplete; no payment was prepared")
+    expiry = network["height"] + int(window)
+    if expiry > maximum:
+        raise ValueError("Expiry exceeds the fixed profile height bound")
+    height, app_hash = str(network["height"]), network["app_hash"]
+    print("Pinned payment network: " + json.dumps(identity, sort_keys=True), file=sys.stderr)
+    print("Reference verified through observed tip-1 at height " + height
+          + "; not global latest state or finality. Expiry height: " + str(expiry)
+          + ". This command never broadcasts.", file=sys.stderr)
+    destination = checked_recipient(input("Recipient address for the displayed network: "), identity["signing_domain"])
+    amount = input("Amount in integer test units: ")
+    fee = input("Fee in integer test units: ")
+    amount, fee, expiry_text = checked_preparation_numbers(amount, fee, str(expiry))
+    fields = [str(o["wallet"]), str(o["journal"]), str(o["genesis"]), o["genesis_sha256"],
+              destination, amount, fee, expiry_text, str(o["output"]), height, app_hash]
+    encode_request(12, bytes(16), fields, o["pin"])
+    if input("Type PREPARE to sign locally (no broadcast): ") != "PREPARE":
+        raise ValueError("Payment not approved")
+    unchanged()
+    if _prepare_network_output(o) != parent_identity:
+        raise ValueError("Preparation output parent changed")
+    password = hidden_password(False)
+    unchanged()
+    if _prepare_network_output(o) != parent_identity:
+        raise ValueError("Preparation output parent changed")
+    response = invoke(o["backend"], encode_request(12, password, fields, o["pin"]), o["backend_sha256"])
+    checked_checkpoint_preparation(response, height, app_hash, o["pin"])
+    if any(response[k] != value for k, value in identity.items()):
+        raise RuntimeError("Prepared payment network mismatch; reconcile saved state")
+    unchanged()
+    return {"result": "network_verified_payment_prepared_not_broadcast",
+            "scope": "fixed_validator_wallet_preparation_no_funds", "config_sha256": o["config_sha256"],
+            "network": network, "wallet": response, "real_funds_allowed": False,
+            "broadcast": False, "latest_verified": False, "retry_authorized": False}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-real-funds", action="store_true", required=True)
@@ -412,8 +732,41 @@ def main(argv: list[str] | None = None) -> int:
         if command in {"status-at-checkpoint", "prepare-at-checkpoint"}:
             sub.add_argument("--expected-height", required=True)
             sub.add_argument("--expected-app-hash", required=True)
+    for kind in ("sync-network", "prepare-network"):
+        online = commands.add_parser(kind, allow_abbrev=False)
+        online.add_argument("wallet", type=Path)
+        for name in ("journal", "genesis", "config", "network-backend", "worker"):
+            online.add_argument("--" + name, type=Path, required=True)
+        for name in ("genesis-sha256", "config-sha256", "network-backend-sha256", "worker-sha256", "endpoint"):
+            online.add_argument("--" + name, required=True)
+        online.add_argument("--socks-proxy")
+        online.add_argument("--create-reference", action="store_true")
+        online.add_argument("--limit", default="128")
+        if kind == "prepare-network":
+            online.add_argument("output", type=Path)
+            online.add_argument("--expiry-blocks", default="20")
     args = parser.parse_args(argv)
     try:
+        if args.command in {"sync-network", "prepare-network"}:
+            # Do not allow duplicate flags or abbreviated global pins for this
+            # new operation. Old operation parsing/numbering remains unchanged.
+            tokens = list(sys.argv[1:] if argv is None else argv)
+            seen = set()
+            known = {"no-real-funds", "backend", "backend-sha256", "pin", "journal", "genesis",
+                     "config", "network-backend", "worker", "genesis-sha256", "config-sha256",
+                     "network-backend-sha256", "worker-sha256", "endpoint", "socks-proxy",
+                     "create-reference", "limit"}
+            if args.command == "prepare-network":
+                known.add("expiry-blocks")
+            for token in tokens:
+                if token.startswith("--"):
+                    name = token[2:].split("=", 1)[0]
+                    if name not in known or name in seen:
+                        raise ValueError("Ambiguous sync flags")
+                    seen.add(name)
+            response = prepare_network(args) if args.command == "prepare-network" else sync_network(args)
+            print(json.dumps(response, ensure_ascii=True, indent=2))
+            return 0
         if args.command == "prepare-at-checkpoint":
             checked_preparation_checkpoint(args.expected_height, args.expected_app_hash, args.pin)
             checked_preparation_backend(args.backend.absolute(), args.backend_sha256)
