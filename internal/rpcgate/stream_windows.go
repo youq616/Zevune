@@ -13,6 +13,12 @@ var queryStreamObject = syscall.NewLazyDLL("ntdll.dll").NewProc("NtQueryObject")
 // never trial-Read/Write (which could block, consume input or emit output).
 // https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-ntqueryobject
 func streamAccess(handle syscall.Handle, read bool) error {
+	// Go's syscall.InvalidHandle is ^Handle(0), which is also Windows'
+	// current-process pseudo-handle value. This helper accepts pipe/file handles
+	// only; reject null and pseudo/sentinel handles before querying object access.
+	if handle == 0 || handle == syscall.InvalidHandle {
+		return ErrConfiguration
+	}
 	if err := queryStreamObject.Find(); err != nil {
 		return ErrConfiguration
 	}
