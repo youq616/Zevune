@@ -73,7 +73,7 @@ mod tests {
     use std::fs;
     use zevune_orchard_lab::pool::testnet::TEST_SUPPLY;
     use zevune_orchard_lab::pool::PoolError;
-    use zevune_orchard_lab::wallet::vault::store::StoreReceipt;
+    use zevune_orchard_lab::wallet::vault::store::{StoreError, StoreReceipt};
     use zevune_orchard_lab::wallet::{Wallet, WalletError, WalletProver};
 
     struct Home(std::path::PathBuf);
@@ -233,6 +233,7 @@ mod tests {
             .prepare_payment_to(&recipient, 1_000, 1, 10, &WalletProver::new())
             .unwrap();
         let pending = tx.bytes().to_vec();
+        let pending_id = tx.id();
         let pin = wallet.receipt().unwrap();
         let initial = pool.summary().unwrap();
         let f = fields(&home, &genesis, &initial);
@@ -248,14 +249,38 @@ mod tests {
         assert!(fs::read(&pool_path).unwrap() == reference);
         // Reopen the encrypted store, not merely an old in-process view.
         wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
-        assert!(wallet.pending_payment().unwrap().unwrap().bytes() == pending.as_slice());
+        assert_eq!(wallet.view().unwrap().pending_id(), Some(pending_id));
         // Decryption restores durable checkpoint/outbox, never a spendability
-        // cache. Querying amounts still requires the actual checked rescan.
+        // cache. First prove reopen and the rejected operation changed no bytes;
+        // do not use pending_payment as an unscanned outbox accessor.
+        assert_eq!(
+            wallet.view().unwrap().balance(),
+            Err(WalletError::NotSynced)
+        );
+        assert!(matches!(
+            wallet.pending_payment(),
+            Err(StoreError::Wallet(WalletError::NotSynced))
+        ));
         assert_eq!(
             wallet.view().unwrap().available_balance(),
             Err(WalletError::NotSynced)
         );
         assert_eq!(wallet.receipt().unwrap(), pin);
+        assert!(fs::read(&wallet_path).unwrap() == before);
+        assert!(fs::read(&pool_path).unwrap() == reference);
+        // Only now reconstruct the SAME validated history explicitly. This
+        // cannot clear the uncommitted payment or append a different checkpoint.
+        pool = genesis.open_pool(&pool_path).unwrap();
+        assert_eq!(pool.summary().unwrap(), initial);
+        let history = genesis.wallet_history(&mut pool).unwrap();
+        wallet.sync(&history).unwrap();
+        assert!(wallet.pending_payment().unwrap().unwrap().bytes() == pending.as_slice());
+        assert_eq!(wallet.view().unwrap().pending_id(), Some(pending_id));
+        assert_eq!(wallet.view().unwrap().available_balance(), Ok(0));
+        assert_eq!(wallet.receipt().unwrap(), pin);
+        assert!(fs::read(&wallet_path).unwrap() == before);
+        assert!(fs::read(&pool_path).unwrap() == reference);
+        drop(pool);
         drop(wallet);
         let result = call(&f, password.as_ref(), pin).unwrap();
         assert!(result.contains("\"pending\":true"));
@@ -273,13 +298,17 @@ mod tests {
         assert!(result.contains("\"height\":1"));
         assert!(result.contains("\"pending\":false"));
         assert!(result.contains("\"balance\":99999"));
+        let reconciled_wallet = fs::read(&wallet_path).unwrap();
         wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
-        assert!(wallet.pending_payment().unwrap().is_none());
+        // The persisted pending identity is readable without scanning. Reopen
+        // still must not populate the trusted balance cache just to inspect it.
+        assert!(wallet.view().unwrap().pending_id().is_none());
         assert_eq!(
             wallet.view().unwrap().balance(),
             Err(WalletError::NotSynced)
         );
         assert_eq!(wallet.view().unwrap().height(), Some(1));
         assert!(wallet.receipt().unwrap() != pin);
+        assert!(fs::read(&wallet_path).unwrap() == reconciled_wallet);
     }
 }
