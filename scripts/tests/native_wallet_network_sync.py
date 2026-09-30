@@ -150,7 +150,7 @@ def main():
     receipts[1] = address['receipt']
     txfile = root / 'payment.tx'
     prepared = call(4, 0, base_fields(0) + [address['address'], '7', '1',
-                    str(received['wallet']['height'] + 1000), str(txfile)], receipts[0])
+                    str(received['wallet']['height'] + 100), str(txfile)], receipts[0])
     receipts[0] = prepared['receipt']
     raw_tx = txfile.read_bytes()
     require(raw_tx[:8] == b'ZVORLAB2' and raw_tx[8:40].hex() == genesis_pin
