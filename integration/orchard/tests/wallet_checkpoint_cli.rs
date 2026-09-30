@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 use zevune_orchard_lab::pool::testnet::{TestGenesis, TEST_SUPPLY};
 use zevune_orchard_lab::wallet::vault::store::{StoreReceipt, WalletStore};
+use zevune_orchard_lab::wallet::WalletError;
 
 struct Home(PathBuf);
 impl Home {
@@ -158,10 +159,13 @@ fn actual_command_rechecks_exact_tip_before_wallet_mutation_on_both_profiles() {
         assert!(fs::read(&wallet_path).unwrap() == before);
         fields[4] = next.height.to_string();
         fields[5] = hex(&next.app_hash);
-        command(&frame(password.as_ref(), current_pin, &fields), true);
+        let result = command(&frame(password.as_ref(), current_pin, &fields), true);
+        assert!(result.contains("\"balance\":100000"));
         let wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
         assert_eq!(wallet.view().unwrap().height(), Some(1));
-        assert_eq!(wallet.view().unwrap().balance().unwrap(), TEST_SUPPLY);
+        // Persisted ancestry is available on reopen, but scanned balances are
+        // intentionally not a trusted restore cache in the existing wallet.
+        assert_eq!(wallet.view().unwrap().balance(), Err(WalletError::NotSynced));
         drop(wallet);
         // Direct malformed frames bypass frontend validation but cannot mutate.
         let before = fs::read(&wallet_path).unwrap();

@@ -74,7 +74,7 @@ mod tests {
     use zevune_orchard_lab::pool::testnet::TEST_SUPPLY;
     use zevune_orchard_lab::pool::PoolError;
     use zevune_orchard_lab::wallet::vault::store::StoreReceipt;
-    use zevune_orchard_lab::wallet::{Wallet, WalletProver};
+    use zevune_orchard_lab::wallet::{Wallet, WalletError, WalletProver};
 
     struct Home(std::path::PathBuf);
     impl Home {
@@ -249,11 +249,17 @@ mod tests {
         // Reopen the encrypted store, not merely an old in-process view.
         wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
         assert!(wallet.pending_payment().unwrap().unwrap().bytes() == pending.as_slice());
-        assert_eq!(wallet.view().unwrap().available_balance().unwrap(), 0);
+        // Decryption restores durable checkpoint/outbox, never a spendability
+        // cache. Querying amounts still requires the actual checked rescan.
+        assert_eq!(
+            wallet.view().unwrap().available_balance(),
+            Err(WalletError::NotSynced)
+        );
         assert_eq!(wallet.receipt().unwrap(), pin);
         drop(wallet);
         let result = call(&f, password.as_ref(), pin).unwrap();
         assert!(result.contains("\"pending\":true"));
+        assert!(result.contains("\"available\":0"));
         assert!(result.contains("\"checkpoint_matched\":true"));
         pool = genesis.open_pool(&pool_path).unwrap();
         let prepared = pool.prepare(1, [9; 32], &[pending]).unwrap();
@@ -266,9 +272,10 @@ mod tests {
         let result = call(&next, password.as_ref(), pin).unwrap();
         assert!(result.contains("\"height\":1"));
         assert!(result.contains("\"pending\":false"));
+        assert!(result.contains("\"balance\":99999"));
         wallet = WalletStore::open(&wallet_path, password.as_ref(), Some(pin)).unwrap();
         assert!(wallet.pending_payment().unwrap().is_none());
-        assert_eq!(wallet.view().unwrap().balance().unwrap(), TEST_SUPPLY - 1);
+        assert_eq!(wallet.view().unwrap().balance(), Err(WalletError::NotSynced));
         assert_eq!(wallet.view().unwrap().height(), Some(1));
         assert!(wallet.receipt().unwrap() != pin);
     }
