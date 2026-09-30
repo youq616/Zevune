@@ -20,7 +20,9 @@
 
 在原 WalletStore 中新增只用于显式付款的新方法，使用现有 zeroizing snapshot/restore 模式把重扫和 build_payment 放在临时钱包上；不复用扫描后自报余额，不构造接受型历史。原持久钱包如果已有pending/outbox，直接 Pending，必须先由独立同步对账，不能在一次新prepare中顺便清旧pending再签另一笔。
 
-检查现有room/validate_storage → 取得临时钱包、真实history.sync → 原check_payment_to（地址域/金额费用/expiry/余额/容量/花费限制） → 仅成功后构造原WalletProver → 临时wallet.build_payment重新检查并验证真实证明 → 提交前再次room/validate_storage → 发布临时wallet和签名outbox并调用原persist一次。没有可复用的preflight令牌。任何历史/策略/证明拒绝在发布之前保持磁盘、receipt和pending；持久化I/O故障仍可能部分写入且标不可用，不声称跨文件事务。
+检查现有room/validate_storage → 取得临时钱包、真实history.sync → 新路径确定性费用上限与原check_payment_to（地址域/金额/expiry/余额/容量/花费限制） → 仅成功后构造原WalletProver → 在同一共享Rust准备方法内再次核对费用上限、临时wallet.build_payment重新检查并验证真实证明 → 提交前再次费用/room/validate_storage → 发布临时wallet和签名outbox并调用原persist一次。没有可复用的preflight令牌。任何历史/策略/证明拒绝在发布之前保持磁盘、receipt和pending；持久化I/O故障仍可能部分写入且标不可用，不声称跨文件事务。
+
+新路径固定费用策略：`1 <= fee <= min(100, max(1, amount / 100))`，除法为无符号整数向下取整。即通常最多金额1%，不足100测试单位时允许最小1单位；绝对上限100测试单位。amount=1/fee=99999、amount=100/fee=2、amount=200/fee=3及任何fee>100拒绝，amount=1/fee=1、amount=200/fee=2允许进入其余原检查。此为无价值实验中减少误填的保守本地钱包策略，不是市场费率估计、共识规则或主网经济参数；不读取节点建议费，不提供高费绕过开关。Python提前提示/拒绝，Rust公开能力层再次检查（不能只依赖UI），最终build前和persist前重复同一确定性检查。旧opcode4/底层原API与历史交易验证不改，也不宣称旧入口已具备该新保护。未来统一在线付款必须使用本检查路径。
 
 不改 journal格式、最大256条、原sync、prepare_payment_to、backup或opcode4的兼容行为；新路径将扫描与新付款保存为一个原格式快照，因此最多消耗一条，但不是扩容或迁移。原锁/同步写入及每次构造真实proof保持。调用者必须持锁提供已经完整验证的WalletHistory；该库方法自身不认证共识来源。
 
@@ -28,6 +30,6 @@
 
 既有Python控制台新增prepare-at-checkpoint，复用原程序pin、隐藏口令、交互式收款地址/金额/费用/expiry及显式PREPARE确认。checkpoint/receipt/创世和已存在输出等公开错误先于口令/后端；返回严格检查确切height/hash、txid/receipt、域和checkpoint_matched，仍明确not_broadcast，不回退opcode4或11。
 
-实际Rust回归必须包括两storage profile真实付款/原验证器接受、同一池锁保持、准确/旧/错检查点、既有pending原字节不变、域/过期/不足金额拒绝且无prover初始化/无wallet变化、满容量拒绝、持久化故障不泄露签名交易与已有故障恢复回归。实际wallet-local子进程以opcode12验证形状、精确状态、create-only导出及重开pending，原0..11回归保留。Python新增解析/参数/响应/无重试与旧操作兼容测试；仅UI/拒绝测试可隔离，不用接受型假后端代替证明。
+实际Rust回归必须包括两storage profile真实付款/原验证器接受、同一池锁保持、准确/旧/错检查点、既有pending原字节不变、域/过期/不足金额及异常fee拒绝且无prover初始化/无wallet变化、费用阈值逐边界、满容量拒绝、持久化故障不泄露签名交易与已有故障恢复回归。实际wallet-local子进程以opcode12验证形状、精确状态、create-only导出及重开pending，原0..11回归保留。Python新增解析/参数/响应/费用/无重试与旧操作兼容测试；仅UI/拒绝测试可隔离，不用接受型假后端代替证明。
 
-需要新准确SHA非作者设计审查、实现复审和现有双平台Rust原生CI。原30m/15m、请求300秒和所有存储/证明预算不提高。本地没有Cargo时不声称Rust执行通过。P4完整在线付款、P5、四真实机器、30天和专业外审仍未完成。
+独立初稿审查4145307847指出原check_payment_to没有异常费用策略；本修订明确补齐范围，不能把原正整数/余额检查称为高费保护。需对此新设计SHA复审，随后新实现另需准确SHA非作者复审和现有双平台Rust原生CI。原30m/15m、请求300秒和所有存储/证明预算不提高。本地没有Cargo时不声称Rust执行通过。P4完整在线付款、P5、四真实机器、30天和专业外审仍未完成。
