@@ -100,7 +100,10 @@ fn output_race_keeps_real_pending_and_both_locks_until_export_fails() {
             fields: fields.iter().map(String::as_str).collect(),
         },
         |target, payment| {
-            assert!(matches!(genesis.open_pool(&journal), Err(PoolError::Locked)));
+            assert!(matches!(
+                genesis.open_pool(&journal),
+                Err(PoolError::Locked)
+            ));
             assert!(matches!(
                 WalletStore::open(&source, password.as_ref(), Some(pin)),
                 Err(StoreError::Locked)
