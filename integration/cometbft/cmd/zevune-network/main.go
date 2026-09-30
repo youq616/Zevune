@@ -152,7 +152,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	noFunds := f.Bool("no-real-funds", false, "required local-only acknowledgement")
 	worker := f.String("worker", "", "absolute trusted Rust worker path")
 	workerDigest := f.String("worker-sha256", "", "independently verified worker digest")
-	var home, manifest, assetDigest, config, configDigest, endpoint, journal, txfile, socksProxy string
+	var home, manifest, assetDigest, config, configDigest, endpoint, journal, txfile, socksProxy, txDigest string
 	var index, ports int
 	var create, stopOnEOF bool
 	var limit uint64
@@ -186,6 +186,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 			}
 			if command == "submit" {
 				f.StringVar(&txfile, "tx", "", "exact signed transaction file")
+				f.StringVar(&txDigest, "tx-sha256", "", "optional exact content digest; does not replace authorization")
 			}
 		}
 	}
@@ -198,7 +199,7 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	}
 	// Track flag presence separately from its value: passing empty shell
 	// variables must fail, not silently disable a checkpoint or disk inspection.
-	checkpointRequested, diskRequested, socksRequested := false, false, false
+	checkpointRequested, diskRequested, socksRequested, txPinRequested := false, false, false, false
 	f.Visit(func(v *flag.Flag) {
 		if v.Name == "expected-height" || v.Name == "expected-app-hash" {
 			checkpointRequested = true
@@ -209,7 +210,18 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 		if v.Name == "disk-reserve-bytes" {
 			diskRequested = true
 		}
+		if v.Name == "tx-sha256" {
+			txPinRequested = true
+		}
 	})
+	var transactionPin [32]byte
+	if txPinRequested {
+		var err error
+		transactionPin, err = parseTransactionPin(txDigest)
+		if err != nil {
+			return err
+		}
+	}
 	// An explicitly empty proxy must not silently disable privacy. Validate
 	// the private route before reading config/transaction files or starting a worker.
 	if socksRequested && labnet.ValidatePrivateRPC(endpoint, socksProxy) != nil {
@@ -313,6 +325,11 @@ func execute(ctx context.Context, args []string, input io.Reader, output io.Writ
 	raw, err := transactionFile(txfile)
 	if err != nil {
 		return err
+	}
+	if txPinRequested {
+		if err := matchTransactionPin(raw, transactionPin); err != nil {
+			return err
+		}
 	}
 	var result labnet.Submission
 	if expected == nil {

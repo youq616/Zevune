@@ -21,9 +21,11 @@ def repository_path(path, root):
 
 class DeliverySourceTests(unittest.TestCase):
     def test_source_allowlist_covers_existing_runtime_imports(self):
-        payloads={name:(ROOT/source).read_bytes() for name,source in delivery.SOURCES.items()}
+        payloads={name:(ROOT/source).read_bytes() for name,source in delivery.CURRENT_SOURCES.items()}
         delivery.check_static_imports(payloads)
-        self.assertEqual(len(payloads),10)
+        self.assertEqual(len(payloads),11)
+        self.assertEqual(len(delivery.LEGACY_SOURCES),10)
+        self.assertIn("wallet_submission.py", payloads)
         self.assertNotIn('inspector_source_bundle.py',payloads)
         self.assertTrue(all(not name.endswith('.exe') for name in payloads))
 
@@ -32,7 +34,7 @@ class DeliverySourceTests(unittest.TestCase):
                  'check_wallet_inspector_gui.py','check_wallet_inspector_backend.py')]
         pending += [Path(__file__),ROOT/'scripts/tests/test_inspector_source_bundle.py',
                     ROOT/'scripts/tests/test_wallet_inspector_desktop.py',ROOT/'scripts/tests/test_verify_local_lab.py']
-        dependencies=set(delivery.SOURCES.values())|{repository_path(WORKFLOW, ROOT),
+        dependencies=set(delivery.CURRENT_SOURCES.values())|{repository_path(WORKFLOW, ROOT),
                                                     'docs/INSPECTOR_SOURCE_DELIVERY.zh-CN.md'}
         visited=set()
         while pending:

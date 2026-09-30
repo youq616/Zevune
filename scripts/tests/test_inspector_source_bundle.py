@@ -35,7 +35,7 @@ class SourceDeliveryTests(unittest.TestCase):
         git(cls.repo, 'init', '-q')
         git(cls.repo, 'config', 'user.name', 'Delivery tests')
         git(cls.repo, 'config', 'user.email', 'tests@example.invalid')
-        for name, source in delivery.SOURCES.items():
+        for name, source in delivery.CURRENT_SOURCES.items():
             dest = cls.repo / source
             dest.parent.mkdir(exist_ok=True)
             dest.write_bytes((ROOT / source).read_bytes())
@@ -73,10 +73,31 @@ class SourceDeliveryTests(unittest.TestCase):
         self.assertFalse(result['code_signature_verified'])
         self.assertFalse(result['real_funds_allowed'])
         self.assertEqual(before, {p.name: p.read_bytes() for p in self.folder.iterdir()})
-        for name, source in delivery.SOURCES.items():
+        for name, source in delivery.CURRENT_SOURCES.items():
             expected = subprocess.check_output(['git', '--no-replace-objects', 'cat-file', 'blob',
                                                 self.commit + ':' + source], cwd=self.repo, timeout=30)
             self.assertEqual(before[name], expected)  # Preserve CRLF and trailing whitespace too.
+
+    def test_versioned_source_sets_keep_v1_and_v2_separate(self):
+        # Contract/integrity fixtures only. Neither payload is executed here.
+        self.assertEqual(self.verify()['payload_files'], 11)
+        changed_pin = self.rewrite(lambda m: m.update(format='zevune-inspector-source-1'))
+        with self.assertRaises(ValueError):
+            self.verify(changed_pin)  # A v2 set cannot be relabeled as v1.
+        changed_pin = self.rewrite(lambda m: m.update(files=[
+            e for e in m['files'] if e['name'] in delivery.LEGACY_SOURCES]))
+        with self.assertRaises(ValueError):
+            self.verify(changed_pin)  # Extra files remain rejected for v1.
+        (self.folder / 'wallet_submission.py').unlink()
+        before = {p.name: p.read_bytes() for p in self.folder.iterdir()}
+        self.assertEqual(self.verify(changed_pin)['payload_files'], 10)
+        self.assertEqual(before, {p.name: p.read_bytes() for p in self.folder.iterdir()})
+        changed_pin = self.rewrite(lambda m: m.update(format=delivery.FORMAT))
+        with self.assertRaises(ValueError):
+            self.verify(changed_pin)  # v2 always requires the new dependency.
+        for bad in (None, [], {}, True, 'zevune-inspector-source-3'):
+            with self.subTest(format=bad), self.assertRaises(ValueError):
+                delivery.source_contract(bad)
 
     @staticmethod
     def changed_stat(info, **changes):
@@ -205,7 +226,7 @@ class SourceDeliveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.verify(pin)
 
     def test_every_payload_tamper_fails_even_same_length(self):
-        for name in delivery.SOURCES:
+        for name in delivery.CURRENT_SOURCES:
             path = self.folder / name
             original = path.read_bytes()
             path.write_bytes(bytes([original[0]^1]) + original[1:])
@@ -383,7 +404,7 @@ class SourceDeliveryTests(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_relative_import_refused(self):
-        payloads={name:(self.original/name).read_bytes() for name in delivery.SOURCES}
+        payloads={name:(self.original/name).read_bytes() for name in delivery.CURRENT_SOURCES}
         payloads['wallet_inspector_desktop.py']=b'from . import hidden\n'
         with self.assertRaises(ValueError):delivery.check_static_imports(payloads)
 

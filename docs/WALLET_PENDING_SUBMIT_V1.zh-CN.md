@@ -1,6 +1,6 @@
 # P4：直接提交同一笔已保存付款
 
-设计检查点，尚未实现或验收。基线PR45 `e7911b9368d742a04aa64f58ba2c80706b422f11` / tree `979e72b11847d06bf55fc55f7ca8e7599459fb1a`，保留PR43/44固定格式修复；PR41 `4eca2a5d0b208266cf7bdd2e4181d9a3e9b970c1`端口候选未自动成为本祖先，各自原生门槛独立。现有分支中未发现同一提交接线模块；仅在dev/p4-pending-network-submit推进，不覆盖已冻结父候选。
+运行时候选已接线，尚未完成独立运行时审查和双平台原生验收。基线PR45 `e7911b9368d742a04aa64f58ba2c80706b422f11` / tree `979e72b11847d06bf55fc55f7ca8e7599459fb1a`，保留PR43/44固定格式修复；PR41 `4eca2a5d0b208266cf7bdd2e4181d9a3e9b970c1`端口候选未自动成为本祖先，各自原生门槛独立。现有分支中未发现同一提交接线模块；仅在dev/p4-pending-network-submit推进，不覆盖已冻结父候选。
 
 ## 真实缺口和调用链
 
@@ -26,3 +26,9 @@ Python真实拒绝/超时子进程及隔离UI测试：部分/伪节点前拒绝�
 Go测试使用真实临时文件验证规范hash、空flag、内容变化、symlink/oversize原限制及同raw绑定；原submit无flag兼容，错hash前于worker/RPC。两平台原生必须用真实钱包/worker/Go命令与四个本机无价值验证者，双profile验证准备→恢复→提交同一字节、钱包完整bytes/receipt/pending不变、一次mempool接受绝非confirmed。上游真实收到广播后取消响应的未知场景计数一次；无自动再次调用、原outbox保留。重启后原认证sync/原付款及错误后置状态回归仍执行，保留此前prepare/recovery零广播用例；不修改原30m/15m/300s预算或skip Windows。
 
 设计先独立非作者审查，代码另按完整新SHA复审和准确双平台CI。所有试验仅临时合成无价值网络；禁止真实资金、真实钱包/验证者私钥上传、合并/ready/部署。源码、Linux tmpfs ENOSPC或代理审查均不替代真实四机器、30天、物理掉电与专业外审。
+
+## 控制台与交付接线
+
+原控制台命令 `submit-pending-network WALLET` 与 `recover-pending-network` 共用必填配置、创世、程序摘要、祖先 receipt 和路由参数；不接受 output、tx 或 caller checkpoint。公开网络身份显示后输入 SUBMIT，再输入隐藏口令。此前结果未知时先另行执行认证 sync 和对账，不再次盲目提交。
+
+新 `wallet_submission.py` 必须与 `zevune_wallet.py` 同目录交付。完整二进制包新构建采用 v10，增加这个模块和本指南；旧 v2—v9 的精确文件集和验证语义保持。源码核查包新构建采用 v2，增加同一直接依赖；v1 原闭集仍可验证和安装。没有自动启动、网络降级或修改用户旧包。

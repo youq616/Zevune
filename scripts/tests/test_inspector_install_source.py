@@ -43,7 +43,7 @@ class InstallSourceTests(unittest.TestCase):
                  'scripts/tests/test_inspector_source_bundle.py', 'scripts/tests/test_inspector_delivery_source.py',
                  'scripts/tests/test_verify_local_lab.py', 'scripts/tests/test_wallet_inspector_desktop.py']
         pending = [root / path for path in paths]
-        dependencies = set(source_tests.delivery.SOURCES.values()) | {
+        dependencies = set(source_tests.delivery.CURRENT_SOURCES.values()) | {
             workflow.relative_to(root).as_posix(), source_tests.WORKFLOW.relative_to(root).as_posix(),
             'docs/INSPECTOR_SOURCE_INSTALL.zh-CN.md', 'docs/INSPECTOR_SOURCE_DELIVERY.zh-CN.md'}
         visited = set()
@@ -148,8 +148,9 @@ class InstallSourceTests(unittest.TestCase):
             elif isinstance(node, ast.ImportFrom):
                 names.add(node.module.split('.')[0])
         self.assertTrue(names <= set(sys.stdlib_module_names) | {'inspector_source_bundle'})
-        self.assertEqual(len(source_tests.delivery.SOURCES), 10)
-        self.assertNotIn('inspector_source_install.py', source_tests.delivery.SOURCES)
+        self.assertEqual(len(source_tests.delivery.CURRENT_SOURCES), 11)
+        self.assertEqual(len(source_tests.delivery.LEGACY_SOURCES), 10)
+        self.assertNotIn('inspector_source_install.py', source_tests.delivery.CURRENT_SOURCES)
 
 
 if __name__ == "__main__":
