@@ -226,8 +226,9 @@ func stop(t *testing.T, c *child) {
 }
 func freePorts(t *testing.T) int {
 	t.Helper()
+	candidates := fixturePortCandidates(t)
 	for k := 0; k < 50; k++ {
-		base := 30000 + 8*rand.IntN(3000)
+		base := candidates[rand.IntN(len(candidates))]
 		ls := []net.Listener{}
 		for i := 0; i < 8; i++ {
 			l, e := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", base+i))
