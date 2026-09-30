@@ -11,8 +11,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -23,6 +23,7 @@ import (
 	"github.com/cometbft/cometbft/types"
 	"github.com/youq616/Zevune/internal/poolbridge"
 	"github.com/youq616/Zevune/internal/rpcgate"
+	"github.com/youq616/Zevune/internal/rpcgate/gatetest"
 )
 
 func gatewayTestAddress(t *testing.T) string {
@@ -295,23 +296,6 @@ func TestGatewayMissingOrWrongUpstreamResultsNeverSucceed(t *testing.T) {
 	}
 }
 
-type gatewayFailedOutput struct{}
-
-func (gatewayFailedOutput) Write([]byte) (int, error) { return 0, errors.New("private writer failure") }
-func (gatewayFailedOutput) Close() error              { return nil }
-
-type gatewayBlockedOutput struct {
-	entered, closed chan struct{}
-	once            sync.Once
-}
-
-func (b *gatewayBlockedOutput) Write([]byte) (int, error) {
-	close(b.entered)
-	<-b.closed
-	return 0, io.ErrClosedPipe
-}
-func (b *gatewayBlockedOutput) Close() error { b.once.Do(func() { close(b.closed) }); return nil }
-
 func TestGatewayConfigurationAndReadyFailureCloseListener(t *testing.T) {
 	// Private fields are constructed ONLY in this test; production obtains them
 	// via Load and the independently supplied digest. No verifier is replaced.
@@ -343,9 +327,6 @@ func TestGatewayConfigurationAndReadyFailureCloseListener(t *testing.T) {
 			t.Fatal("invalid config")
 		}
 	}
-	if err := n.RunGateway(context.Background(), good, gatewayFailedOutput{}); err != rpcgate.ErrReady {
-		t.Fatal("ready failure", err)
-	}
 	assertClosed := func() {
 		t.Helper()
 		c, err := net.DialTimeout("tcp4", good.Listen, 200*time.Millisecond)
@@ -354,30 +335,47 @@ func TestGatewayConfigurationAndReadyFailureCloseListener(t *testing.T) {
 			t.Fatal("listener retained after failed ready")
 		}
 	}
-	assertClosed()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	b := &gatewayBlockedOutput{entered: make(chan struct{}), closed: make(chan struct{})}
-	done := make(chan error, 1)
-	go func() { done <- n.RunGateway(ctx, good, b) }()
-	select {
-	case <-b.entered:
-	case err := <-done:
-		t.Fatal("ready exited before write", err)
-	case <-time.After(time.Second):
-		cancel()
-		t.Fatal("ready writer did not start")
+	if err := n.RunGateway(context.Background(), good, nil); err != rpcgate.ErrConfiguration {
+		t.Fatal("unvalidated output accepted")
 	}
-	cancel()
-	select {
-	case err := <-done:
-		if err != rpcgate.ErrReady {
+	assertClosed()
+	for _, blocked := range []bool{false, true} {
+		r, w, err := gatetest.Pipe()
+		if err != nil {
 			t.Fatal(err)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("blocked ready retained service")
+		if blocked {
+			if err := w.SetWriteDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+				t.Fatal(err)
+			}
+			_, err := w.Write(make([]byte, 4*1024*1024))
+			if !errors.Is(err, os.ErrDeadlineExceeded) {
+				t.Fatal("pipe not blocked", err)
+			}
+			w.SetWriteDeadline(time.Time{})
+		} else {
+			r.Close() // a real broken pipe, not a cooperative mock writer
+		}
+		out, err := rpcgate.OpenOutput(w)
+		if err != nil {
+			r.Close()
+			t.Fatal(err)
+		}
+		budget := 2 * time.Second
+		if blocked {
+			budget = 200 * time.Millisecond
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), budget)
+		err = n.RunGateway(ctx, good, out)
+		cancel()
+		// Assert return and socket cleanup BEFORE closing/draining the pipe peer.
+		if err != rpcgate.ErrReady {
+			t.Error("readiness failure", err)
+		}
+		assertClosed()
+		out.Close()
+		r.Close()
 	}
-	assertClosed()
 	if calls.Load() != 0 {
 		t.Fatal("readiness generated upstream request")
 	}

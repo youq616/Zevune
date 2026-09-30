@@ -57,7 +57,7 @@ func parse(args []string) (options, error) {
 	return o, nil
 }
 
-func execute(parent context.Context, args []string, input io.ReadCloser, output io.WriteCloser) error {
+func execute(parent context.Context, args []string, input, output *os.File) error {
 	o, err := parse(args)
 	if err != nil || parent == nil || parent.Err() != nil || output == nil || o.stopOnEOF && input == nil {
 		return rpcgate.ErrConfiguration
@@ -75,22 +75,47 @@ func execute(parent context.Context, args []string, input io.ReadCloser, output 
 	if rpcgate.ValidateListen(o.gateway.Listen) != nil || labnet.ValidateEndpoint(o.gateway.Upstream) != nil || labnet.ValidatePrivateRPC(o.gateway.OnionEndpoint, o.gateway.Listen) != nil || o.gateway.Upstream == "http://"+o.gateway.Listen {
 		return rpcgate.ErrConfiguration
 	}
+	out, err := rpcgate.OpenOutput(output)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	var in *rpcgate.Input
+	if o.stopOnEOF {
+		in, err = rpcgate.OpenInput(input)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+	}
+	// Both capabilities are established before ANY watcher or listener starts.
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
-	if o.stopOnEOF {
+	if in != nil {
 		stopped := make(chan struct{})
-		go func() { _, _ = io.Copy(io.Discard, input); cancel(); close(stopped) }()
-		defer func() { cancel(); _ = input.Close(); <-stopped }()
+		go func() { _ = in.UntilEOF(ctx); cancel(); close(stopped) }()
+		// Every read has a short real deadline. Join first, then close ownership;
+		// neither an inherited blocking Read nor a detached task survives return.
+		defer func() { cancel(); <-stopped }()
 	}
-	return n.RunGateway(ctx, o.gateway, output)
+	return n.RunGateway(ctx, o.gateway, out)
 }
 
-func main() {
+func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	err := execute(ctx, os.Args[1:], os.Stdin, os.Stdout)
-	stop()
+	defer stop()
+	failure, err := rpcgate.OpenOutput(os.Stderr)
 	if err != nil {
-		_ = rpcgate.WriteFailure(context.Background(), os.Stderr)
-		os.Exit(1)
+		// Unsupported diagnostics must not turn a startup rejection into a hang.
+		// There is deliberately no fmt.Fprintln/os.Stderr fallback here.
+		return 1
 	}
+	defer failure.Close()
+	if err := execute(ctx, os.Args[1:], os.Stdin, os.Stdout); err != nil {
+		_ = rpcgate.WriteFailure(context.Background(), failure)
+		return 1
+	}
+	return 0
 }
+
+func main() { os.Exit(run()) }

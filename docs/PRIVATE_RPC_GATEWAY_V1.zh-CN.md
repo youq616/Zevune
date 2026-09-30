@@ -1,6 +1,6 @@
 # P5 第二阶段：受限 RPC 服务网关
 
-状态：设计检查点 `85f9f61686058d7bf43d4844aff358bdc0f9ab00` 已收到用户转交的独立会话无阻断结论；当前为运行时实现候选，尚未验收。基线 main `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6` / tree `36034da259fb7e28b8783097a6e4bdf48f57d6f0`，已有 PR39 onion/SOCKS 客户端保持不变。继续 `dev/p5-rpc-gateway` / PR40；设计评审不替代新代码提交的独立复审和实际 CI。本模块不是离线报告、桌面界面或完整 P5 交付。
+状态：设计检查点 `85f9f61686058d7bf43d4844aff358bdc0f9ab00` 已收到用户转交的独立会话无阻断结论；运行时候选 `7ac26ad8afaba2021bbd5df4b08c75d851a75d97` 的独立审查发现标准流取消阻断 B1。本版为 B1 修复候选，仍未验收，须按新 SHA 复审。基线 main `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6` / tree `36034da259fb7e28b8783097a6e4bdf48f57d6f0`，已有 PR39 onion/SOCKS 客户端保持不变。继续 `dev/p5-rpc-gateway` / PR40；设计评审不替代新代码提交的独立复审和实际 CI。本模块不是离线报告、桌面界面或完整 P5 交付。
 
 ## 目的及授权边界
 
@@ -61,13 +61,13 @@ R2：外层 JSON-RPC 的 id 是原数字整数，0 不省略；status 高度为�
 
 R3：在原 8 秒 handler 上限内，新增更短的 4 秒上游调用/完整读体预算；下游写入/flush 最多 1 秒且不超过较短请求期限。固定错误输出最多 1 秒。原客户端 5 秒响应头和 10 秒调用预算完全不改。上传体耗时、调度和编码仍占用端到端时间，4 秒并非成功保证；超时仍可能产生广播结果未知。测试包含上游及时发头而持续拖延 body，以及完整收到广播后断链，断链后不能二次提交。底层在未写出请求字节前可能安全重拨，不冒称一次 typed 调用意味着严格一次 TCP 尝试。
 
-R4：服务根取消拥有监听、已接受 socket、请求准入及共享上游生命周期；请求取消只传给自己的处理和上游。关闭标志及 WaitGroup.Add 共用互斥锁，停机后禁止新登记，所有已登记 handler 退出后才关闭上游空闲连接。慢头连接在 Accept 阶段即占 32 个 socket 上限。就绪输出最多 2 秒，命令失败输出最多 1 秒；超时/取消先关闭输出再等待写任务退出，不遗留后台写任务。输出适配器必须是支持并发 Close 中断 Write 的独占 io.WriteCloser（命令使用自己的标准输出/错误管道）；任意不可中断的自定义 Writer 不在支持合同内。测试含真实 OS 管道填满后取消，不能仅用普通 bytes.Buffer 推断这一能力。
+R4：服务根取消拥有监听、已接受 socket、请求准入及共享上游生命周期；请求取消只传给自己的处理和上游。关闭标志及 WaitGroup.Add 共用互斥锁，停机后禁止新登记，所有已登记 handler 退出后才关闭上游空闲连接。慢头连接在 Accept 阶段即占 32 个 socket 上限。就绪输出预算 2 秒、命令失败输出预算 1 秒；标准流现在必须通过下述 B1 能力入口，不能再以 io.ReadCloser/io.WriteCloser 或进程内 os.Pipe 的行为推断继承标准流可取消。输出不创建 goroutine；stdin watcher 通过实际读期限退出，先 join 再 Close。
 
 HTTP 帧解析仍委托 Go 标准库：核心严格检查原 RequestURI、Host 和所需头的存在性/单值，并拒绝 Expect、Trailer、Proxy-Authorization；分块体读完后再次拒绝未声明 trailer。标准库可能在 handler 之前拒绝或规范化部分 HTTP 帧（例如相同 Content-Length），其协议错误和内部容差不是网关自有 JSON 错误承诺，也不表示所有 HTTP 原始字节只有一种拼写。原请求、头和 parser 错误都不转交上游。
 
 ## 命令与当前证据边界
 
-在已经独立核验的本机无价值网络上，从 `integration/cometbft` 构建 `go build -mod=readonly ./cmd/zevune-rpc-gateway`。运行参数形状如下；所有大写占位值须取自独立可信本地配置，网关不会自行发现端点或创建 Tor 服务：
+在已经独立核验的本机无价值网络上，从 `integration/cometbft` 构建 `go build -mod=readonly ./cmd/zevune-rpc-gateway`。运行参数形状如下；所有大写占位值须取自独立可信本地配置，网关不会自行发现端点或创建 Tor 服务。该命令现在要求监督进程按下节提供受支持的专用继承管道；以下仅是参数形状，不承诺直接连接终端或普通 Windows shell 同步管道可以启动：
 
 ```text
 zevune-rpc-gateway --no-real-funds --config ABSOLUTE_PUBLIC_CONFIG_PATH --config-sha256 INDEPENDENT_CONFIG_SHA256 --listen 127.0.0.1:28080 --upstream http://127.0.0.1:26657 --onion-endpoint CANONICAL_ONION_V3_HTTP_URL --stop-on-stdin-eof
@@ -76,3 +76,23 @@ zevune-rpc-gateway --no-real-funds --config ABSOLUTE_PUBLIC_CONFIG_PATH --config
 就绪固定行是 `{"gateway":"ready","real_funds_allowed":false}`，不是共识、Tor 或付款确认。`--stop-on-stdin-eof` 可选，退出还支持进程中断信号；没有公开监听开关、任意上游参数透传或自动重试开关。
 
 现有 network-operator 双平台工作流增加网关核心 test/vet、原客户端协议测试、新网关二进制及追加的真实付款 E2E；保留原无网关私密 RPC 用例与错误后置状态用例。Linux 另运行 race/fuzz，Windows 不冒称执行 Linux-only 步骤。源码中有测试并不意味着某个候选运行过；PR 记录必须绑定实际提交/tree 和对应日志。旧分发包的内容和格式不变，新增网关不是可信发布制品。本地稀疏 stdlib 测试不能替代嵌套 CometBFT/Rust 的原生整合验收。
+
+## B1：继承标准流能力与修复验收
+
+用户转交的独立运行时审查固定于 `7ac26ad8afaba2021bbd5df4b08c75d851a75d97` / tree `01424b8bd3a2ce4d290f478fc20761ccd2c8c9d7`，结论存在 P2 生命周期阻断；作者收件记录为 PR40 评论 `5907886214`。报告核对原双平台 CI 成功，但指出实际继承标准流的 Close 不保证中断在途 I/O。报告未提供可访问的原会话链接，也没有发布 GitHub 审批；本修复不自行宣布已获得复审通过。
+
+`OpenInput/OpenOutput` 只接收具体 `*os.File`，调用即移交该端点的独占所有权，成功和失败均消费原文件；外部不得再对同一端点执行 I/O 或改动模式。允许父进程持有相反端点（例如保持 stdin 写端打开）；不允许其它任务/进程同时读写已移交的子进程端点。新 `Input/Output` 不暴露内部描述符，没有任意 Writer 适配入口。
+
+| 平台 | 支持路径 | 明确拒绝的路径 |
+| --- | --- | --- |
+| Linux | 对继承 FIFO/pipe 通过 `/proc/self/fd` 重开独立 `O_NONBLOCK` 描述符，核对方向及 inode，并检查 deadline 能力；不使用 dup+SetNonblock 改动父端共享标志 | 缺少 procfs、文件/终端/其它设备、错误方向、无法启用 deadline |
+| Windows（固定 Go 1.27.1） | 专用继承的 `FILE_FLAG_OVERLAPPED` pipe；在没有在途 I/O 时解除旧 Go 包装的 IOCP 关联，复制句柄、关闭旧包装，并用非原 stdin 数值的句柄重新注册；实际 SetDeadline 必须成功 | 普通同步 CreatePipe/os.Pipe、终端、普通文件，以及 IOCP/deadline 建立失败；不声称支持同步管道 |
+| 其它系统 | 未建立支持合同 | 在监听及读任务之前失败 |
+
+stdout 与 stderr 必须各自为受支持的独占管道；仅在启用 `--stop-on-stdin-eof` 时要求 stdin 同样合格。stderr 能力最先建立；不支持时返回非零退出码且不输出诊断，绝不回退到可能阻塞的裸 stderr。拒绝不支持的标准流是有意收紧的命令入口兼容性，不是让这些流“变得可取消”。尚未交付通用 Windows shell 启动器；测试中的 overlapped pipe 构造器只提供真实 OS 测试管道，不进入网关命令依赖链。
+
+实际 Read/Write 使用每次至多 50ms、且不超过 context 的 OS/runtime deadline，在短期限返回后检查取消。输出在调用者任务内完成，不存在超时后等待写 goroutine 的分支；stdin 唯一 watcher 在每次读取间检查取消，退出后再释放文件。就绪失败仍执行原 HTTP 服务清理，再退出命令；失败输出仍保留 1 秒预算。期限不是实时调度承诺，可信本机内核和运行时仍为前提。
+
+新增 `TestRealGatewayInheritedStandardStreamLifecycle` 必须在两平台实际启动网关二进制：stdin 父端保持打开时以 Linux SIGTERM / Windows 定向 CTRL_BREAK 取消；stdout 预先填满时等候就绪超时；stderr 预先填满时触发参数失败；stdin 等待期间监听失败；普通文件拒绝，以及 Windows 同步继承管道拒绝。退出及监听关闭先断言，之后才能关闭/排空父端。Windows 支持路径用真实 overlapped 本地管道，不用进程内可协作 writer。所有 child Wait 任务有明确 join，正常成功不能依赖测试强杀；超时强杀是测试失败后的清理。
+
+根模块的继承管道子进程用例是标准流机制测试，不是实际网关命令验收。完整命令、公共配置 Load、HTTP 清理和真实付款仍由原生 operator_e2e 覆盖。原 R1–R3 运行时代码、客户端、证明/存储规则及原 CI 预算不变；本次未取得的新 SHA CI 或独立复审不得引用旧 SHA 成功来替代。

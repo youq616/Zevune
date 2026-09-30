@@ -3,7 +3,6 @@ package labnet
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"strconv"
 
 	cmtjson "github.com/cometbft/cometbft/libs/json"
@@ -36,12 +35,12 @@ func (n *Network) gatewayConfig(o GatewayOptions) (rpcgate.Config, error) {
 	return rpcgate.Config{Listen: o.Listen, Host: host + ":" + strconv.Itoa(int(port)), MaxHeight: int64(height)}, nil
 }
 
-// RunGateway requires a Network produced by the independently pinned Load.
-// output follows rpcgate.WriteReady's exclusive, interruptible writer contract.
+// RunGateway requires a Network produced by the independently pinned Load and
+// a concrete, deadline-capable output owner established before listening.
 // Root cancellation owns service shutdown; single HTTP requests do not.
-func (n *Network) RunGateway(ctx context.Context, o GatewayOptions, output io.WriteCloser) error {
+func (n *Network) RunGateway(ctx context.Context, o GatewayOptions, output *rpcgate.Output) error {
 	c, err := n.gatewayConfig(o)
-	if err != nil || ctx == nil || ctx.Err() != nil || output == nil {
+	if err != nil || ctx == nil || ctx.Err() != nil || !output.Valid() {
 		return rpcgate.ErrConfiguration
 	}
 	upstream, err := newPeer(o.Upstream)
