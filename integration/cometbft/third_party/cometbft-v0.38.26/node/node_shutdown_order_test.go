@@ -10,6 +10,7 @@ import (
 	"github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -87,6 +88,15 @@ func TestNodeShutdownStoresAfterReactorConsumers(t *testing.T) {
 	}
 	stopped := make(chan error, 1)
 	go func() { stopped <- n.Stop() }()
+	deadline := time.After(5 * time.Second)
+	for n.IsRunning() {
+		select {
+		case <-deadline:
+			t.Fatal("Node Stop did not begin")
+		default:
+			runtime.Gosched()
+		}
+	}
 	select {
 	case <-closed:
 		t.Error("Node closed blockstore before admitted reactor callback completed")

@@ -268,3 +268,90 @@ func TestReactorShutdownPreservesIndirectVoteSendUntilStopping(t *testing.T) {
 		t.Fatal("stopped reactor forwarded an indirect vote")
 	}
 }
+
+// Hold AddPeer before its admission point so Stop deterministically wins. The
+// original one-time IsRunning check before Get is not enough for this ordering.
+type shutdownGetPeer struct {
+	*p2pmock.Peer
+	entered, release chan struct{}
+	once, released   sync.Once
+	sends            atomic.Int64
+}
+
+func (p *shutdownGetPeer) Get(key string) interface{} {
+	if key == types.PeerStateKey {
+		p.once.Do(func() { close(p.entered) })
+		<-p.release
+	}
+	return p.Peer.Get(key)
+}
+func (p *shutdownGetPeer) Send(p2p.Envelope) bool { p.sends.Add(1); return true }
+func (p *shutdownGetPeer) unblock()               { p.released.Do(func() { close(p.release) }) }
+func TestReactorShutdownClosesAdmissionBeforeWaiting(t *testing.T) {
+	r, _ := shutdownTestReactor(t, 1, false)
+	if err := r.Start(); err != nil {
+		t.Fatal(err)
+	}
+	p := &shutdownGetPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
+	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
+	r.InitPeer(p)
+	added := make(chan struct{})
+	go func() { r.AddPeer(p); close(added) }()
+	shutdownAwait(t, p.entered, "AddPeer before admission")
+	stopped := make(chan struct{})
+	go func() { _ = r.Stop(); close(stopped) }()
+	shutdownAwait(t, stopped, "Stop while admission callback is not registered")
+	p.unblock()
+	shutdownAwait(t, added, "late AddPeer rejection")
+	if p.sends.Load() != 0 {
+		t.Fatal("AddPeer sent after shutdown won admission")
+	}
+}
+
+type shutdownWaitPeer struct {
+	*p2pmock.Peer
+	waits      atomic.Int64
+	allWaiting chan struct{}
+	once       sync.Once
+}
+
+func (p *shutdownWaitPeer) Quit() <-chan struct{} {
+	if p.waits.Add(1) == 3 {
+		p.once.Do(func() { close(p.allWaiting) })
+	}
+	return p.Peer.Quit()
+}
+func TestReactorShutdownCancelsAllAdmittedWaitsWithoutPeerStop(t *testing.T) {
+	r, _ := shutdownTestReactor(t, 1, true)
+	if err := r.Start(); err != nil {
+		t.Fatal(err)
+	}
+	p := &shutdownWaitPeer{Peer: p2pmock.NewPeer(nil), allWaiting: make(chan struct{})}
+	t.Cleanup(func() { _ = p.Stop() })
+	r.InitPeer(p)
+	r.AddPeer(p)
+	// Every worker has reached its wait's channel acquisition. Each configured
+	// wait is one hour with an open peer Quit, so one worker cannot account for
+	// multiple observations during this bounded test. All three were admitted
+	// and started before Stop; this is not a scheduler-start lottery.
+	shutdownAwait(t, p.allWaiting, "all three admitted wait paths")
+	if p.waits.Load() != 3 {
+		t.Fatalf("unexpected pre-shutdown wait count: %d", p.waits.Load())
+	}
+	select {
+	case <-p.Peer.Quit():
+		t.Fatal("peer already stopped")
+	default:
+	}
+	stopped := make(chan struct{})
+	go func() { _ = r.Stop(); close(stopped) }()
+	shutdownAwait(t, stopped, "private cancellation and joined waits")
+	select {
+	case <-p.Peer.Quit():
+		t.Fatal("test unexpectedly stopped peer to cancel waits")
+	default:
+	}
+	if p.waits.Load() != 3 {
+		t.Fatal("shutdown began a new wait iteration")
+	}
+}

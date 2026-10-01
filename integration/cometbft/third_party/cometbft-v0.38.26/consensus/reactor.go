@@ -1,3 +1,7 @@
+// Local Zevune modification of CometBFT v0.38.26: join admitted consensus
+// peer consumers before node storage closure. The sibling cometbft-origin folder
+// records the exact change and original source identities.
+
 package consensus
 
 import (
