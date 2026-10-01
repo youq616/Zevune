@@ -18,7 +18,7 @@ impl std::error::Error for CheckpointMismatch {}
 
 // Return the SAME fully replayed, locked pool that was checked. Do not check a
 // summary using one handle and then reopen the path for the wallet history.
-fn open_checked(
+pub(super) fn open_checked(
     genesis: &TestGenesis,
     journal: &std::path::Path,
     height: u64,

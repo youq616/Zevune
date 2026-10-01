@@ -24,8 +24,8 @@ MAGIC = b"ZVWCLI01"
 MAX_REQUEST = 16_384
 OPS = {"create": 0, "address": 1, "backup": 2, "status": 3,
        "prepare": 4, "pending": 5, "restore": 6, "init-test-ledger": 7,
-       "network-address": 8, "storage": 9, "compact": 10, "status-at-checkpoint": 11}
-COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2, 11: 6}
+       "network-address": 8, "storage": 9, "compact": 10, "status-at-checkpoint": 11, "prepare-at-checkpoint": 12}
+COUNTS = {0: 1, 1: 2, 2: 2, 3: 4, 4: 9, 5: 5, 6: 2, 7: 3, 8: 5, 9: 1, 10: 2, 11: 6, 12: 11}
 
 
 def encode_request(op: int, password: bytes, fields: list[str], pin: str | None = None) -> bytes:
@@ -37,6 +37,10 @@ def encode_request(op: int, password: bytes, fields: list[str], pin: str | None 
         raise ValueError("Compaction requires the exact current source receipt")
     if op == 11:
         checked_checkpoint(fields[4], fields[5], pin)
+    if op == 12:
+        checked_preparation_checkpoint(fields[9], fields[10], pin)
+        checked_preparation_numbers(fields[5], fields[6], fields[7])
+        checked_address(fields[4])
     data = bytearray(MAGIC + bytes([op]) + struct.pack(">H", len(password)) + password)
     data.append(int(pin is not None))
     if pin is not None:
@@ -206,6 +210,76 @@ def checked_checkpoint_status(response: dict, height: str, app_hash: str) -> dic
     return response
 
 
+def checked_preparation_checkpoint(height: str, app_hash: str, pin: str | None) -> tuple[str, str]:
+    value = checked_checkpoint(height, app_hash, pin)
+    if pin[:64] == "0" * 64 or pin[80:] == "0" * 64:
+        raise ValueError("Invalid independently saved preparation receipt")
+    return value
+
+
+def checked_preparation_numbers(amount: str, fee: str, expiry: str) -> tuple[str, str, str]:
+    """New NO-FUNDS intent guard only; not a consensus or market fee policy."""
+    if any(not isinstance(v, str) or len(v) > 20 for v in (amount, fee, expiry)):
+        raise ValueError("Invalid preparation intent")
+    values = checked_payment_numbers(amount, fee, expiry)
+    if int(fee) > min(100, max(1, int(amount) // 100)):
+        raise ValueError("Abnormal local test fee; preparation rejected")
+    return values
+
+
+def checked_preparation_backend(backend: Path, expected: str | None) -> None:
+    """Pre-secret check; invoke repeats its original digest check before exec.
+
+    Like the original console, this assumes a trusted local host, not an OS
+    sandbox or an executable-file locking primitive across process creation.
+    """
+    if (not isinstance(expected, str) or re.fullmatch(r"[0-9a-f]{64}", expected) is None
+            or expected == "0" * 64):
+        raise ValueError("Preparation requires a pinned local wallet executable")
+    meta = backend.lstat()
+    if (not stat.S_ISREG(meta.st_mode) or not 0 < meta.st_size <= 512 * 1024 * 1024
+            or getattr(meta, "st_file_attributes", 0) & 0x400):
+        raise ValueError("Invalid preparation backend")
+    digest = hashlib.sha256()
+    with backend.open("rb") as stream:
+        if not os.path.samestat(meta, os.fstat(stream.fileno())):
+            raise ValueError("Preparation backend changed")
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    after = backend.lstat()
+    if (not os.path.samestat(meta, after) or after.st_size != meta.st_size
+            or after.st_mtime_ns != meta.st_mtime_ns or digest.hexdigest() != expected):
+        raise ValueError("Preparation backend digest or identity mismatch")
+
+
+def checked_checkpoint_preparation(response: dict, height: str, app_hash: str, pin: str) -> dict:
+    """Check a local saved-payment receipt, never authenticate a remote tip."""
+    checked_preparation_checkpoint(height, app_hash, pin)
+    keys = {"ok", "scope", "result", "checkpoint_matched", "payment_profile",
+            "signing_domain", "genesis_sha256", "height", "app_hash", "txid", "receipt", "broadcast"}
+    if (not isinstance(response, dict) or set(response) != keys
+            or response["ok"] is not True or response["scope"] != "local_journal_only_no_funds"
+            or response["result"] != "checkpoint_payment_saved_not_broadcast"
+            or response["checkpoint_matched"] is not True or response["broadcast"] is not False
+            or type(response["height"]) is not int or response["height"] != int(height)
+            or response["app_hash"] != app_hash
+            or not isinstance(response["txid"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", response["txid"]) is None):
+        raise RuntimeError("Unexpected checked preparation response; reconcile before any retry")
+    current = response["receipt"]
+    checked_preparation_checkpoint(height, app_hash, current)
+    # The supplied pin can be an ancestor, not necessarily the last generation.
+    if current[:64] != pin[:64] or int(current[64:80], 16) <= int(pin[64:80], 16):
+        raise RuntimeError("Unexpected saved-payment ancestry")
+    genesis = response["genesis_sha256"]
+    if (not isinstance(genesis, str) or re.fullmatch(r"[0-9a-f]{64}", genesis) is None
+            or genesis == "0" * 64 or not isinstance(response["payment_profile"], str)
+            or response["payment_profile"] not in {"LAB1", "LAB2"}
+            or response["signing_domain"] != (genesis if response["payment_profile"] == "LAB2" else None)):
+        raise RuntimeError("Invalid preparation network identity")
+    return response
+
+
 PREPARE_STAGES = {"setup_and_sync", "intent_preflight", "prover_parameters",
                   "prove_sign_verify_persist", "export"}
 
@@ -326,20 +400,29 @@ def main(argv: list[str] | None = None) -> int:
     for command in OPS:
         sub = commands.add_parser(command)
         sub.add_argument("wallet", type=Path)
-        if command in {"backup", "restore", "prepare", "pending", "compact"}:
+        if command in {"backup", "restore", "prepare", "pending", "compact", "prepare-at-checkpoint"}:
             sub.add_argument("output", type=Path)
         if command in {"address", "network-address"}:
             sub.add_argument("--index", default="0")
-        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint"}:
+        if command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
             sub.add_argument("--journal", type=Path, required=True)
             sub.add_argument("--genesis", type=Path, required=True)
-        if command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint"}:
+        if command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
             sub.add_argument("--genesis-sha256", required=True)
-        if command == "status-at-checkpoint":
+        if command in {"status-at-checkpoint", "prepare-at-checkpoint"}:
             sub.add_argument("--expected-height", required=True)
             sub.add_argument("--expected-app-hash", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "prepare-at-checkpoint":
+            checked_preparation_checkpoint(args.expected_height, args.expected_app_hash, args.pin)
+            checked_preparation_backend(args.backend.absolute(), args.backend_sha256)
+            try:
+                args.output.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                raise ValueError("Preparation output must not exist")
         if args.command == "status-at-checkpoint":
             # Reject missing/empty pins before file access or secret input.
             checked_checkpoint(args.expected_height, args.expected_app_hash, args.pin)
@@ -369,9 +452,9 @@ def main(argv: list[str] | None = None) -> int:
             fields.append(integer(args.index, (1 << 32) - 1))
         if args.command in {"backup", "restore", "compact"}:
             fields.append(str(args.output.absolute()))
-        if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint"}:
+        if args.command in {"status", "prepare", "pending", "init-test-ledger", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
             fields.extend([str(args.journal.absolute()), str(args.genesis.absolute())])
-        if args.command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint"}:
+        if args.command in {"status", "prepare", "pending", "network-address", "status-at-checkpoint", "prepare-at-checkpoint"}:
             if re.fullmatch(r"[0-9a-f]{64}", args.genesis_sha256) is None:
                 raise ValueError("A pinned public genesis digest is required")
             fields.append(args.genesis_sha256)
@@ -379,19 +462,21 @@ def main(argv: list[str] | None = None) -> int:
             print("Pinned local payment network: " + json.dumps(identity, sort_keys=True), file=sys.stderr)
         if args.command == "network-address":
             fields.append(integer(args.index, (1 << 32) - 1))
-        if args.command == "prepare":
+        if args.command in {"prepare", "prepare-at-checkpoint"}:
             # Private intent is prompted, never placed in shell arguments/history.
             destination = checked_recipient(input("Recipient address for the displayed network: "), identity["signing_domain"])
             amount = integer(input("Amount in integer test units: "))
             fee = integer(input("Fee in integer test units: "))
             expiry = integer(input("Expiry block height: "))
             amount, fee, expiry = checked_payment_numbers(amount, fee, expiry)
+            if args.command == "prepare-at-checkpoint":
+                amount, fee, expiry = checked_preparation_numbers(amount, fee, expiry)
             if input("Type PREPARE to sign locally (no broadcast): ") != "PREPARE":
                 raise ValueError("Payment not approved")
             fields.extend([destination, amount, fee, expiry])
-        if args.command in {"prepare", "pending"}:
+        if args.command in {"prepare", "pending", "prepare-at-checkpoint"}:
             fields.append(str(args.output.absolute()))
-        if args.command == "status-at-checkpoint":
+        if args.command in {"status-at-checkpoint", "prepare-at-checkpoint"}:
             fields.extend([args.expected_height, args.expected_app_hash])
         print("NO-FUNDS local laboratory. Local journal state is not a consensus certificate.", file=sys.stderr)
         password = hidden_password(args.command == "create")
@@ -407,6 +492,8 @@ def main(argv: list[str] | None = None) -> int:
             checked_compaction(response, args.pin)
         if args.command == "status-at-checkpoint":
             checked_checkpoint_status(response, args.expected_height, args.expected_app_hash)
+        if args.command == "prepare-at-checkpoint":
+            checked_checkpoint_preparation(response, args.expected_height, args.expected_app_hash, args.pin)
         if args.command == "storage":
             checked_storage_status(response)
             if response.get("result") != "storage_inspected_not_synced":

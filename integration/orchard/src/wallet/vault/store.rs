@@ -28,6 +28,7 @@ pub const MAX_RECORDS: u64 = 256;
 pub const MAX_FILE_BYTES: u64 = FILE_HEADER as u64 + MAX_RECORDS * RECORD as u64;
 type Hash = [u8; 32];
 
+mod checked_prepare;
 mod compact;
 pub use compact::CompactionReceipt;
 
