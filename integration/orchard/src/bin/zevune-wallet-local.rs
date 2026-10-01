@@ -101,7 +101,7 @@ fn parse(mut raw: &[u8]) -> Result<Request<'_>> {
         _ => return Err(bad().into()),
     };
     ensure(count == expected && !(op == 0 && pin.is_some()) && !(op == 10 && pin.is_none()))?;
-    ensure(!matches!(op, 11 | 12 | 13) || pin.is_some())?;
+    ensure(!matches!(op, 11..=13) || pin.is_some())?;
     let mut fields = Vec::with_capacity(count);
     for _ in 0..count {
         let n = u16::from_be_bytes(take(&mut raw, 2)?.try_into()?) as usize;
