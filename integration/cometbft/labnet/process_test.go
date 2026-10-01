@@ -105,16 +105,24 @@ func (p *process) stop(t *testing.T) {
 		return
 	}
 	p.stopped = true
-	_ = p.in.Close()
+	// This observes Wait completion, not the kernel's precise exit time. Do not
+	// add a wait or probe before preserving the original stdin-close sequence.
+	exitObservedBeforeClose := false
+	select {
+	case <-p.done:
+		exitObservedBeforeClose = true
+	default:
+	}
+	closeErr := p.in.Close()
 	select {
 	case <-p.done:
 		if p.exitErr != nil {
-			t.Errorf("child exited unsuccessfully: node=%d exit_code=%d diagnostic=%+v", p.nodeIndex, p.exitCode(), p.failure())
+			t.Errorf("child exited unsuccessfully: node=%d exit_code=%d diagnostic=%+v stop_observation=%+v", p.nodeIndex, p.exitCode(), p.failure(), p.stopObservation(exitObservedBeforeClose, closeErr))
 		}
 	case <-time.After(45 * time.Second):
 		_ = p.cmd.Process.Kill()
 		<-p.done
-		t.Errorf("child did not stop: node=%d exit_code=%d diagnostic=%+v", p.nodeIndex, p.exitCode(), p.failure())
+		t.Errorf("child did not stop: node=%d exit_code=%d diagnostic=%+v stop_observation=%+v", p.nodeIndex, p.exitCode(), p.failure(), p.stopObservation(exitObservedBeforeClose, closeErr))
 	}
 	_ = p.out.Close()
 }
@@ -153,15 +161,23 @@ func readNodeReady(r io.Reader, index int) error {
 // Drain all stderr without blocking a child; retain at most 512 bytes. Only a
 // validated fixed-label failure record is ever returned for diagnostic output.
 type boundedProcessOutput struct {
-	mu        sync.Mutex
-	data      []byte
-	truncated bool
+	mu            sync.Mutex
+	data          []byte
+	truncated     bool
+	observedBytes int
+	bytesCapped   bool
 }
 
 func (b *boundedProcessOutput) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n := len(p)
+	// Count drained bytes without retaining them or permitting counter overflow.
+	if n > 65535-b.observedBytes {
+		b.observedBytes, b.bytesCapped = 65535, true
+	} else {
+		b.observedBytes += n
+	}
 	remaining := 512 - len(b.data)
 	if n > remaining {
 		b.truncated = true
@@ -169,6 +185,61 @@ func (b *boundedProcessOutput) Write(p []byte) (int, error) {
 	}
 	b.data = append(b.data, p...)
 	return n, nil
+}
+
+type processStderrObservation struct {
+	Class         string
+	ObservedBytes int // Saturates at 65535; never an unbounded counter.
+	BytesCapped   bool
+	RetainedBytes int // The existing 512-byte retention limit is unchanged.
+	Truncated     bool
+}
+
+type processStopObservation struct {
+	ExitObservedBeforeClose bool
+	StdinClose              string
+	ExitObservedMS          int64 // Wait observation, not an inferred cause/time.
+	Stderr                  processStderrObservation
+}
+
+func (p *process) stopObservation(beforeClose bool, closeErr error) processStopObservation {
+	closeCode := "other"
+	if closeErr == nil {
+		closeCode = "ok"
+	} else if errors.Is(closeErr, os.ErrClosed) || errors.Is(closeErr, io.ErrClosedPipe) {
+		closeCode = "closed"
+	}
+	o := processStopObservation{ExitObservedBeforeClose: beforeClose, StdinClose: closeCode, ExitObservedMS: -1,
+		Stderr: processStderrObservation{Class: "not_captured"}}
+	select {
+	case <-p.done:
+		o.ExitObservedMS = p.exitObservedMS
+	default:
+	}
+	if p.diagnostic == nil {
+		return o
+	}
+	// Reuse the unchanged fixed-record allowlist. No stderr text, JSON field,
+	// exception string, path or guessed panic/port cause is returned here.
+	fixed := p.failure()
+	b := p.diagnostic
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	o.Stderr = processStderrObservation{ObservedBytes: b.observedBytes, BytesCapped: b.bytesCapped,
+		RetainedBytes: len(b.data), Truncated: b.truncated}
+	switch {
+	case b.truncated:
+		o.Stderr.Class = "truncated"
+	case len(b.data) == 0:
+		o.Stderr.Class = "empty"
+	case !json.Valid(b.data):
+		o.Stderr.Class = "invalid_json"
+	case fixed.Stage != "unknown":
+		o.Stderr.Class = "fixed_record"
+	default:
+		o.Stderr.Class = "unrecognized_record"
+	}
+	return o
 }
 
 func (p *process) failure() NodeFailure {
