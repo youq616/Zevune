@@ -80,6 +80,8 @@ class BundleManifestTests(unittest.TestCase):
             (root / "integration/cometbft/ignored.go").write_bytes(b"ignored working copy input")
             actual_output, actual_run = build.checked_output, subprocess.run
             compiler_inputs = []
+            qualified_sources = []
+            compiler_sources = []
 
             def tool_output(args, cwd):
                 # These are test declarations, not installed toolchain evidence.
@@ -101,6 +103,7 @@ class BundleManifestTests(unittest.TestCase):
                 for name, payload in source.items():
                     self.assertEqual((staged / name).read_bytes(), payload)
                 compiler_inputs.append(args[0])
+                compiler_sources.append(staged)
                 if args[0] == "go":
                     Path(args[args.index("-o") + 1]).write_bytes(b"inert Go output fixture")
                 else:
@@ -114,7 +117,8 @@ class BundleManifestTests(unittest.TestCase):
             bundle = Path(temp) / "bundle"
             with patch.object(build, "__file__", str(root / "scripts/build_local_lab.py")), \
                     patch.object(build, "checked_output", side_effect=tool_output), \
-                    patch.object(build.subprocess, "run", side_effect=run):
+                    patch.object(build.subprocess, "run", side_effect=run), \
+                    patch.object(build, "verify_build_selection", side_effect=qualified_sources.append):
                 output = build.build(bundle)
             self.assertEqual(output["source_commit"], commit)
             self.assertEqual(output["source_tree"], tree)
@@ -122,6 +126,10 @@ class BundleManifestTests(unittest.TestCase):
             self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
             self.assertTrue((root / "reports/evidence.txt").is_file())
             self.assertEqual(compiler_inputs, ["go", "cargo"])
+            # This inert compiler test checks both qualification boundaries;
+            # real origin/negative probes have their own dedicated suite.
+            self.assertEqual(qualified_sources, [root, compiler_sources[0]])
+            self.assertEqual(compiler_sources[0], compiler_sources[1])
             self.assertEqual(len(output["files"]), 22)
             for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py", "ledger_backup.py"):
                 self.assertEqual((bundle / name).read_bytes(), source["scripts/" + name])

@@ -20,6 +20,9 @@ jobs:
         with:
           go-version: stable
           cache: false
+      - name: Verify pinned CometBFT lifetime patch and source selection
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_cometbft_origin.py
       - name: Format
         shell: bash
         run: test -z "$(gofmt -l ./cmd ./internal)"

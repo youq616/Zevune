@@ -18,6 +18,7 @@ import tempfile
 
 from source_snapshot import export_build_source
 from verify_local_lab import verify
+from check_cometbft_origin import verify_build_selection
 
 
 def checked_output(args: list[str], cwd: Path) -> str:
@@ -55,6 +56,7 @@ def build(destination: Path) -> dict:
                 "rust": checked_output(["rustc", "--version"], root / "integration/orchard")}
     if not versions["go"].startswith("go version go1.27.1 ") or not versions["rust"].startswith("rustc 1.98.1 "):
         raise ValueError("Pinned Go 1.27.1 and Rust 1.98.1 are required")
+    verify_build_selection(root)
     destination = destination.absolute()
     if destination.exists() or destination.is_symlink():
         raise ValueError("Output already exists")
@@ -68,6 +70,7 @@ def build(destination: Path) -> dict:
     with tempfile.TemporaryDirectory(prefix="zevune-source-build-") as temporary:
         staged = Path(temporary) / "source"
         source_tree = export_build_source(root, commit, staged)
+        verify_build_selection(staged)
         env["CARGO_TARGET_DIR"] = str(Path(temporary) / "cargo-target")
         network = Path(temporary) / ("zevune-network" + suffix)
         subprocess.run(["go", "build", "-mod=readonly", "-buildvcs=false", "-trimpath", "-o",

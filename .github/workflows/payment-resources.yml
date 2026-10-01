@@ -53,6 +53,9 @@ jobs:
         with:
           go-version: '1.27.1'
           cache: false
+      - name: Verify pinned CometBFT lifetime patch and source selection
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_cometbft_origin.py
       - name: Install fixed Rust formatter and compiler
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt
       - name: Test resource evidence validation and process measurement
