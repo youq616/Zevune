@@ -847,7 +847,7 @@ def main(argv: list[str] | None = None) -> int:
         if command in {"status-at-checkpoint", "prepare-at-checkpoint", "pending-at-checkpoint"}:
             sub.add_argument("--expected-height", required=True)
             sub.add_argument("--expected-app-hash", required=True)
-    for kind in ("sync-network", "prepare-network", "recover-pending-network"):
+    for kind in ("sync-network", "prepare-network", "recover-pending-network", "submit-pending-network"):
         online = commands.add_parser(kind, allow_abbrev=False)
         online.add_argument("wallet", type=Path)
         for name in ("journal", "genesis", "config", "network-backend", "worker"):
@@ -863,7 +863,7 @@ def main(argv: list[str] | None = None) -> int:
             online.add_argument("--expiry-blocks", default="20")
     args = parser.parse_args(argv)
     try:
-        if args.command in {"sync-network", "prepare-network", "recover-pending-network"}:
+        if args.command in {"sync-network", "prepare-network", "recover-pending-network", "submit-pending-network"}:
             # Do not allow duplicate flags or abbreviated global pins for this
             # new operation. Old operation parsing/numbering remains unchanged.
             tokens = list(sys.argv[1:] if argv is None else argv)
@@ -880,6 +880,17 @@ def main(argv: list[str] | None = None) -> int:
                     if name not in known or name in seen:
                         raise ValueError("Ambiguous sync flags")
                     seen.add(name)
+            if args.command == "submit-pending-network":
+                from wallet_submission import submit_pending_network
+                try:
+                    response = submit_pending_network(args, sys.modules[__name__])
+                    print(json.dumps(response, ensure_ascii=True, indent=2))
+                    return 0
+                except (Exception, KeyboardInterrupt):
+                    # Includes output publication failure AFTER a successful send.
+                    # Do not echo transaction/path/peer details or infer no send.
+                    print("Submission not completed; outcome may be unknown. Preserve pending and independently reconcile; no automatic retry or re-sign.", file=sys.stderr)
+                    return 1
             operations = {"sync-network": sync_network, "prepare-network": prepare_network,
                           "recover-pending-network": recover_pending_network}
             response = operations[args.command](args)

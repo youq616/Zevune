@@ -9,6 +9,7 @@ on:
       - 'integration/cometbft/**'
       - 'integration/orchard/**'
       - 'scripts/zevune_wallet.py'
+      - 'scripts/wallet_submission.py'
       - 'scripts/tests/**'
       - 'docs/WALLET_NETWORK_SYNC_V1.zh-CN.md'
   pull_request:
@@ -20,6 +21,7 @@ on:
       - 'integration/cometbft/**'
       - 'integration/orchard/**'
       - 'scripts/zevune_wallet.py'
+      - 'scripts/wallet_submission.py'
       - 'scripts/tests/**'
       - 'docs/WALLET_NETWORK_SYNC_V1.zh-CN.md'
 permissions:
@@ -35,12 +37,14 @@ jobs:
     env:
       RAYON_NUM_THREADS: '2'
       CARGO_BUILD_JOBS: '2'
+      ZEVUNE_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
         with:
@@ -50,15 +54,17 @@ jobs:
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
       - name: Check exact source and Python regression
         run: |
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test -z "$(gofmt -l integration/cometbft/labnet/wallet_network_sync_e2e_test.go integration/cometbft/labnet/wallet_network_prepare_e2e_test.go)"
+          test "$(git rev-parse HEAD)" = "$ZEVUNE_SOURCE_HEAD"
+          git show -s --format='source_head=%H source_tree=%T parents=%P' HEAD
+          cargo +1.98.1 fmt --manifest-path integration/orchard/Cargo.toml --all -- --check
+          test -z "$(gofmt -l integration/cometbft/labnet/wallet_network_sync_e2e_test.go integration/cometbft/labnet/wallet_network_prepare_e2e_test.go integration/cometbft/labnet/wallet_pending_submit_e2e_test.go integration/cometbft/cmd/zevune-network)"
           python -m unittest discover -s scripts/tests -v
           git diff --exit-code
       - name: Build real wallet and worker from locked dependencies
         working-directory: integration/orchard
         run: |
-          cargo fmt --all -- --check
-          cargo build --locked --release --features local-funding-lab --bins
+          cargo +1.98.1 fmt --all -- --check
+          cargo +1.98.1 build --locked --release --features local-funding-lab --bins
       - name: Build original network command and register executable paths only
         run: |
           python - <<'PY'
@@ -76,7 +82,8 @@ jobs:
                    'ZEVUNE_FUNDED_SCENARIO': rust / ('zevune-funded-scenario' + suffix),
                    'ZEVUNE_PYTHON': Path(sys.executable).resolve(strict=True),
                    'ZEVUNE_WALLET_NETWORK_SCENARIO': root / 'scripts/tests/native_wallet_network_sync.py',
-                   'ZEVUNE_WALLET_NETWORK_PREPARE_SCENARIO': root / 'scripts/tests/native_wallet_network_prepare.py'}
+                   'ZEVUNE_WALLET_NETWORK_PREPARE_SCENARIO': root / 'scripts/tests/native_wallet_network_prepare.py',
+                   'ZEVUNE_WALLET_NETWORK_SUBMIT_SCENARIO': root / 'scripts/tests/native_wallet_pending_submit.py'}
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
               for name, path in paths.items():
                   stream.write(name + '=' + str(path) + '\n')
@@ -85,7 +92,8 @@ jobs:
       - name: Real network to wallet closed loop and false post-state refusal
         working-directory: integration/cometbft
         run: |
-          go test -mod=readonly -tags=operator_e2e,wallet_network_e2e ./labnet -run '^(TestRealWalletNetworkSynchronization|TestRealWalletNetworkPreparation|TestQuorumSignedWrongPostStateNeverPersists)$' -count=1 -timeout=15m -v
+          go test -mod=readonly ./cmd/zevune-network -count=1 -timeout=5m -v
+          go test -mod=readonly -tags=operator_e2e,wallet_network_e2e ./labnet -run '^(TestRealWalletNetworkSynchronization|TestRealWalletNetworkPreparation|TestRealWalletPendingSubmission|TestQuorumSignedWrongPostStateNeverPersists)$' -count=1 -timeout=15m -v
           go vet -mod=readonly -tags=operator_e2e,wallet_network_e2e ./labnet ./cmd/zevune-network
       - name: Check source and dependency locks unchanged
         run: git diff --exit-code

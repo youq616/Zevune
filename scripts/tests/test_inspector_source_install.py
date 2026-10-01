@@ -37,7 +37,7 @@ class SourceInstallTests(unittest.TestCase):
         git('init', '-q')
         git('config', 'user.name', 'Source installation tests')
         git('config', 'user.email', 'tests@example.invalid')
-        for source in delivery.SOURCES.values():
+        for source in delivery.CURRENT_SOURCES.values():
             path = cls.repo / source
             path.parent.mkdir(exist_ok=True)
             path.write_bytes((ROOT / source).read_bytes())
@@ -78,7 +78,7 @@ class SourceInstallTests(unittest.TestCase):
         result = self.install()
         self.assertEqual(self.contents(self.target), self.original_bytes)
         self.assertEqual(self.contents(self.source), self.original_bytes)
-        self.assertEqual(set(self.contents(self.target)), set(delivery.SOURCES) | {delivery.MANIFEST})
+        self.assertEqual(set(self.contents(self.target)), set(delivery.CURRENT_SOURCES) | {delivery.MANIFEST})
         self.assertEqual(result['manifest_sha256'], self.pin)
         self.assertEqual(result['source_commit'], self.commit)
         self.assertTrue(result['installed'] and result['integrity_verified'] and result['source_unchanged'])
@@ -89,13 +89,30 @@ class SourceInstallTests(unittest.TestCase):
             self.assertEqual((self.target / name).stat().st_nlink, 1)
             self.assertFalse(os.path.samefile(self.source / name, self.target / name))
 
+    def test_legacy_v1_install_preserves_its_original_closed_set(self):
+        # Synthetic manifest contract; no payload, wallet, or network execution.
+        path = self.source / delivery.MANIFEST
+        manifest = json.loads(path.read_bytes())
+        manifest['format'] = 'zevune-inspector-source-1'
+        manifest['files'] = [e for e in manifest['files'] if e['name'] in delivery.LEGACY_SOURCES]
+        raw = json.dumps(manifest).encode()
+        path.write_bytes(raw)
+        (self.source / 'wallet_submission.py').unlink()
+        pin = hashlib.sha256(raw).hexdigest()
+        before = self.contents(self.source)
+        result = self.install(pin=pin)
+        self.assertEqual(result['payload_files'], 10)
+        self.assertEqual(result['manifest_sha256'], pin)
+        self.assertEqual(before, self.contents(self.source))
+        self.assertEqual(before, self.contents(self.target))
+
     def test_install_needs_no_git_and_imports_no_payload(self):
         before = set(sys.modules)
         with patch.object(delivery, 'git_bytes', side_effect=AssertionError('no Git allowed')), \
                 patch.object(subprocess, 'run', side_effect=AssertionError('no subprocess allowed')):
             self.install()
         new = set(sys.modules) - before
-        self.assertFalse(new & ({name[:-3] for name in delivery.SOURCES if name.endswith('.py')} | {'tkinter'}))
+        self.assertFalse(new & ({name[:-3] for name in delivery.CURRENT_SOURCES if name.endswith('.py')} | {'tkinter'}))
 
     def test_malformed_pins_refused_before_filesystem_access(self):
         for pin, commit in ((False, self.commit), ('A' * 64, self.commit),
@@ -113,7 +130,7 @@ class SourceInstallTests(unittest.TestCase):
             self.assertFalse(self.target.exists())
 
     def test_each_modified_payload_refused_before_mkdir(self):
-        for name in delivery.SOURCES:
+        for name in delivery.CURRENT_SOURCES:
             path = self.source / name
             raw = path.read_bytes()
             path.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
@@ -391,7 +408,7 @@ class SourceInstallTests(unittest.TestCase):
 
         with patch.object(delivery, 'write_new', side_effect=record):
             self.install()
-        self.assertEqual(order, sorted(delivery.SOURCES) + [delivery.MANIFEST])
+        self.assertEqual(order, sorted(delivery.CURRENT_SOURCES) + [delivery.MANIFEST])
 
     def test_cli_install_and_verify_without_git_or_display(self):
         env = {**os.environ, 'PATH': '', 'DISPLAY': ''}

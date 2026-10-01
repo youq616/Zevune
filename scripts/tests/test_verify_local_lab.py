@@ -262,6 +262,41 @@ class BundleVerificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.check()
 
+    def test_v10_submission_dependency_preserves_all_older_contracts(self):
+        counts = ((2, 5), (3, 8), (4, 10), (5, 12), (6, 14), (7, 16), (8, 20), (9, 22), (10, 24))
+        for version, count in counts:
+            known = {e['name'] for e in self.manifest['files']}
+            for name in sorted(verify.required_files(False, version) - known):
+                raw = b'inert versioned delivery fixture, never executed\n'
+                (self.root / name).write_bytes(raw)
+                self.manifest['files'].append(dict(name=name, size=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+            self.manifest['format'] = f'zevune-local-bundle-{version}'
+            self.save()
+            self.assertEqual(self.check()['files_checked'], count)
+        for old in range(2, 10):
+            self.manifest['format'] = f'zevune-local-bundle-{old}'
+            self.save()
+            with self.assertRaises(ValueError):
+                self.check()
+        self.manifest['format'] = 'zevune-local-bundle-10'
+        for entry in self.manifest['files']:
+            if entry['name'].startswith('zevune-'):
+                old = entry['name']
+                entry['name'] += '.exe'
+                (self.root / old).rename(self.root / entry['name'])
+        self.save()
+        self.assertEqual(self.check()['files_checked'], 24)
+        for name in ('wallet_submission.py', 'WALLET_PENDING_SUBMIT_V1.zh-CN.md'):
+            path = self.root / name
+            raw = path.read_bytes()
+            path.write_bytes(b'changed')
+            with self.assertRaises(ValueError):
+                self.check()
+            path.write_bytes(raw)
+        (self.root / 'wallet_submission.py').unlink()
+        with self.assertRaises(ValueError):
+            self.check()
+
     def test_wrong_independent_pin_and_commit_rejected(self):
         for pin in ("0" * 64, "", self.pin.upper(), self.pin + "\n"):
             with self.subTest(pin=pin), self.assertRaises(ValueError):

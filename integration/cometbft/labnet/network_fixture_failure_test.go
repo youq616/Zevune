@@ -23,7 +23,7 @@ func walletNetworkFailureReport(value map[string]any) string {
 	}{Step: "unknown", Code: "unknown"}
 	step, _ := value["step"].(string)
 	switch step {
-	case "setup", "network-start", "initial-catchup", "real-payment-and-pending", "explicit-fixture-broadcast", "payment-rescan", "restart-rescan", "false-peer-refusal", "stale-handoff-refusal", "final-rescan", "initial-config", "initial-partial-command", "initial-partial-check", "initial-reference-copy", "readonly-pending-recovery":
+	case "setup", "network-start", "initial-catchup", "real-payment-and-pending", "explicit-fixture-broadcast", "payment-rescan", "restart-rescan", "false-peer-refusal", "stale-handoff-refusal", "final-rescan", "initial-config", "initial-partial-command", "initial-partial-check", "initial-reference-copy", "readonly-pending-recovery", "submission-config", "partial-submission-refusal", "prepare-0", "prepare-1", "submit-0", "submit-1", "reconcile-0", "reconcile-1":
 		report.Step = step
 	}
 	code, _ := value["code"].(string)
@@ -86,6 +86,12 @@ func TestWalletNetworkFailureReportAllowlist(t *testing.T) {
 	recovery := walletNetworkFailureReport(map[string]any{"stage": "failed", "step": "readonly-pending-recovery"})
 	if !strings.Contains(recovery, `"step":"readonly-pending-recovery"`) {
 		t.Fatal("PR45 recovery stage lost")
+	}
+	for _, step := range []string{"submission-config", "partial-submission-refusal", "prepare-0", "prepare-1", "submit-0", "submit-1", "reconcile-0", "reconcile-1"} {
+		report := walletNetworkFailureReport(map[string]any{"stage": "failed", "step": step})
+		if !strings.Contains(report, `"step":"`+step+`"`) {
+			t.Fatal("pending scenario stage lost")
+		}
 	}
 	legacy := walletNetworkFailureReport(map[string]any{"stage": "failed", "step": "initial-catchup"})
 	if !strings.Contains(legacy, `"step":"initial-catchup"`) || !strings.Contains(legacy, `"code":"unknown"`) {

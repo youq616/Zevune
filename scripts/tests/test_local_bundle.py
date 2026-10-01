@@ -57,6 +57,8 @@ class BundleManifestTests(unittest.TestCase):
                 "integration/cometbft/go.mod": b"synthetic locked Go input\n",
                 "integration/orchard/Cargo.lock": b"synthetic locked Rust input\n",
                 "scripts/zevune_wallet.py": b"synthetic script fixture; never executed\n",
+                "scripts/wallet_submission.py": b"inert submission module; never executed\n",
+                "docs/WALLET_PENDING_SUBMIT_V1.zh-CN.md": b"public no-funds submission guide\n",
                 "scripts/wallet_backup.py": b"synthetic backup CLI; never executed\n",
                 "scripts/wallet_backup_backend.py": b"synthetic transport; never executed\n",
                 "scripts/payment_request.py": b"inert request CLI; never executed\n",
@@ -118,12 +120,12 @@ class BundleManifestTests(unittest.TestCase):
                 output = build.build(bundle)
             self.assertEqual(output["source_commit"], commit)
             self.assertEqual(output["source_tree"], tree)
-            self.assertEqual(output["format"], "zevune-local-bundle-9")
+            self.assertEqual(output["format"], "zevune-local-bundle-10")
             self.assertEqual(output["build_source"], "isolated_exact_git_blobs")
             self.assertTrue((root / "reports/evidence.txt").is_file())
             self.assertEqual(compiler_inputs, ["go", "cargo"])
-            self.assertEqual(len(output["files"]), 22)
-            for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py", "ledger_backup.py"):
+            self.assertEqual(len(output["files"]), 24)
+            for name in ("zevune_wallet.py", "wallet_submission.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py", "ledger_backup.py"):
                 self.assertEqual((bundle / name).read_bytes(), source["scripts/" + name])
             self.assertEqual((bundle / "WALLET_BACKUP_CATALOG.zh-CN.md").read_bytes(),
                              source["docs/WALLET_BACKUP_CATALOG.zh-CN.md"])

@@ -177,8 +177,9 @@ class WalletReconcileTests(unittest.TestCase):
         import verify_local_lab as verify
         for windows in (False, True):
             self.assertNotIn("wallet_reconcile.py", verify.required_files(windows, 9))
+            self.assertNotIn("wallet_reconcile.py", verify.required_files(windows, 10))
             with self.assertRaises(ValueError):
-                verify.required_files(windows, 10)
+                verify.required_files(windows, 11)
 
 
 if __name__ == "__main__":

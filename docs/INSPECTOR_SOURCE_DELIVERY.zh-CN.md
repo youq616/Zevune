@@ -20,7 +20,7 @@ python "$repo\scripts\inspector_source_bundle.py" --no-real-funds build --reposi
 ```
 
 父目录必须预先存在，输出目录必须全新、位于源码仓库之外。构建仅从指定提交的 Git blob 读取
-九份 Python 源码和原核查指南，不从工作目录复制，也不包含后端程序、密码、钱包、测试数据、
+十份 Python 源码和原核查指南，不从工作目录复制，也不包含后端程序、密码、钱包、测试数据、
 日志、工具自身或新的交付说明。工作区修改、未跟踪文件及 Git 换行/过滤器不参与构建。
 准确完整提交号必填；HEAD、分支、标签、缩写和隐式“最新”不被接受。Git replacement refs 与
 继承的其他仓库环境变量不改变选定对象。构建不会切换、重置或修改已有源码文件。
@@ -56,7 +56,7 @@ python "$out\wallet_inspector_desktop.py" --no-real-funds
 
 ## 固定格式与失败策略
 
-格式名 `zevune-inspector-source-1`，平面目录恰好10份 payload 和一个 `INSPECTOR-SOURCE.json`。
+新构建格式名 `zevune-inspector-source-2`，平面目录恰好11份 payload 和一个 `INSPECTOR-SOURCE.json`。
 每份 payload 至多512 KiB、总量至多4 MiB、清单至多32 KiB。清单绑定固定文件名、原源码路径、
 长度、SHA256、Git blob ID、完整提交与树 ID。文件缺失、多出、重复、大小或摘要不符均拒绝。
 数字0不等于安全标志false；未知格式、未知字段、重复JSON字段和不规范路径不能被静默接受。
@@ -85,7 +85,7 @@ python "$out\wallet_inspector_desktop.py" --no-real-funds
 合成错误仅注入拒绝或IO失败，不替代任何正向钱包密码学认证。
 
 `check_inspector_source_delivery.py` 在仓库外建立真实交付目录，先用独立进程校验，再显式运行
-原26项真实Tk测试。子进程在隔离Python环境中强制核对全部九个运行模块确实来自交付目录，
+原26项真实Tk测试。子进程在隔离Python环境中强制核对全部十个运行模块确实来自交付目录，
 测试后再次核验字节。传入 `--backend` 时额外运行原六组真正钱包认证/预留不变场景；不传入时
 明确报告该原生部分未执行。CI在Windows与Linux分别重建固定Rust1.98.1原后端并传入此参数。
 
@@ -109,3 +109,5 @@ python "$out\wallet_inspector_desktop.py" --no-real-funds
 
 本次修正测试设施，不抹去C8的三个Windows工作流失败或Issue37原失败记录。阶段验收仍要求准确
 候选的完整受影响原生CI和独立非作者复审；只读校验成功不自动提供审查批准或真实资金许可。
+
+PR46 新增直接依赖 `wallet_submission.py`，新构建采用 v2 的11文件闭集。验证和安装仍保留 v1 原10文件闭集，不把新模块塞入旧格式；v1/v2 均拒绝缺少、额外或替换文件。旧二进制包 v2—v9 合同不变，含新提交模块的构建采用 `zevune-local-bundle-10`。

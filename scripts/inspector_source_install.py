@@ -44,7 +44,8 @@ def _metadata_unchanged(snapshot: Snapshot) -> None:
     delivery.require(delivery.directory_chain(snapshot.source) == snapshot.chain
                      and delivery.stamp(snapshot.source.lstat()) == snapshot.root_stamp,
                      "install_source_directory_changed")
-    delivery.names_in(snapshot.source)
+    delivery.names_in(snapshot.source, {name for name, _, _ in snapshot.files
+                                        if name != delivery.MANIFEST})
     for name, _, before in snapshot.files:
         delivery.require(delivery.stamp((snapshot.source / name).lstat()) == before,
                          "install_source_changed")
@@ -58,12 +59,14 @@ def _confirm(snapshot: Snapshot) -> None:
     delivery.require(delivery.directory_chain(snapshot.source) == snapshot.chain
                      and delivery.stamp(snapshot.source.lstat()) == snapshot.root_stamp,
                      "install_source_directory_changed")
-    delivery.names_in(snapshot.source)
+    delivery.names_in(snapshot.source, {name for name, _, _ in snapshot.files
+                                        if name != delivery.MANIFEST})
     for name, expected, before in snapshot.files:
         limit = delivery.MAX_MANIFEST if name == delivery.MANIFEST else delivery.MAX_FILE
         data, after = delivery.read_plain(snapshot.source / name, limit)
         delivery.require(data == expected and after == before, "install_source_changed")
-    delivery.names_in(snapshot.source)
+    delivery.names_in(snapshot.source, {name for name, _, _ in snapshot.files
+                                        if name != delivery.MANIFEST})
     delivery.require(delivery.directory_chain(snapshot.source) == snapshot.chain
                      and delivery.stamp(snapshot.source.lstat()) == snapshot.root_stamp,
                      "install_source_directory_changed")

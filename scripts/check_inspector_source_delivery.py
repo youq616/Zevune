@@ -25,7 +25,7 @@ kind, backend = sys.argv[3], sys.argv[4]
 sys.path.insert(0, str(bundle))
 names = ('wallet_inspector_desktop', 'wallet_reconcile', 'wallet_health',
          'wallet_backup_backend', 'wallet_backup', 'wallet_archive',
-         'ledger_restore', 'ledger_recovery_backend', 'zevune_wallet')
+         'ledger_restore', 'ledger_recovery_backend', 'zevune_wallet', 'wallet_submission')
 for name in names:
     module = importlib.import_module(name)
     assert pathlib.Path(module.__file__).resolve().parent == bundle, 'runtime import escaped delivery'

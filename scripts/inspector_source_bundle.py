@@ -22,7 +22,7 @@ import stat
 import subprocess
 
 MANIFEST = "INSPECTOR-SOURCE.json"
-FORMAT = "zevune-inspector-source-1"
+FORMAT = "zevune-inspector-source-2"
 MAX_FILE = 512 * 1024
 MAX_TOTAL = 4 * 1024 * 1024
 MAX_MANIFEST = 32 * 1024
@@ -34,6 +34,16 @@ SOURCES = {name + ".py": "scripts/" + name + ".py" for name in (
     "wallet_backup_backend", "wallet_backup", "wallet_archive",
     "ledger_restore", "ledger_recovery_backend", "zevune_wallet")}
 SOURCES["WALLET_INSPECTOR_DESKTOP.zh-CN.md"] = "docs/WALLET_INSPECTOR_DESKTOP.zh-CN.md"
+LEGACY_SOURCES = dict(SOURCES)
+CURRENT_SOURCES = {**SOURCES, "wallet_submission.py": "scripts/wallet_submission.py"}
+
+
+def source_contract(format_name: str) -> dict[str, str]:
+    # Preserve the exact v1 set; adding a module does not reinterpret old bundles.
+    if type(format_name) is str and format_name == "zevune-inspector-source-1":
+        return LEGACY_SOURCES
+    require(type(format_name) is str and format_name == FORMAT, "invalid_manifest_policy")
+    return CURRENT_SOURCES
 
 
 def require(condition: bool, code: str) -> None:
@@ -99,14 +109,15 @@ def read_plain(path: Path, maximum: int) -> tuple[bytes, tuple]:
     return bytes(data), stamp(before)
 
 
-def names_in(folder: Path) -> set[str]:
+def names_in(folder: Path, sources=None) -> set[str]:
+    sources = CURRENT_SOURCES if sources is None else sources
     names = set()
     with os.scandir(folder) as entries:
         for entry in entries:
-            require(entry.name in set(SOURCES) | {MANIFEST}, "extra_delivery_entry")
+            require(entry.name in set(sources) | {MANIFEST}, "extra_delivery_entry")
             names.add(entry.name)
-            require(len(names) <= len(SOURCES) + 1, "delivery_entry_limit")
-    require(names == set(SOURCES) | {MANIFEST}, "missing_delivery_entry")
+            require(len(names) <= len(sources) + 1, "delivery_entry_limit")
+    require(names == set(sources) | {MANIFEST}, "missing_delivery_entry")
     return names
 
 
@@ -127,27 +138,28 @@ def decode_manifest(raw: bytes, expected_commit: str) -> dict:
     fields = {"format", "source_commit", "source_tree", "source_kind", "entrypoint",
               "native_backend_included", "real_funds_allowed", "accepted", "files"}
     require(type(manifest) is dict and set(manifest) == fields, "invalid_manifest_fields")
-    require(manifest["format"] == FORMAT and manifest["source_kind"] == "fixed_exact_git_blobs"
+    sources = source_contract(manifest["format"])
+    require(manifest["source_kind"] == "fixed_exact_git_blobs"
             and manifest["entrypoint"] == "wallet_inspector_desktop.py"
             and all(manifest[key] is False for key in ("native_backend_included", "real_funds_allowed", "accepted")),
             "invalid_manifest_policy")
     require(identity(manifest["source_commit"], OID) and identity(manifest["source_tree"], OID)
             and manifest["source_commit"] == expected_commit, "source_identity_mismatch")
     entries = manifest["files"]
-    require(type(entries) is list and len(entries) == len(SOURCES), "invalid_manifest_count")
+    require(type(entries) is list and len(entries) == len(sources), "invalid_manifest_count")
     seen, total = set(), 0
     for entry in entries:
         require(type(entry) is dict and set(entry) == {"name", "source_path", "size", "sha256", "git_blob"},
                 "invalid_manifest_entry")
         name = entry["name"]
-        require(type(name) is str and name in SOURCES and name not in seen, "invalid_manifest_name")
-        require(entry["source_path"] == SOURCES[name] and type(entry["size"]) is int
+        require(type(name) is str and name in sources and name not in seen, "invalid_manifest_name")
+        require(entry["source_path"] == sources[name] and type(entry["size"]) is int
                 and 0 < entry["size"] <= MAX_FILE and identity(entry["sha256"], DIGEST)
                 and identity(entry["git_blob"], OID), "invalid_manifest_file")
         total += entry["size"]
         require(total <= MAX_TOTAL, "delivery_total_limit")
         seen.add(name)
-    require(seen == set(SOURCES), "invalid_manifest_set")
+    require(seen == set(sources), "invalid_manifest_set")
     return manifest
 
 
@@ -156,10 +168,14 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str) -> dict:
     require(identity(manifest_sha256, DIGEST) and identity(source_commit, OID), "independent_pins_required")
     chain = directory_chain(folder)
     root_stamp = stamp(folder.lstat())
-    names_in(folder)
-    raw, manifest_stamp = read_plain(folder / MANIFEST, MAX_MANIFEST)
+    try:
+        raw, manifest_stamp = read_plain(folder / MANIFEST, MAX_MANIFEST)
+    except FileNotFoundError:
+        raise ValueError("missing_delivery_entry") from None
     require(hashlib.sha256(raw).hexdigest() == manifest_sha256, "manifest_digest_mismatch")
     manifest = decode_manifest(raw, source_commit)
+    sources = source_contract(manifest["format"])
+    names_in(folder, sources)
     observed = {}
     for entry in manifest["files"]:
         data, observed[entry["name"]] = read_plain(folder / entry["name"], MAX_FILE)
@@ -167,7 +183,7 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str) -> dict:
                 and blob_id(data) == entry["git_blob"], "payload_identity_mismatch")
     # Detect ordinary concurrent changes after each file was read. This is not
     # an atomic snapshot or protection against a malicious host/filesystem.
-    names_in(folder)
+    names_in(folder, sources)
     for name, before in observed.items():
         require(stamp((folder / name).lstat()) == before, "payload_changed_after_read")
     again, after = read_plain(folder / MANIFEST, MAX_MANIFEST)
@@ -175,7 +191,7 @@ def verify(folder: Path, manifest_sha256: str, source_commit: str) -> dict:
             and directory_chain(folder) == chain, "delivery_changed_during_check")
     return {"integrity_verified": True, "manifest_sha256": manifest_sha256,
             "source_commit": source_commit, "source_tree": manifest["source_tree"],
-            "payload_files": len(SOURCES), "payload_executed": False,
+            "payload_files": len(sources), "payload_executed": False,
             "code_signature_verified": False, "accepted": False, "real_funds_allowed": False}
 
 
@@ -197,7 +213,7 @@ def git_bytes(root: Path, *args: str, maximum: int = MAX_FILE) -> bytes:
 
 def check_static_imports(payloads: dict[str, bytes]) -> None:
     """Catch missing ordinary imports, not dynamic execution or malicious code."""
-    modules = {name[:-3] for name in SOURCES if name.endswith(".py")}
+    modules = {name[:-3] for name in CURRENT_SOURCES if name.endswith(".py")}
     for name, data in payloads.items():
         if not name.endswith(".py"):
             continue
@@ -221,7 +237,7 @@ def capture(root: Path, source_commit: str) -> tuple[str, dict[str, bytes]]:
     tree = git_bytes(root, "rev-parse", "--verify", source_commit + "^{tree}", maximum=64).decode("ascii").strip()
     require(identity(tree, OID), "invalid_git_tree")
     payloads, total = {}, 0
-    for name, path in sorted(SOURCES.items()):
+    for name, path in sorted(CURRENT_SOURCES.items()):
         raw = git_bytes(root, "ls-tree", "-lz", "--full-tree", source_commit, "--", path, maximum=1024)
         parts = raw.split(b"\0")
         require(len(parts) == 2 and parts[1] == b"", "missing_or_multiple_source_entries")
@@ -267,7 +283,7 @@ def build(root: Path, source_commit: str, destination: Path) -> dict:
     manifest = {"format": FORMAT, "source_commit": source_commit, "source_tree": tree,
                 "source_kind": "fixed_exact_git_blobs", "entrypoint": "wallet_inspector_desktop.py",
                 "native_backend_included": False, "real_funds_allowed": False, "accepted": False,
-                "files": [{"name": name, "source_path": SOURCES[name], "size": len(data),
+                "files": [{"name": name, "source_path": CURRENT_SOURCES[name], "size": len(data),
                            "sha256": hashlib.sha256(data).hexdigest(), "git_blob": blob_id(data)}
                           for name, data in sorted(payloads.items())]}
     raw = (json.dumps(manifest, sort_keys=True, ensure_ascii=True, indent=2) + "\n").encode("utf-8")
