@@ -1,0 +1,806 @@
+--- a/consensus/reactor.go
++++ b/consensus/reactor.go
+@@ -1,3 +1,7 @@
++// Local Zevune modification of CometBFT v0.38.26: join admitted consensus
++// peer consumers before node storage closure. The sibling cometbft-origin folder
++// records the exact change and original source identities.
++
+ package consensus
+ 
+ import (
+@@ -47,6 +51,13 @@
+ 	rs       *cstypes.RoundState
+ 
+ 	Metrics *Metrics
++
++	// peerAdmission serializes worker registration with shutdown. peerDone is
++	// private: BaseService.Quit closes only after OnStop returns.
++	peerAdmission sync.Mutex
++	peerClosing   bool
++	peerDone      chan struct{}
++	peerWorkers   sync.WaitGroup
+ }
+ 
+ type ReactorOption func(*Reactor)
+@@ -59,6 +70,7 @@
+ 		waitSync: waitSync,
+ 		rs:       consensusState.GetRoundState(),
+ 		Metrics:  NopMetrics(),
++		peerDone: make(chan struct{}),
+ 	}
+ 	conR.BaseReactor = *p2p.NewBaseReactor("Consensus", conR)
+ 
+@@ -93,6 +105,10 @@
+ // OnStop implements BaseService by unsubscribing from events and stopping
+ // state.
+ func (conR *Reactor) OnStop() {
++	conR.peerAdmission.Lock()
++	conR.peerClosing = true
++	close(conR.peerDone)
++	conR.peerAdmission.Unlock()
+ 	conR.unsubscribeFromBroadcastEvents()
+ 	if err := conR.conS.Stop(); err != nil {
+ 		conR.Logger.Error("Error stopping consensus state", "err", err)
+@@ -100,6 +116,9 @@
+ 	if !conR.WaitSync() {
+ 		conR.conS.Wait()
+ 	}
++	// Node closes its stores after reactor.Stop returns. All admitted storage
++	// consumers and the initial AddPeer send must have finished before then.
++	conR.peerWorkers.Wait()
+ }
+ 
+ // SwitchToConsensus switches from block_sync mode to consensus mode.
+@@ -181,7 +200,7 @@
+ 
+ // InitPeer implements Reactor by creating a state for the peer.
+ func (conR *Reactor) InitPeer(peer p2p.Peer) p2p.Peer {
+-	peerState := NewPeerState(peer).SetLogger(conR.Logger)
++	peerState := NewPeerState(&stoppingPeer{Peer: peer, done: conR.peerDone}).SetLogger(conR.Logger)
+ 	peer.Set(types.PeerStateKey, peerState)
+ 	return peer
+ }
+@@ -197,15 +216,75 @@
+ 	if !ok {
+ 		panic(fmt.Sprintf("peer %v has no state", peer))
+ 	}
+-	// Begin routines for this peer.
+-	go conR.gossipDataRoutine(peer, peerState)
+-	go conR.gossipVotesRoutine(peer, peerState)
+-	go conR.queryMaj23Routine(peer, peerState)
++	conR.peerAdmission.Lock()
++	if conR.peerClosing || !conR.IsRunning() {
++		conR.peerAdmission.Unlock()
++		return
++	}
++	// Include this AddPeer call because its initial Send may already be in
++	// flight when shutdown begins. No positive Add can race the shutdown Wait.
++	conR.peerWorkers.Add(4)
++	conR.peerAdmission.Unlock()
++	defer conR.peerWorkers.Done()
++
++	peer = &stoppingPeer{Peer: peer, done: conR.peerDone}
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.gossipDataRoutine(peer, peerState)
++	}()
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.gossipVotesRoutine(peer, peerState)
++	}()
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.queryMaj23Routine(peer, peerState)
++	}()
+ 
+ 	// Send our state to peer.
+ 	// If we're block_syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
+ 	if !conR.WaitSync() {
+ 		conR.sendNewRoundStepMessage(peer)
++	}
++}
++
++// stoppingPeer preserves the real peer's bounded Send behavior while refusing
++// new sends after reactor shutdown, including indirect PeerState.PickSendVote
++// and AddPeer's initial send. An in-flight Send is joined, never abandoned.
++type stoppingPeer struct {
++	p2p.Peer
++	done <-chan struct{}
++}
++
++func (p *stoppingPeer) IsRunning() bool {
++	select {
++	case <-p.done:
++		return false
++	default:
++		return p.Peer.IsRunning()
++	}
++}
++
++func (p *stoppingPeer) Send(e p2p.Envelope) bool {
++	return p.IsRunning() && p.Peer.Send(e)
++}
++
++func (p *stoppingPeer) TrySend(e p2p.Envelope) bool {
++	return p.IsRunning() && p.Peer.TrySend(e)
++}
++
++// waitPeer preserves the configured running interval, but shutdown does not
++// depend on a timer or on BaseService.Quit being closed from inside OnStop.
++func (conR *Reactor) waitPeer(peer p2p.Peer, duration time.Duration) bool {
++	timer := time.NewTimer(duration)
++	defer timer.Stop()
++	select {
++	case <-conR.peerDone:
++		return false
++	case <-peer.Quit():
++		return false
++	case <-timer.C:
++		return true
+ 	}
+ }
+ 
+@@ -591,7 +670,9 @@
+ 				if blockMeta == nil {
+ 					heightLogger.Error("Failed to load block meta",
+ 						"blockstoreBase", blockStoreBase, "blockstoreHeight", conR.conS.blockStore.Height())
+-					time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++						return
++					}
+ 				} else {
+ 					ps.InitProposalBlockParts(blockMeta.BlockID.PartSetHeader)
+ 				}
+@@ -606,7 +687,9 @@
+ 		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
+ 			// logger.Info("Peer Height|Round mismatch, sleeping",
+ 			// "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			continue OUTER_LOOP
+ 		}
+ 
+@@ -647,7 +730,9 @@
+ 		}
+ 
+ 		// Nothing to do. Sleep.
+-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++			return
++		}
+ 		continue OUTER_LOOP
+ 	}
+ }
+@@ -661,12 +746,16 @@
+ 		if blockMeta == nil {
+ 			logger.Error("Failed to load block meta", "ourHeight", rs.Height,
+ 				"blockstoreBase", conR.conS.blockStore.Base(), "blockstoreHeight", conR.conS.blockStore.Height())
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		} else if !blockMeta.BlockID.PartSetHeader.Equals(prs.ProposalBlockPartSetHeader) {
+ 			logger.Info("Peer ProposalBlockPartSetHeader mismatch, sleeping",
+ 				"blockPartSetHeader", blockMeta.BlockID.PartSetHeader, "peerBlockPartSetHeader", prs.ProposalBlockPartSetHeader)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		}
+ 		// Load the part
+@@ -674,7 +763,9 @@
+ 		if part == nil {
+ 			logger.Error("Could not load part", "index", index,
+ 				"blockPartSetHeader", blockMeta.BlockID.PartSetHeader, "peerBlockPartSetHeader", prs.ProposalBlockPartSetHeader)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		}
+ 		// Send the part
+@@ -696,12 +787,16 @@
+ 		} else {
+ 			logger.Debug("Sending block part for catchup failed")
+ 			// sleep to avoid retrying too fast
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 		}
+ 		return
+ 	}
+ 	//  logger.Info("No parts to send in catch-up, sleeping")
+-	time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++	if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++		return
++	}
+ }
+ 
+ func (conR *Reactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
+@@ -789,7 +884,9 @@
+ 			sleeping = 1
+ 		}
+ 
+-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++			return
++		}
+ 		continue OUTER_LOOP
+ 	}
+ }
+@@ -878,7 +975,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -898,7 +997,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -919,7 +1020,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -942,12 +1045,16 @@
+ 							BlockID: commit.BlockID.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+ 
+-		time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++			return
++		}
+ 
+ 		continue OUTER_LOOP
+ 	}
+--- /dev/null
++++ b/consensus/reactor_shutdown_test.go
+@@ -0,0 +1,357 @@
++package consensus
++
++import (
++	"runtime"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/cometbft/cometbft/abci/example/kvstore"
++	cfg "github.com/cometbft/cometbft/config"
++	cstypes "github.com/cometbft/cometbft/consensus/types"
++	"github.com/cometbft/cometbft/libs/bits"
++	"github.com/cometbft/cometbft/libs/log"
++	"github.com/cometbft/cometbft/p2p"
++	p2pmock "github.com/cometbft/cometbft/p2p/mock"
++	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
++	sm "github.com/cometbft/cometbft/state"
++	"github.com/cometbft/cometbft/types"
++)
++
++// This test-only barrier advertises fixture heights solely to select the real
++// reactor consumer. It never accepts a block, signature or authorization.
++type shutdownReadBarrier struct {
++	sm.BlockStore
++	kind           string
++	entered        chan struct{}
++	release        chan struct{}
++	once           sync.Once
++	released       sync.Once
++	closed         atomic.Bool
++	readAfterClose atomic.Bool
++}
++
++func (b *shutdownReadBarrier) Base() int64   { return 1 }
++func (b *shutdownReadBarrier) Height() int64 { return 3 }
++func (b *shutdownReadBarrier) gate(kind string) {
++	if b.kind != kind {
++		return
++	}
++	b.once.Do(func() { close(b.entered) })
++	<-b.release
++	if b.closed.Load() {
++		b.readAfterClose.Store(true)
++	}
++}
++func (b *shutdownReadBarrier) LoadBlockMeta(h int64) *types.BlockMeta {
++	b.gate("data")
++	return b.BlockStore.LoadBlockMeta(h)
++}
++func (b *shutdownReadBarrier) LoadBlockCommit(h int64) *types.Commit {
++	b.gate("commit")
++	return b.BlockStore.LoadBlockCommit(h)
++}
++func (b *shutdownReadBarrier) Close() error { b.closed.Store(true); return b.BlockStore.Close() }
++func (b *shutdownReadBarrier) unblock()     { b.released.Do(func() { close(b.release) }) }
++
++func shutdownTestReactor(t *testing.T, height int64, waitSync bool) (*Reactor, *State) {
++	t.Helper()
++	c := cfg.TestConfig().SetRoot(t.TempDir())
++	cfg.EnsureRoot(c.RootDir)
++	// Deliberately long existing intervals prove cancellation, not grace sleeps.
++	c.Consensus.PeerGossipSleepDuration = time.Hour
++	c.Consensus.PeerQueryMaj23SleepDuration = time.Hour
++	state, pvs := randGenesisState(1, false, 10, types.DefaultConsensusParams())
++	cs := newStateWithConfig(c, state, pvs[0], kvstore.NewInMemoryApplication())
++	cs.Height = height
++	cs.Votes = cstypes.NewHeightVoteSet(state.ChainID, height, state.Validators)
++	r := NewReactor(cs, waitSync)
++	r.SetLogger(log.NewNopLogger())
++	r.SetEventBus(cs.eventBus)
++	t.Cleanup(func() {
++		if r.IsRunning() {
++			_ = r.Stop()
++		}
++		_ = cs.eventBus.Stop()
++	})
++	return r, cs
++}
++func shutdownAwait(t *testing.T, ch <-chan struct{}, label string) {
++	t.Helper()
++	select {
++	case <-ch:
++	case <-time.After(5 * time.Second):
++		t.Fatalf("timeout waiting for %s", label)
++	}
++}
++func shutdownWaitStoppedFlag(t *testing.T, r *Reactor) {
++	t.Helper()
++	deadline := time.After(5 * time.Second)
++	for r.IsRunning() {
++		select {
++		case <-deadline:
++			t.Fatal("Stop did not begin")
++		default:
++			runtime.Gosched()
++		}
++	}
++}
++
++func TestReactorShutdownJoinsEveryStorageConsumer(t *testing.T) {
++	for _, kind := range []string{"data", "votes", "query"} {
++		t.Run(kind, func(t *testing.T) {
++			height := int64(4)
++			if kind == "query" {
++				height = 1
++			}
++			r, cs := shutdownTestReactor(t, height, true)
++			barrierKind := "commit"
++			if kind == "data" {
++				barrierKind = "data"
++			}
++			b := &shutdownReadBarrier{BlockStore: cs.blockStore, kind: barrierKind, entered: make(chan struct{}), release: make(chan struct{})}
++			cs.blockStore = b
++			t.Cleanup(b.unblock)
++			if err := r.Start(); err != nil {
++				t.Fatal(err)
++			}
++			peer := p2pmock.NewPeer(nil)
++			t.Cleanup(func() { _ = peer.Stop() })
++			r.InitPeer(peer)
++			ps := peer.Get(types.PeerStateKey).(*PeerState)
++			ps.PRS.Height = 1
++			ps.PRS.Round = 0
++			ps.PRS.Step = cstypes.RoundStepCommit
++			ps.PRS.ProposalPOLRound = -1
++			ps.PRS.CatchupCommitRound = -1
++			if kind != "data" {
++				ps.PRS.ProposalBlockParts = bits.NewBitArray(1)
++				ps.PRS.ProposalBlockParts.SetIndex(0, true)
++			}
++			if kind == "query" {
++				ps.PRS.CatchupCommitRound = 0
++			}
++			r.AddPeer(peer)
++			shutdownAwait(t, b.entered, "real "+kind+" storage consumer")
++			stopped := make(chan struct{})
++			go func() { _ = r.Stop(); _ = b.Close(); close(stopped) }()
++			shutdownWaitStoppedFlag(t, r)
++			// The consumer is deterministically held, not sampled during a timing race.
++			// A bounded noncompletion assertion also catches accidental deadlocks safely.
++			select {
++			case <-stopped:
++				t.Error("Stop and store close overtook an admitted storage consumer")
++			case <-time.After(100 * time.Millisecond):
++			}
++			b.unblock()
++			shutdownAwait(t, stopped, "joined shutdown")
++			if b.readAfterClose.Load() {
++				t.Error("consumer accessed storage after close")
++			}
++		})
++	}
++}
++
++type shutdownSendPeer struct {
++	*p2pmock.Peer
++	entered  chan struct{}
++	release  chan struct{}
++	once     sync.Once
++	released sync.Once
++	sends    atomic.Int64
++}
++
++func (p *shutdownSendPeer) Send(_ p2p.Envelope) bool {
++	p.sends.Add(1)
++	p.once.Do(func() { close(p.entered) })
++	<-p.release
++	return true
++}
++func (p *shutdownSendPeer) unblock() { p.released.Do(func() { close(p.release) }) }
++func TestReactorShutdownJoinsInitialSend(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, false)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	r.InitPeer(p)
++	added := make(chan struct{})
++	go func() { r.AddPeer(p); close(added) }()
++	shutdownAwait(t, p.entered, "initial peer send")
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownWaitStoppedFlag(t, r)
++	select {
++	case <-stopped:
++		t.Error("Stop overtook initial AddPeer send")
++	case <-time.After(100 * time.Millisecond):
++	}
++	p.unblock()
++	shutdownAwait(t, added, "AddPeer return")
++	shutdownAwait(t, stopped, "Stop return")
++	if p.sends.Load() != 1 {
++		t.Fatalf("shutdown chained additional sends: %d", p.sends.Load())
++	}
++	if err := r.Stop(); err == nil {
++		t.Error("repeated Stop lost original service error")
++	}
++}
++
++func TestReactorShutdownAdmissionAndPrivateCancellation(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	peers := make([]*p2pmock.Peer, 24)
++	for i := range peers {
++		peers[i] = p2pmock.NewPeer(nil)
++		r.InitPeer(peers[i])
++		p := peers[i]
++		t.Cleanup(func() { _ = p.Stop() })
++	}
++	ready := make(chan struct{})
++	var calls sync.WaitGroup
++	for _, p := range peers {
++		calls.Add(1)
++		go func(p p2p.Peer) { defer calls.Done(); <-ready; r.AddPeer(p) }(p)
++	}
++	stopDone := make(chan struct{})
++	go func() { <-ready; _ = r.Stop(); close(stopDone) }()
++	close(ready)
++	calls.Wait()
++	shutdownAwait(t, stopDone, "concurrent admission shutdown")
++	// Original public APIs only: the test also compiles against the pinned origin.
++	for _, p := range peers {
++		r.AddPeer(p)
++	}
++	if r.IsRunning() {
++		t.Error("stopped reactor unexpectedly running")
++	}
++}
++
++func TestReactorShutdownPreservesIndirectVoteSendUntilStopping(t *testing.T) {
++	r, cs := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	p.unblock()
++	t.Cleanup(func() { _ = p.Stop() })
++	r.InitPeer(p)
++	ps := p.Get(types.PeerStateKey).(*PeerState)
++	ps.PRS.Height = 1
++	ps.PRS.Round = 0
++	vs := newValidatorStub(cs.privValidator, 0)
++	vs.Height = 1
++	vote, err := vs.signVote(cmtproto.PrevoteType, nil, types.PartSetHeader{}, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	votes := types.NewVoteSet(cs.state.ChainID, 1, 0, cmtproto.PrevoteType, cs.state.Validators)
++	added, err := votes.AddVote(vote)
++	if err != nil || !added {
++		t.Fatalf("genuine fixture vote: %v", err)
++	}
++	if !ps.PickSendVote(votes) || p.sends.Load() != 1 {
++		t.Fatal("running indirect send was not preserved")
++	}
++	// Clear only test peer knowledge; the same real signed vote remains available.
++	ps.mtx.Lock()
++	ps.PRS.Prevotes = bits.NewBitArray(1)
++	ps.mtx.Unlock()
++	if err = r.Stop(); err != nil {
++		t.Fatal(err)
++	}
++	if ps.PickSendVote(votes) || p.sends.Load() != 1 {
++		t.Fatal("stopped reactor forwarded an indirect vote")
++	}
++}
++
++// Hold AddPeer before its admission point so Stop deterministically wins. The
++// original one-time IsRunning check before Get is not enough for this ordering.
++type shutdownGetPeer struct {
++	*p2pmock.Peer
++	entered, release chan struct{}
++	once, released   sync.Once
++	sends            atomic.Int64
++}
++
++func (p *shutdownGetPeer) Get(key string) interface{} {
++	if key == types.PeerStateKey {
++		p.once.Do(func() { close(p.entered) })
++		<-p.release
++	}
++	return p.Peer.Get(key)
++}
++func (p *shutdownGetPeer) Send(p2p.Envelope) bool { p.sends.Add(1); return true }
++func (p *shutdownGetPeer) unblock()               { p.released.Do(func() { close(p.release) }) }
++func TestReactorShutdownClosesAdmissionBeforeWaiting(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, false)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownGetPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	r.InitPeer(p)
++	added := make(chan struct{})
++	go func() { r.AddPeer(p); close(added) }()
++	shutdownAwait(t, p.entered, "AddPeer before admission")
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownAwait(t, stopped, "Stop while admission callback is not registered")
++	p.unblock()
++	shutdownAwait(t, added, "late AddPeer rejection")
++	if p.sends.Load() != 0 {
++		t.Fatal("AddPeer sent after shutdown won admission")
++	}
++}
++
++type shutdownWaitPeer struct {
++	*p2pmock.Peer
++	waits      atomic.Int64
++	allWaiting chan struct{}
++	once       sync.Once
++}
++
++func (p *shutdownWaitPeer) Quit() <-chan struct{} {
++	if p.waits.Add(1) == 3 {
++		p.once.Do(func() { close(p.allWaiting) })
++	}
++	return p.Peer.Quit()
++}
++func TestReactorShutdownCancelsAllAdmittedWaitsWithoutPeerStop(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownWaitPeer{Peer: p2pmock.NewPeer(nil), allWaiting: make(chan struct{})}
++	t.Cleanup(func() { _ = p.Stop() })
++	r.InitPeer(p)
++	r.AddPeer(p)
++	// Every worker has reached its wait's channel acquisition. Each configured
++	// wait is one hour with an open peer Quit, so one worker cannot account for
++	// multiple observations during this bounded test. All three were admitted
++	// and started before Stop; this is not a scheduler-start lottery.
++	shutdownAwait(t, p.allWaiting, "all three admitted wait paths")
++	if p.waits.Load() != 3 {
++		t.Fatalf("unexpected pre-shutdown wait count: %d", p.waits.Load())
++	}
++	select {
++	case <-p.Peer.Quit():
++		t.Fatal("peer already stopped")
++	default:
++	}
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownAwait(t, stopped, "private cancellation and joined waits")
++	select {
++	case <-p.Peer.Quit():
++		t.Fatal("test unexpectedly stopped peer to cancel waits")
++	default:
++	}
++	if p.waits.Load() != 3 {
++		t.Fatal("shutdown began a new wait iteration")
++	}
++}
+--- /dev/null
++++ b/node/node_shutdown_order_test.go
+@@ -0,0 +1,124 @@
++package node
++
++import (
++	dbm "github.com/cometbft/cometbft-db"
++	cfg "github.com/cometbft/cometbft/config"
++	"github.com/cometbft/cometbft/internal/test"
++	"github.com/cometbft/cometbft/libs/log"
++	"github.com/cometbft/cometbft/p2p"
++	p2pmock "github.com/cometbft/cometbft/p2p/mock"
++	"github.com/cometbft/cometbft/privval"
++	"github.com/cometbft/cometbft/proxy"
++	"os"
++	"runtime"
++	"sync"
++	"testing"
++	"time"
++)
++
++type lifetimeCloseDB struct {
++	dbm.DB
++	closed chan struct{}
++	once   sync.Once
++}
++
++func (d *lifetimeCloseDB) Close() error { d.once.Do(func() { close(d.closed) }); return d.DB.Close() }
++
++type lifetimeSendPeer struct {
++	*p2pmock.Peer
++	entered, release chan struct{}
++	once, released   sync.Once
++}
++
++func (p *lifetimeSendPeer) Send(p2p.Envelope) bool {
++	p.once.Do(func() { close(p.entered) })
++	<-p.release
++	return true
++}
++func (p *lifetimeSendPeer) unblock() { p.released.Do(func() { close(p.release) }) }
++
++// This exercises real Node.OnStop ordering, not a surrogate call sequence. The
++// controlled in-flight send belongs to the real consensus Reactor.AddPeer.
++func TestNodeShutdownStoresAfterReactorConsumers(t *testing.T) {
++	c := test.ResetTestRoot("node_shutdown_store_order")
++	t.Cleanup(func() { _ = os.RemoveAll(c.RootDir) })
++	c.P2P.ListenAddress = "tcp://127.0.0.1:0"
++	c.RPC.ListenAddress = "tcp://127.0.0.1:0"
++	c.RPC.GRPCListenAddress = ""
++	closed := make(chan struct{})
++	provider := func(ctx *cfg.DBContext) (dbm.DB, error) {
++		d, e := cfg.DefaultDBProvider(ctx)
++		if e != nil {
++			return nil, e
++		}
++		if ctx.ID == "blockstore" {
++			return &lifetimeCloseDB{DB: d, closed: closed}, nil
++		}
++		return d, nil
++	}
++	key, e := p2p.LoadOrGenNodeKey(c.NodeKeyFile())
++	if e != nil {
++		t.Fatal(e)
++	}
++	n, e := NewNode(c, privval.LoadOrGenFilePV(c.PrivValidatorKeyFile(), c.PrivValidatorStateFile()), key,
++		proxy.DefaultClientCreator(c.ProxyApp, c.ABCI, c.DBDir()), DefaultGenesisDocProviderFunc(c), provider, DefaultMetricsProvider(c.Instrumentation), log.NewNopLogger())
++	if e != nil {
++		t.Fatal(e)
++	}
++	if e = n.Start(); e != nil {
++		t.Fatal(e)
++	}
++	t.Cleanup(func() {
++		if n.IsRunning() {
++			_ = n.Stop()
++		}
++	})
++	if n.consensusReactor.WaitSync() {
++		t.Fatal("single-validator test node unexpectedly waiting for block sync")
++	}
++	p := &lifetimeSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	n.consensusReactor.InitPeer(p)
++	added := make(chan struct{})
++	go func() { n.consensusReactor.AddPeer(p); close(added) }()
++	select {
++	case <-p.entered:
++	case <-time.After(5 * time.Second):
++		t.Fatal("initial real-reactor send did not start")
++	}
++	stopped := make(chan error, 1)
++	go func() { stopped <- n.Stop() }()
++	deadline := time.After(5 * time.Second)
++	for n.IsRunning() {
++		select {
++		case <-deadline:
++			t.Fatal("Node Stop did not begin")
++		default:
++			runtime.Gosched()
++		}
++	}
++	select {
++	case <-closed:
++		t.Error("Node closed blockstore before admitted reactor callback completed")
++	case <-time.After(100 * time.Millisecond):
++	}
++	p.unblock()
++	select {
++	case <-added:
++	case <-time.After(5 * time.Second):
++		t.Fatal("AddPeer did not finish after release")
++	}
++	select {
++	case e = <-stopped:
++		if e != nil {
++			t.Fatal(e)
++		}
++	case <-time.After(5 * time.Second):
++		t.Fatal("Node did not finish shutdown")
++	}
++	select {
++	case <-closed:
++	default:
++		t.Error("Node failed to close real blockstore after joining consumers")
++	}
++}
+--- /dev/null
++++ b/p2p/conn/send_shutdown_bound_test.go
+@@ -0,0 +1,29 @@
++package conn
++
++import (
++	"testing"
++	"time"
++)
++
++// Verify the original real queue operation's bound without lowering its timeout
++// or replacing it with a fake send. The lifecycle patch relies on joining it.
++func TestShutdownInFlightQueueSendKeepsOriginalBound(t *testing.T) {
++	ch := &Channel{sendQueue: make(chan []byte, 1)}
++	if !ch.sendBytes([]byte{1}) {
++		t.Fatal("initial queue admission failed")
++	}
++	start := time.Now()
++	if ch.sendBytes([]byte{2}) {
++		t.Fatal("full unconsumed queue accepted another send")
++	}
++	elapsed := time.Since(start)
++	if elapsed < defaultSendTimeout {
++		t.Fatalf("original timeout shortened: %v", elapsed)
++	}
++	if elapsed > defaultSendTimeout+5*time.Second {
++		t.Fatalf("send failed to respect its bounded operation: %v", elapsed)
++	}
++	if len(ch.sendQueue) != 1 {
++		t.Fatal("timeout changed queued message")
++	}
++}

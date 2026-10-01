@@ -5,6 +5,9 @@ on:
   pull_request:
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   boundary:
     strategy:
@@ -27,6 +30,9 @@ jobs:
         with:
           go-version: '1.27.1'
           cache: false
+      - name: Verify pinned CometBFT lifetime patch and source selection
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_cometbft_origin.py
       - name: Install pinned Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
       - name: Check committed Rust source and locked dependencies
