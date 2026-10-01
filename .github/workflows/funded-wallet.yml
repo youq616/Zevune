@@ -103,7 +103,7 @@ jobs:
       - name: Actual funded four-node payments and encrypted wallet recovery
         working-directory: integration/cometbft
         run: |
-          go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch)$' -count=1 -timeout=15m -v
+          go test -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp -run '^(TestFundedWalletFourNodesAndRecovery|TestPoolNodeHelper|TestGenesisBindingRejectsAmbiguityAndMismatch|TestPoolFixturePorts)$' -count=1 -timeout=15m -v
           go vet -mod=readonly -tags=pool_e2e,funded_e2e ./poolapp
       - name: Assert unchanged tracked source and dependency locks
         run: git diff --exit-code
