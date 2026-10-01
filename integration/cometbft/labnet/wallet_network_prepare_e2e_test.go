@@ -163,9 +163,13 @@ func TestRealWalletNetworkPreparation(t *testing.T) {
 			last := walletNetworkFrame(t, driver)
 			if last["stage"] != "done" || last["real_funds_allowed"] != false || last["partial_refused"] != true ||
 				last["stale_handoff_rejected"] != true || last["false_peer_rejected"] != true ||
-				last["pending_preserved"] != true || broadcasts.Load() != 0 || falseRequests.Load() < 2 || connections.Load() < 5 {
+				last["pending_preserved"] != true || last["verified_partial"] != true || last["config_canonical"] != true || broadcasts.Load() != 0 || falseRequests.Load() < 2 || connections.Load() < 5 {
 				t.Fatal("native preparation assertions incomplete")
 			}
+			if _, ok := last["config_was_canonical"].(bool); !ok {
+				t.Fatal("canonical fixture observation missing")
+			}
+			t.Logf("native fixture config_was_canonical=%t; authenticated one-block partial catchup verified before copying reference", last["config_was_canonical"])
 			driver.stop(t)
 			for i, node := range nodes {
 				if running[i] {
