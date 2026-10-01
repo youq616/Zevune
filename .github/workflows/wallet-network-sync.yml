@@ -1,0 +1,90 @@
+name: wallet-network-sync
+on:
+  push:
+    paths:
+      - '.github/workflows/wallet-network-sync.yml'
+      - 'go.mod'
+      - 'go.sum'
+      - 'internal/**'
+      - 'integration/cometbft/**'
+      - 'integration/orchard/**'
+      - 'scripts/zevune_wallet.py'
+      - 'scripts/tests/**'
+      - 'docs/WALLET_NETWORK_SYNC_V1.zh-CN.md'
+  pull_request:
+    paths:
+      - '.github/workflows/wallet-network-sync.yml'
+      - 'go.mod'
+      - 'go.sum'
+      - 'internal/**'
+      - 'integration/cometbft/**'
+      - 'integration/orchard/**'
+      - 'scripts/zevune_wallet.py'
+      - 'scripts/tests/**'
+      - 'docs/WALLET_NETWORK_SYNC_V1.zh-CN.md'
+permissions:
+  contents: read
+jobs:
+  wallet-network:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      RAYON_NUM_THREADS: '2'
+      CARGO_BUILD_JOBS: '2'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: integration/cometbft/go.sum
+      - name: Install fixed Rust
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Check exact source and Python regression
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(gofmt -l integration/cometbft/labnet/wallet_network_sync_e2e_test.go)"
+          python -m unittest discover -s scripts/tests -v
+          git diff --exit-code
+      - name: Build real wallet and worker from locked dependencies
+        working-directory: integration/orchard
+        run: |
+          cargo fmt --all -- --check
+          cargo build --locked --release --features local-funding-lab --bins
+      - name: Build original network command and register executable paths only
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          root = Path.cwd()
+          suffix = '.exe' if os.name == 'nt' else ''
+          network = Path(os.environ['RUNNER_TEMP']) / ('zevune-network' + suffix)
+          subprocess.run(['go', 'build', '-mod=readonly', '-buildvcs=false', '-trimpath', '-o', str(network), './cmd/zevune-network'], cwd=root / 'integration/cometbft', check=True)
+          rust = root / 'integration/orchard/target/release'
+          paths = {'ZEVUNE_NETWORK_OPERATOR': network, 'ZEVUNE_POOL_WORKER': rust / ('zevune-pool-worker' + suffix),
+                   'ZEVUNE_WALLET_LOCAL': rust / ('zevune-wallet-local' + suffix),
+                   'ZEVUNE_FUNDED_SCENARIO': rust / ('zevune-funded-scenario' + suffix),
+                   'ZEVUNE_PYTHON': Path(sys.executable).resolve(strict=True),
+                   'ZEVUNE_WALLET_NETWORK_SCENARIO': root / 'scripts/tests/native_wallet_network_sync.py'}
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+              for name, path in paths.items():
+                  stream.write(name + '=' + str(path) + '\n')
+          PY
+          git diff --exit-code
+      - name: Real network to wallet closed loop and false post-state refusal
+        working-directory: integration/cometbft
+        run: |
+          go test -mod=readonly -tags=operator_e2e,wallet_network_e2e ./labnet -run '^(TestRealWalletNetworkSynchronization|TestQuorumSignedWrongPostStateNeverPersists)$' -count=1 -timeout=15m -v
+          go vet -mod=readonly -tags=operator_e2e,wallet_network_e2e ./labnet ./cmd/zevune-network
+      - name: Check source and dependency locks unchanged
+        run: git diff --exit-code
