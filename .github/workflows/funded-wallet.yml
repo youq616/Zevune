@@ -7,6 +7,9 @@ on:
     paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'integration/cometbft/**', 'scripts/run_funded_rust.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   # The library and interface cohorts together replace the former single full
   # cargo-test invocation. Keep both platforms and the original 30-minute bound.

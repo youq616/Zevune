@@ -7,6 +7,9 @@ on:
     paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'scripts/check_payment_resources.py', 'scripts/tests/test_payment_resources*.py', 'go.mod', 'go.sum', 'docs/PAYMENT_RESOURCE_BASELINE.zh-CN.md', '.github/workflows/payment-resources.yml', '.gitattributes']
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   resources:
     strategy:

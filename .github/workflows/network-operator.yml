@@ -7,6 +7,9 @@ on:
     paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   operator:
     strategy:
