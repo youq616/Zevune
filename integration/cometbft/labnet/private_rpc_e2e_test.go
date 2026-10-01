@@ -177,17 +177,27 @@ func TestRealOperatorPrivateRPCPaymentAndAuthenticatedReplay(t *testing.T) {
 		t.Fatal("private payment not submitted")
 	}
 	height := findInclusion(t, peers[0], raw, 1)
-	awaitNetworkHeight(t, nodes, peers, height+1)
+	// Preserve the original post-inclusion 90-second budget, shared by both
+	// height waits and the final signed-header reads. Final sync may advance
+	// beyond the payment's inclusion height; it does not synchronize all peers.
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	sources := make([]rpcSource, len(peers))
+	statuses := make([]nodeStatusSource, len(peers))
+	for i, p := range peers {
+		sources[i], statuses[i] = p, p
+	}
+	if observed, err := waitNodeHeights(ctx, nodes, statuses, height+1); err != nil {
+		t.Fatalf("private inclusion height wait: target=%d class=%s nodes=%+v", height+1, privateRPCCheckClass(err), observed)
+	}
 	final := synchronize(false)
 	state = replayScenario(t, peers[0], driver, state, final.Height)
 	if HashText(state.AppHash) != final.AppHash || state.Nullifiers == 0 {
 		t.Fatal("private path did not retain genuine payment reexecution")
 	}
-	for _, p := range peers {
-		header, err := network.header(context.Background(), p, int64(state.Height)+1)
-		if err != nil || !bytes.Equal(header.Header.AppHash, state.AppHash[:]) {
-			t.Fatal("private reference differs from signed validator state", err)
-		}
+	needed := int64(state.Height) + 1
+	if observed, failure := checkPrivateRPCHeaders(ctx, network, nodes, sources, needed, state.AppHash); failure.Class != "ok" {
+		t.Fatalf("private reference differs from signed validator state: %+v nodes=%+v", failure, observed)
 	}
 	if connections.Load() < 4 {
 		t.Fatal("CLI operations bypassed the explicit SOCKS route")
