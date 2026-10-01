@@ -128,7 +128,11 @@ class BundleManifestTests(unittest.TestCase):
             self.assertEqual(compiler_inputs, ["go", "cargo"])
             # This inert compiler test checks both qualification boundaries;
             # real origin/negative probes have their own dedicated suite.
-            self.assertEqual(qualified_sources, [root, compiler_sources[0]])
+            # build() resolves its checkout root. Windows temporary paths can
+            # use an 8.3 alias; require real filesystem identity, not spelling.
+            self.assertTrue(qualified_sources[0].samefile(root))
+            self.assertFalse(qualified_sources[0].samefile(bundle))
+            self.assertEqual(qualified_sources, [root.resolve(strict=True), compiler_sources[0]])
             self.assertEqual(compiler_sources[0], compiler_sources[1])
             self.assertEqual(len(output["files"]), 22)
             for name in ("zevune_wallet.py", "wallet_backup.py", "wallet_backup_backend.py", "wallet_archive.py", "payment_request.py", "wallet_health.py", "wallet_maintenance.py", "ledger_restore.py", "ledger_recovery_backend.py", "ledger_backup.py"):

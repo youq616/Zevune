@@ -121,9 +121,12 @@ def verify_files(root: Path) -> dict:
             p = staged / rel
             p.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(vendor / rel, p)
-        result = subprocess.run(["git", "apply", "--reverse", "--check", "--whitespace=error", "-"], input=raw_patch, cwd=staged, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        # This disposable directory has no repository attributes. Keep reverse
+        # application byte-exact even when the host enables Windows CRLF output.
+        git_apply = ["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "apply"]
+        result = subprocess.run([*git_apply, "--reverse", "--check", "--whitespace=error", "-"], input=raw_patch, cwd=staged, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         require(result.returncode == 0, "patch_reverse_check_failed")
-        result = subprocess.run(["git", "apply", "--reverse", "--whitespace=error", "-"], input=raw_patch, cwd=staged, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        result = subprocess.run([*git_apply, "--reverse", "--whitespace=error", "-"], input=raw_patch, cwd=staged, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         require(result.returncode == 0, "patch_reverse_failed")
         require(digest((staged / RUNTIME_PATCH).read_bytes()) == baseline[RUNTIME_PATCH]["sha256"], "patched_origin_mismatch")
         require(all(not (staged / rel).exists() for rel in NEW_TESTS), "added_test_reverse_mismatch")

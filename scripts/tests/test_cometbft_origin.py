@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import check_cometbft_origin as origin
@@ -33,6 +34,20 @@ class CometBFTOwnerOriginTests(unittest.TestCase):
         p.write_bytes(p.read_bytes() + b"\n")
         with self.assertRaisesRegex(origin.OriginError, "digest_mismatch"):
             origin.verify_files(self.root)
+
+    def test_host_crlf_settings_preserve_exact_origin_and_reject_mutation(self):
+        # Command-scoped settings simulate a Windows host without modifying
+        # shared Git configuration. Verification still compares original bytes.
+        with patch.dict(os.environ, {
+                "GIT_CONFIG_COUNT": "2", "GIT_CONFIG_KEY_0": "core.autocrlf",
+                "GIT_CONFIG_VALUE_0": "true", "GIT_CONFIG_KEY_1": "core.eol",
+                "GIT_CONFIG_VALUE_1": "crlf"}):
+            got = origin.verify_files(self.root)
+            self.assertEqual(got["retained_origin_files"], 1019)
+            runtime = self.vendor / origin.RUNTIME_PATCH
+            runtime.write_bytes(runtime.read_bytes().replace(b"\n", b"\r\n"))
+            with self.assertRaisesRegex(origin.OriginError, "digest_mismatch"):
+                origin.verify_files(self.root)
 
     def test_license_and_module_metadata_are_immutable(self):
         for name in ("LICENSE", "NOTICE", "go.mod", "go.sum"):
