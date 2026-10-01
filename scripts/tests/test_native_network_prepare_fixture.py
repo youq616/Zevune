@@ -177,6 +177,8 @@ class NativePreparationFixtureTests(unittest.TestCase):
         self.assertIsNone(value['network_calls'])
         good=native.failure_frame(native.FixtureFailure('missing_reference'),'initial-reference-copy',{})
         self.assertEqual(good['code'],'missing_reference')
+        recovery=native.failure_frame(RuntimeError('private'),'readonly-pending-recovery',{})
+        self.assertEqual(recovery['step'],'readonly-pending-recovery')
 
     @unittest.skipUnless(os.name == 'nt', 'requires actual native Windows short-name API')
     def test_native_windows_short_config_normalizes_without_weakening_pin(self):
