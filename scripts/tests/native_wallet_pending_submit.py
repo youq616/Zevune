@@ -19,13 +19,49 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import zevune_wallet as wallet
+import native_wallet_network_prepare as preparation
 from native_wallet_network_sync import digest, read_frame, require, write_frame
 
 STAGE = 'setup'
+DETAIL = {}
+PENDING_FAILURE_STEPS = frozenset(('setup', 'submission-config', 'partial-submission-refusal',
+    'prepare-0', 'prepare-1', 'submit-0', 'submit-1', 'reconcile-0', 'reconcile-1'))
+
+
+def pending_failure_frame(error, step, detail):
+    # Reuse the already reviewed fixed-code/boolean/counter encoder; only the
+    # bounded stage vocabulary differs for this two-payment native scenario.
+    report = preparation.failure_frame(error, 'unknown', detail)
+    report['step'] = step if type(step) is str and step in PENDING_FAILURE_STEPS else 'unknown'
+    return report
+
+
+def run_pending_command(argv, answers, password, *, success=True, before_secret=False,
+                        partial_reference=None, detail=None):
+    out, err = io.StringIO(), io.StringIO()
+    observer = (preparation.observe_original_reference(detail) if partial_reference is not None
+                else contextlib.nullcontext(None))
+    with observer as observed, patch('builtins.input', side_effect=answers) as prompt, \
+         patch.object(wallet, 'hidden_password', return_value=password) as secret, \
+         contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = wallet.main(argv)
+    if partial_reference is not None:
+        preparation.checked_initial_partial(observed, detail, code, out.getvalue(),
+            prompt.call_count, secret.call_count, partial_reference)
+    require(code == (0 if success else 1), 'actual_command_exit')
+    if before_secret:
+        require(prompt.call_count == 0 and secret.call_count == 0, 'pre_secret_refusal')
+    elif answers:
+        require(prompt.call_count == len(answers) and secret.call_count == 1, 'actual_ui_boundary')
+    if not success:
+        require(not out.getvalue(), 'failure_has_no_success')
+        return None
+    return json.loads(out.getvalue())
 
 
 def main():
-    global STAGE
+    global STAGE, DETAIL
+    DETAIL = {}
     require(len(sys.argv) == 6, 'arguments')
     root, network, worker, backend = (Path(p).resolve(strict=True) for p in sys.argv[1:5])
     mode = sys.argv[5]
@@ -53,6 +89,8 @@ def main():
     write_frame(dict(stage='genesis', genesis_sha256=genesis_pin))
     route = read_frame()
     require(set(route) == {'config','config_sha256','endpoint','socks_proxy'}, 'route')
+    STAGE = 'submission-config'
+    route = preparation.canonical_config(route, DETAIL)
 
     def args(kind, *, output=None, create=False, limit='128'):
         a = ['--no-real-funds','--backend',str(backend),'--backend-sha256',pins['backend'],
@@ -69,20 +107,8 @@ def main():
         return a
 
     def run(a, answers, *, success=True, before_secret=False):
-        out, err = io.StringIO(), io.StringIO()
-        with patch('builtins.input', side_effect=answers) as prompt, \
-             patch.object(wallet, 'hidden_password', return_value=password) as secret, \
-             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = wallet.main(a)
-        require(code == (0 if success else 1), 'actual_command_exit')
-        if before_secret:
-            require(prompt.call_count == 0 and secret.call_count == 0, 'pre_secret_refusal')
-        elif answers:
-            require(prompt.call_count == len(answers) and secret.call_count == 1, 'actual_ui_boundary')
-        if not success:
-            require(not out.getvalue(), 'failure_has_no_success')
-            return None
-        return json.loads(out.getvalue())
+        return run_pending_command(a, answers, password, success=success, before_secret=before_secret,
+            partial_reference=reference if before_secret else None, detail=DETAIL)
 
     STAGE = 'partial-submission-refusal'
     initial_wallet = sender.read_bytes()
@@ -132,12 +158,18 @@ def main():
         pin = scanned['receipt']
     require(ids[0] != ids[1], 'distinct_fixture_payments')
     write_frame(dict(stage='done',real_funds_allowed=False,accepted_not_confirmed=True,
-                     lost_response_unknown=True,pending_preserved=True,restarted=True))
+                     lost_response_unknown=True,pending_preserved=True,restarted=True,
+                     verified_partial=DETAIL['verified_partial'],config_canonical=DETAIL['config_canonical'],
+                     config_was_canonical=DETAIL['config_was_canonical']))
 
 
 if __name__ == '__main__':
     try:
         main()
-    except Exception:
-        print('Native saved-pending submission failed at '+STAGE+'; private data suppressed.', file=sys.stderr)
+    except BaseException as error:
+        try:
+            write_frame(pending_failure_frame(error, STAGE, DETAIL))
+        except BaseException:
+            pass
+        print('Native saved-pending submission failed; private data suppressed.', file=sys.stderr)
         raise SystemExit(1) from None

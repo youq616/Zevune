@@ -225,9 +225,13 @@ func TestRealWalletPendingSubmission(t *testing.T) {
 				walletNetworkSend(t, driver, map[string]string{"stage": "included-and-restarted"})
 			}
 			last := walletNetworkFrame(t, driver)
-			if last["stage"] != "done" || last["real_funds_allowed"] != false || last["accepted_not_confirmed"] != true || last["lost_response_unknown"] != true || last["pending_preserved"] != true || last["restarted"] != true || broadcasts.Load() != 2 || connections.Load() < 4 {
+			if last["stage"] != "done" || last["real_funds_allowed"] != false || last["accepted_not_confirmed"] != true || last["lost_response_unknown"] != true || last["pending_preserved"] != true || last["restarted"] != true || last["verified_partial"] != true || last["config_canonical"] != true || broadcasts.Load() != 2 || connections.Load() < 4 {
 				t.Fatal("native submission incomplete")
 			}
+			if _, ok := last["config_was_canonical"].(bool); !ok {
+				t.Fatal("pending fixture canonical observation missing")
+			}
+			t.Logf("pending fixture config_was_canonical=%t; original verifier partial catchup confirmed before any submission", last["config_was_canonical"])
 			driver.stop(t)
 			stop(0)
 			t.Log("two distinct valueless pending payments; each submitted once; real accepted then lost-response unknown; exact bytes, unchanged wallet and authenticated reconciliation after full restart")
