@@ -23,7 +23,7 @@ MOD_H1 = "h1:mDrAs+NMp7gc2ExoTE2/S6lDMespxaEc2Nd2BvDbbmM="
 VENDOR = Path("integration/cometbft/third_party/cometbft-v0.38.26")
 PROVENANCE = Path("integration/cometbft/third_party/cometbft-origin")
 RUNTIME_PATCH = "consensus/reactor.go"
-NEW_TESTS = frozenset(("consensus/reactor_shutdown_test.go", "node/node_shutdown_order_test.go", "p2p/conn/send_shutdown_bound_test.go"))
+NEW_TESTS = frozenset(("consensus/byzantine_test.go", "consensus/reactor_shutdown_test.go", "node/node_shutdown_order_test.go", "p2p/conn/send_shutdown_bound_test.go"))
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 
 class OriginError(ValueError):
@@ -132,7 +132,7 @@ def verify_files(root: Path) -> dict:
         require(all(not (staged / rel).exists() for rel in NEW_TESTS), "added_test_reverse_mismatch")
         require({p.relative_to(staged).as_posix() for p in staged.rglob("*") if p.is_file() or p.is_symlink()} == {RUNTIME_PATCH}, "unlisted_reverse_patch_file")
         regular(staged / RUNTIME_PATCH)
-    return {"module": MODULE, "version": VERSION, "origin": ORIGIN_COMMIT, "retained_origin_files": 1019, "added_test_files": 3, "runtime_patch_files": 1}
+    return {"module": MODULE, "version": VERSION, "origin": ORIGIN_COMMIT, "retained_origin_files": 1019, "added_test_files": len(NEW_TESTS), "runtime_patch_files": 1}
 
 def verify_build_selection(root: Path) -> dict:
     root = root.resolve(strict=True)
