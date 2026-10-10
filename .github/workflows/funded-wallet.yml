@@ -7,6 +7,9 @@ on:
     paths: ['integration/orchard/**', 'internal/poolbridge/**', 'internal/protocol/**', 'integration/cometbft/**', 'scripts/run_funded_rust.py', 'scripts/zevune_wallet.py', 'scripts/check_wallet_backend.py', 'scripts/tests/**', '.github/workflows/funded-wallet.yml', '.gitattributes']
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   # The library and interface cohorts together replace the former single full
   # cargo-test invocation. Keep both platforms and the original 30-minute bound.
@@ -63,6 +66,9 @@ jobs:
         with:
           go-version: '1.27.1'
           cache-dependency-path: integration/cometbft/go.sum
+      - name: Verify pinned CometBFT lifetime patch and source selection
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_cometbft_origin.py
       - name: Compile Go modules before expensive cryptography checks
         run: |
           go test -mod=readonly ./... -run '^$'

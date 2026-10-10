@@ -77,3 +77,6 @@ require (
 )
 
 replace github.com/youq616/Zevune => ../..
+
+// Reviewed local lifetime patch; immutable v0.38.26 origin is recorded under third_party/cometbft-origin.
+replace github.com/cometbft/cometbft => ./third_party/cometbft-v0.38.26

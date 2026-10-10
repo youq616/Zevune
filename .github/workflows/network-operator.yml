@@ -7,6 +7,9 @@ on:
     paths: ['integration/cometbft/**', 'integration/orchard/**', 'internal/poolbridge/**', 'scripts/**', 'docs/LOCAL_NETWORK_OPERATOR.zh-CN.md', '.github/workflows/network-operator.yml']
 permissions:
   contents: read
+env:
+  GOWORK: 'off'
+  GOFLAGS: ''
 jobs:
   operator:
     strategy:
@@ -29,6 +32,9 @@ jobs:
         with:
           go-version: '1.27.1'
           cache-dependency-path: integration/cometbft/go.sum
+      - name: Verify pinned CometBFT lifetime patch and source selection
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_cometbft_origin.py
       - name: Install fixed Rust
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
       - name: Check exact source and build real workers

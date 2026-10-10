@@ -1,0 +1,1502 @@
+--- a/consensus/reactor.go
++++ b/consensus/reactor.go
+@@ -1,3 +1,7 @@
++// Local Zevune modification of CometBFT v0.38.26: join admitted consensus
++// peer consumers before node storage closure. The sibling cometbft-origin folder
++// records the exact change and original source identities.
++
+ package consensus
+ 
+ import (
+@@ -47,6 +51,13 @@
+ 	rs       *cstypes.RoundState
+ 
+ 	Metrics *Metrics
++
++	// peerAdmission serializes worker registration with shutdown. peerDone is
++	// private: BaseService.Quit closes only after OnStop returns.
++	peerAdmission sync.Mutex
++	peerClosing   bool
++	peerDone      chan struct{}
++	peerWorkers   sync.WaitGroup
+ }
+ 
+ type ReactorOption func(*Reactor)
+@@ -59,6 +70,7 @@
+ 		waitSync: waitSync,
+ 		rs:       consensusState.GetRoundState(),
+ 		Metrics:  NopMetrics(),
++		peerDone: make(chan struct{}),
+ 	}
+ 	conR.BaseReactor = *p2p.NewBaseReactor("Consensus", conR)
+ 
+@@ -93,6 +105,10 @@
+ // OnStop implements BaseService by unsubscribing from events and stopping
+ // state.
+ func (conR *Reactor) OnStop() {
++	conR.peerAdmission.Lock()
++	conR.peerClosing = true
++	close(conR.peerDone)
++	conR.peerAdmission.Unlock()
+ 	conR.unsubscribeFromBroadcastEvents()
+ 	if err := conR.conS.Stop(); err != nil {
+ 		conR.Logger.Error("Error stopping consensus state", "err", err)
+@@ -100,6 +116,9 @@
+ 	if !conR.WaitSync() {
+ 		conR.conS.Wait()
+ 	}
++	// Node closes its stores after reactor.Stop returns. All admitted storage
++	// consumers and the initial AddPeer send must have finished before then.
++	conR.peerWorkers.Wait()
+ }
+ 
+ // SwitchToConsensus switches from block_sync mode to consensus mode.
+@@ -181,7 +200,7 @@
+ 
+ // InitPeer implements Reactor by creating a state for the peer.
+ func (conR *Reactor) InitPeer(peer p2p.Peer) p2p.Peer {
+-	peerState := NewPeerState(peer).SetLogger(conR.Logger)
++	peerState := NewPeerState(&stoppingPeer{Peer: peer, done: conR.peerDone}).SetLogger(conR.Logger)
+ 	peer.Set(types.PeerStateKey, peerState)
+ 	return peer
+ }
+@@ -197,15 +216,75 @@
+ 	if !ok {
+ 		panic(fmt.Sprintf("peer %v has no state", peer))
+ 	}
+-	// Begin routines for this peer.
+-	go conR.gossipDataRoutine(peer, peerState)
+-	go conR.gossipVotesRoutine(peer, peerState)
+-	go conR.queryMaj23Routine(peer, peerState)
++	conR.peerAdmission.Lock()
++	if conR.peerClosing || !conR.IsRunning() {
++		conR.peerAdmission.Unlock()
++		return
++	}
++	// Include this AddPeer call because its initial Send may already be in
++	// flight when shutdown begins. No positive Add can race the shutdown Wait.
++	conR.peerWorkers.Add(4)
++	conR.peerAdmission.Unlock()
++	defer conR.peerWorkers.Done()
++
++	peer = &stoppingPeer{Peer: peer, done: conR.peerDone}
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.gossipDataRoutine(peer, peerState)
++	}()
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.gossipVotesRoutine(peer, peerState)
++	}()
++	go func() {
++		defer conR.peerWorkers.Done()
++		conR.queryMaj23Routine(peer, peerState)
++	}()
+ 
+ 	// Send our state to peer.
+ 	// If we're block_syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
+ 	if !conR.WaitSync() {
+ 		conR.sendNewRoundStepMessage(peer)
++	}
++}
++
++// stoppingPeer preserves the real peer's bounded Send behavior while refusing
++// new sends after reactor shutdown, including indirect PeerState.PickSendVote
++// and AddPeer's initial send. An in-flight Send is joined, never abandoned.
++type stoppingPeer struct {
++	p2p.Peer
++	done <-chan struct{}
++}
++
++func (p *stoppingPeer) IsRunning() bool {
++	select {
++	case <-p.done:
++		return false
++	default:
++		return p.Peer.IsRunning()
++	}
++}
++
++func (p *stoppingPeer) Send(e p2p.Envelope) bool {
++	return p.IsRunning() && p.Peer.Send(e)
++}
++
++func (p *stoppingPeer) TrySend(e p2p.Envelope) bool {
++	return p.IsRunning() && p.Peer.TrySend(e)
++}
++
++// waitPeer preserves the configured running interval, but shutdown does not
++// depend on a timer or on BaseService.Quit being closed from inside OnStop.
++func (conR *Reactor) waitPeer(peer p2p.Peer, duration time.Duration) bool {
++	timer := time.NewTimer(duration)
++	defer timer.Stop()
++	select {
++	case <-conR.peerDone:
++		return false
++	case <-peer.Quit():
++		return false
++	case <-timer.C:
++		return true
+ 	}
+ }
+ 
+@@ -591,7 +670,9 @@
+ 				if blockMeta == nil {
+ 					heightLogger.Error("Failed to load block meta",
+ 						"blockstoreBase", blockStoreBase, "blockstoreHeight", conR.conS.blockStore.Height())
+-					time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++						return
++					}
+ 				} else {
+ 					ps.InitProposalBlockParts(blockMeta.BlockID.PartSetHeader)
+ 				}
+@@ -606,7 +687,9 @@
+ 		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
+ 			// logger.Info("Peer Height|Round mismatch, sleeping",
+ 			// "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			continue OUTER_LOOP
+ 		}
+ 
+@@ -647,7 +730,9 @@
+ 		}
+ 
+ 		// Nothing to do. Sleep.
+-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++			return
++		}
+ 		continue OUTER_LOOP
+ 	}
+ }
+@@ -661,12 +746,16 @@
+ 		if blockMeta == nil {
+ 			logger.Error("Failed to load block meta", "ourHeight", rs.Height,
+ 				"blockstoreBase", conR.conS.blockStore.Base(), "blockstoreHeight", conR.conS.blockStore.Height())
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		} else if !blockMeta.BlockID.PartSetHeader.Equals(prs.ProposalBlockPartSetHeader) {
+ 			logger.Info("Peer ProposalBlockPartSetHeader mismatch, sleeping",
+ 				"blockPartSetHeader", blockMeta.BlockID.PartSetHeader, "peerBlockPartSetHeader", prs.ProposalBlockPartSetHeader)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		}
+ 		// Load the part
+@@ -674,7 +763,9 @@
+ 		if part == nil {
+ 			logger.Error("Could not load part", "index", index,
+ 				"blockPartSetHeader", blockMeta.BlockID.PartSetHeader, "peerBlockPartSetHeader", prs.ProposalBlockPartSetHeader)
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 			return
+ 		}
+ 		// Send the part
+@@ -696,12 +787,16 @@
+ 		} else {
+ 			logger.Debug("Sending block part for catchup failed")
+ 			// sleep to avoid retrying too fast
+-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++			if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++				return
++			}
+ 		}
+ 		return
+ 	}
+ 	//  logger.Info("No parts to send in catch-up, sleeping")
+-	time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++	if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++		return
++	}
+ }
+ 
+ func (conR *Reactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
+@@ -789,7 +884,9 @@
+ 			sleeping = 1
+ 		}
+ 
+-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerGossipSleepDuration) {
++			return
++		}
+ 		continue OUTER_LOOP
+ 	}
+ }
+@@ -878,7 +975,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -898,7 +997,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -919,7 +1020,9 @@
+ 							BlockID: maj23.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+@@ -942,12 +1045,16 @@
+ 							BlockID: commit.BlockID.ToProto(),
+ 						},
+ 					})
+-					time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++					if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++						return
++					}
+ 				}
+ 			}
+ 		}
+ 
+-		time.Sleep(conR.conS.config.PeerQueryMaj23SleepDuration)
++		if !conR.waitPeer(peer, conR.conS.config.PeerQueryMaj23SleepDuration) {
++			return
++		}
+ 
+ 		continue OUTER_LOOP
+ 	}
+--- /dev/null
++++ b/consensus/reactor_shutdown_test.go
+@@ -0,0 +1,357 @@
++package consensus
++
++import (
++	"runtime"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/cometbft/cometbft/abci/example/kvstore"
++	cfg "github.com/cometbft/cometbft/config"
++	cstypes "github.com/cometbft/cometbft/consensus/types"
++	"github.com/cometbft/cometbft/libs/bits"
++	"github.com/cometbft/cometbft/libs/log"
++	"github.com/cometbft/cometbft/p2p"
++	p2pmock "github.com/cometbft/cometbft/p2p/mock"
++	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
++	sm "github.com/cometbft/cometbft/state"
++	"github.com/cometbft/cometbft/types"
++)
++
++// This test-only barrier advertises fixture heights solely to select the real
++// reactor consumer. It never accepts a block, signature or authorization.
++type shutdownReadBarrier struct {
++	sm.BlockStore
++	kind           string
++	entered        chan struct{}
++	release        chan struct{}
++	once           sync.Once
++	released       sync.Once
++	closed         atomic.Bool
++	readAfterClose atomic.Bool
++}
++
++func (b *shutdownReadBarrier) Base() int64   { return 1 }
++func (b *shutdownReadBarrier) Height() int64 { return 3 }
++func (b *shutdownReadBarrier) gate(kind string) {
++	if b.kind != kind {
++		return
++	}
++	b.once.Do(func() { close(b.entered) })
++	<-b.release
++	if b.closed.Load() {
++		b.readAfterClose.Store(true)
++	}
++}
++func (b *shutdownReadBarrier) LoadBlockMeta(h int64) *types.BlockMeta {
++	b.gate("data")
++	return b.BlockStore.LoadBlockMeta(h)
++}
++func (b *shutdownReadBarrier) LoadBlockCommit(h int64) *types.Commit {
++	b.gate("commit")
++	return b.BlockStore.LoadBlockCommit(h)
++}
++func (b *shutdownReadBarrier) Close() error { b.closed.Store(true); return b.BlockStore.Close() }
++func (b *shutdownReadBarrier) unblock()     { b.released.Do(func() { close(b.release) }) }
++
++func shutdownTestReactor(t *testing.T, height int64, waitSync bool) (*Reactor, *State) {
++	t.Helper()
++	c := cfg.TestConfig().SetRoot(t.TempDir())
++	cfg.EnsureRoot(c.RootDir)
++	// Deliberately long existing intervals prove cancellation, not grace sleeps.
++	c.Consensus.PeerGossipSleepDuration = time.Hour
++	c.Consensus.PeerQueryMaj23SleepDuration = time.Hour
++	state, pvs := randGenesisState(1, false, 10, types.DefaultConsensusParams())
++	cs := newStateWithConfig(c, state, pvs[0], kvstore.NewInMemoryApplication())
++	cs.Height = height
++	cs.Votes = cstypes.NewHeightVoteSet(state.ChainID, height, state.Validators)
++	r := NewReactor(cs, waitSync)
++	r.SetLogger(log.NewNopLogger())
++	r.SetEventBus(cs.eventBus)
++	t.Cleanup(func() {
++		if r.IsRunning() {
++			_ = r.Stop()
++		}
++		_ = cs.eventBus.Stop()
++	})
++	return r, cs
++}
++func shutdownAwait(t *testing.T, ch <-chan struct{}, label string) {
++	t.Helper()
++	select {
++	case <-ch:
++	case <-time.After(5 * time.Second):
++		t.Fatalf("timeout waiting for %s", label)
++	}
++}
++func shutdownWaitStoppedFlag(t *testing.T, r *Reactor) {
++	t.Helper()
++	deadline := time.After(5 * time.Second)
++	for r.IsRunning() {
++		select {
++		case <-deadline:
++			t.Fatal("Stop did not begin")
++		default:
++			runtime.Gosched()
++		}
++	}
++}
++
++func TestReactorShutdownJoinsEveryStorageConsumer(t *testing.T) {
++	for _, kind := range []string{"data", "votes", "query"} {
++		t.Run(kind, func(t *testing.T) {
++			height := int64(4)
++			if kind == "query" {
++				height = 1
++			}
++			r, cs := shutdownTestReactor(t, height, true)
++			barrierKind := "commit"
++			if kind == "data" {
++				barrierKind = "data"
++			}
++			b := &shutdownReadBarrier{BlockStore: cs.blockStore, kind: barrierKind, entered: make(chan struct{}), release: make(chan struct{})}
++			cs.blockStore = b
++			t.Cleanup(b.unblock)
++			if err := r.Start(); err != nil {
++				t.Fatal(err)
++			}
++			peer := p2pmock.NewPeer(nil)
++			t.Cleanup(func() { _ = peer.Stop() })
++			r.InitPeer(peer)
++			ps := peer.Get(types.PeerStateKey).(*PeerState)
++			ps.PRS.Height = 1
++			ps.PRS.Round = 0
++			ps.PRS.Step = cstypes.RoundStepCommit
++			ps.PRS.ProposalPOLRound = -1
++			ps.PRS.CatchupCommitRound = -1
++			if kind != "data" {
++				ps.PRS.ProposalBlockParts = bits.NewBitArray(1)
++				ps.PRS.ProposalBlockParts.SetIndex(0, true)
++			}
++			if kind == "query" {
++				ps.PRS.CatchupCommitRound = 0
++			}
++			r.AddPeer(peer)
++			shutdownAwait(t, b.entered, "real "+kind+" storage consumer")
++			stopped := make(chan struct{})
++			go func() { _ = r.Stop(); _ = b.Close(); close(stopped) }()
++			shutdownWaitStoppedFlag(t, r)
++			// The consumer is deterministically held, not sampled during a timing race.
++			// A bounded noncompletion assertion also catches accidental deadlocks safely.
++			select {
++			case <-stopped:
++				t.Error("Stop and store close overtook an admitted storage consumer")
++			case <-time.After(100 * time.Millisecond):
++			}
++			b.unblock()
++			shutdownAwait(t, stopped, "joined shutdown")
++			if b.readAfterClose.Load() {
++				t.Error("consumer accessed storage after close")
++			}
++		})
++	}
++}
++
++type shutdownSendPeer struct {
++	*p2pmock.Peer
++	entered  chan struct{}
++	release  chan struct{}
++	once     sync.Once
++	released sync.Once
++	sends    atomic.Int64
++}
++
++func (p *shutdownSendPeer) Send(_ p2p.Envelope) bool {
++	p.sends.Add(1)
++	p.once.Do(func() { close(p.entered) })
++	<-p.release
++	return true
++}
++func (p *shutdownSendPeer) unblock() { p.released.Do(func() { close(p.release) }) }
++func TestReactorShutdownJoinsInitialSend(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, false)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	r.InitPeer(p)
++	added := make(chan struct{})
++	go func() { r.AddPeer(p); close(added) }()
++	shutdownAwait(t, p.entered, "initial peer send")
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownWaitStoppedFlag(t, r)
++	select {
++	case <-stopped:
++		t.Error("Stop overtook initial AddPeer send")
++	case <-time.After(100 * time.Millisecond):
++	}
++	p.unblock()
++	shutdownAwait(t, added, "AddPeer return")
++	shutdownAwait(t, stopped, "Stop return")
++	if p.sends.Load() != 1 {
++		t.Fatalf("shutdown chained additional sends: %d", p.sends.Load())
++	}
++	if err := r.Stop(); err == nil {
++		t.Error("repeated Stop lost original service error")
++	}
++}
++
++func TestReactorShutdownAdmissionAndPrivateCancellation(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	peers := make([]*p2pmock.Peer, 24)
++	for i := range peers {
++		peers[i] = p2pmock.NewPeer(nil)
++		r.InitPeer(peers[i])
++		p := peers[i]
++		t.Cleanup(func() { _ = p.Stop() })
++	}
++	ready := make(chan struct{})
++	var calls sync.WaitGroup
++	for _, p := range peers {
++		calls.Add(1)
++		go func(p p2p.Peer) { defer calls.Done(); <-ready; r.AddPeer(p) }(p)
++	}
++	stopDone := make(chan struct{})
++	go func() { <-ready; _ = r.Stop(); close(stopDone) }()
++	close(ready)
++	calls.Wait()
++	shutdownAwait(t, stopDone, "concurrent admission shutdown")
++	// Original public APIs only: the test also compiles against the pinned origin.
++	for _, p := range peers {
++		r.AddPeer(p)
++	}
++	if r.IsRunning() {
++		t.Error("stopped reactor unexpectedly running")
++	}
++}
++
++func TestReactorShutdownPreservesIndirectVoteSendUntilStopping(t *testing.T) {
++	r, cs := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	p.unblock()
++	t.Cleanup(func() { _ = p.Stop() })
++	r.InitPeer(p)
++	ps := p.Get(types.PeerStateKey).(*PeerState)
++	ps.PRS.Height = 1
++	ps.PRS.Round = 0
++	vs := newValidatorStub(cs.privValidator, 0)
++	vs.Height = 1
++	vote, err := vs.signVote(cmtproto.PrevoteType, nil, types.PartSetHeader{}, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	votes := types.NewVoteSet(cs.state.ChainID, 1, 0, cmtproto.PrevoteType, cs.state.Validators)
++	added, err := votes.AddVote(vote)
++	if err != nil || !added {
++		t.Fatalf("genuine fixture vote: %v", err)
++	}
++	if !ps.PickSendVote(votes) || p.sends.Load() != 1 {
++		t.Fatal("running indirect send was not preserved")
++	}
++	// Clear only test peer knowledge; the same real signed vote remains available.
++	ps.mtx.Lock()
++	ps.PRS.Prevotes = bits.NewBitArray(1)
++	ps.mtx.Unlock()
++	if err = r.Stop(); err != nil {
++		t.Fatal(err)
++	}
++	if ps.PickSendVote(votes) || p.sends.Load() != 1 {
++		t.Fatal("stopped reactor forwarded an indirect vote")
++	}
++}
++
++// Hold AddPeer before its admission point so Stop deterministically wins. The
++// original one-time IsRunning check before Get is not enough for this ordering.
++type shutdownGetPeer struct {
++	*p2pmock.Peer
++	entered, release chan struct{}
++	once, released   sync.Once
++	sends            atomic.Int64
++}
++
++func (p *shutdownGetPeer) Get(key string) interface{} {
++	if key == types.PeerStateKey {
++		p.once.Do(func() { close(p.entered) })
++		<-p.release
++	}
++	return p.Peer.Get(key)
++}
++func (p *shutdownGetPeer) Send(p2p.Envelope) bool { p.sends.Add(1); return true }
++func (p *shutdownGetPeer) unblock()               { p.released.Do(func() { close(p.release) }) }
++func TestReactorShutdownClosesAdmissionBeforeWaiting(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, false)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownGetPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	r.InitPeer(p)
++	added := make(chan struct{})
++	go func() { r.AddPeer(p); close(added) }()
++	shutdownAwait(t, p.entered, "AddPeer before admission")
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownAwait(t, stopped, "Stop while admission callback is not registered")
++	p.unblock()
++	shutdownAwait(t, added, "late AddPeer rejection")
++	if p.sends.Load() != 0 {
++		t.Fatal("AddPeer sent after shutdown won admission")
++	}
++}
++
++type shutdownWaitPeer struct {
++	*p2pmock.Peer
++	waits      atomic.Int64
++	allWaiting chan struct{}
++	once       sync.Once
++}
++
++func (p *shutdownWaitPeer) Quit() <-chan struct{} {
++	if p.waits.Add(1) == 3 {
++		p.once.Do(func() { close(p.allWaiting) })
++	}
++	return p.Peer.Quit()
++}
++func TestReactorShutdownCancelsAllAdmittedWaitsWithoutPeerStop(t *testing.T) {
++	r, _ := shutdownTestReactor(t, 1, true)
++	if err := r.Start(); err != nil {
++		t.Fatal(err)
++	}
++	p := &shutdownWaitPeer{Peer: p2pmock.NewPeer(nil), allWaiting: make(chan struct{})}
++	t.Cleanup(func() { _ = p.Stop() })
++	r.InitPeer(p)
++	r.AddPeer(p)
++	// Every worker has reached its wait's channel acquisition. Each configured
++	// wait is one hour with an open peer Quit, so one worker cannot account for
++	// multiple observations during this bounded test. All three were admitted
++	// and started before Stop; this is not a scheduler-start lottery.
++	shutdownAwait(t, p.allWaiting, "all three admitted wait paths")
++	if p.waits.Load() != 3 {
++		t.Fatalf("unexpected pre-shutdown wait count: %d", p.waits.Load())
++	}
++	select {
++	case <-p.Peer.Quit():
++		t.Fatal("peer already stopped")
++	default:
++	}
++	stopped := make(chan struct{})
++	go func() { _ = r.Stop(); close(stopped) }()
++	shutdownAwait(t, stopped, "private cancellation and joined waits")
++	select {
++	case <-p.Peer.Quit():
++		t.Fatal("test unexpectedly stopped peer to cancel waits")
++	default:
++	}
++	if p.waits.Load() != 3 {
++		t.Fatal("shutdown began a new wait iteration")
++	}
++}
+--- /dev/null
++++ b/node/node_shutdown_order_test.go
+@@ -0,0 +1,124 @@
++package node
++
++import (
++	dbm "github.com/cometbft/cometbft-db"
++	cfg "github.com/cometbft/cometbft/config"
++	"github.com/cometbft/cometbft/internal/test"
++	"github.com/cometbft/cometbft/libs/log"
++	"github.com/cometbft/cometbft/p2p"
++	p2pmock "github.com/cometbft/cometbft/p2p/mock"
++	"github.com/cometbft/cometbft/privval"
++	"github.com/cometbft/cometbft/proxy"
++	"os"
++	"runtime"
++	"sync"
++	"testing"
++	"time"
++)
++
++type lifetimeCloseDB struct {
++	dbm.DB
++	closed chan struct{}
++	once   sync.Once
++}
++
++func (d *lifetimeCloseDB) Close() error { d.once.Do(func() { close(d.closed) }); return d.DB.Close() }
++
++type lifetimeSendPeer struct {
++	*p2pmock.Peer
++	entered, release chan struct{}
++	once, released   sync.Once
++}
++
++func (p *lifetimeSendPeer) Send(p2p.Envelope) bool {
++	p.once.Do(func() { close(p.entered) })
++	<-p.release
++	return true
++}
++func (p *lifetimeSendPeer) unblock() { p.released.Do(func() { close(p.release) }) }
++
++// This exercises real Node.OnStop ordering, not a surrogate call sequence. The
++// controlled in-flight send belongs to the real consensus Reactor.AddPeer.
++func TestNodeShutdownStoresAfterReactorConsumers(t *testing.T) {
++	c := test.ResetTestRoot("node_shutdown_store_order")
++	t.Cleanup(func() { _ = os.RemoveAll(c.RootDir) })
++	c.P2P.ListenAddress = "tcp://127.0.0.1:0"
++	c.RPC.ListenAddress = "tcp://127.0.0.1:0"
++	c.RPC.GRPCListenAddress = ""
++	closed := make(chan struct{})
++	provider := func(ctx *cfg.DBContext) (dbm.DB, error) {
++		d, e := cfg.DefaultDBProvider(ctx)
++		if e != nil {
++			return nil, e
++		}
++		if ctx.ID == "blockstore" {
++			return &lifetimeCloseDB{DB: d, closed: closed}, nil
++		}
++		return d, nil
++	}
++	key, e := p2p.LoadOrGenNodeKey(c.NodeKeyFile())
++	if e != nil {
++		t.Fatal(e)
++	}
++	n, e := NewNode(c, privval.LoadOrGenFilePV(c.PrivValidatorKeyFile(), c.PrivValidatorStateFile()), key,
++		proxy.DefaultClientCreator(c.ProxyApp, c.ABCI, c.DBDir()), DefaultGenesisDocProviderFunc(c), provider, DefaultMetricsProvider(c.Instrumentation), log.NewNopLogger())
++	if e != nil {
++		t.Fatal(e)
++	}
++	if e = n.Start(); e != nil {
++		t.Fatal(e)
++	}
++	t.Cleanup(func() {
++		if n.IsRunning() {
++			_ = n.Stop()
++		}
++	})
++	if n.consensusReactor.WaitSync() {
++		t.Fatal("single-validator test node unexpectedly waiting for block sync")
++	}
++	p := &lifetimeSendPeer{Peer: p2pmock.NewPeer(nil), entered: make(chan struct{}), release: make(chan struct{})}
++	t.Cleanup(func() { p.unblock(); _ = p.Stop() })
++	n.consensusReactor.InitPeer(p)
++	added := make(chan struct{})
++	go func() { n.consensusReactor.AddPeer(p); close(added) }()
++	select {
++	case <-p.entered:
++	case <-time.After(5 * time.Second):
++		t.Fatal("initial real-reactor send did not start")
++	}
++	stopped := make(chan error, 1)
++	go func() { stopped <- n.Stop() }()
++	deadline := time.After(5 * time.Second)
++	for n.IsRunning() {
++		select {
++		case <-deadline:
++			t.Fatal("Node Stop did not begin")
++		default:
++			runtime.Gosched()
++		}
++	}
++	select {
++	case <-closed:
++		t.Error("Node closed blockstore before admitted reactor callback completed")
++	case <-time.After(100 * time.Millisecond):
++	}
++	p.unblock()
++	select {
++	case <-added:
++	case <-time.After(5 * time.Second):
++		t.Fatal("AddPeer did not finish after release")
++	}
++	select {
++	case e = <-stopped:
++		if e != nil {
++			t.Fatal(e)
++		}
++	case <-time.After(5 * time.Second):
++		t.Fatal("Node did not finish shutdown")
++	}
++	select {
++	case <-closed:
++	default:
++		t.Error("Node failed to close real blockstore after joining consumers")
++	}
++}
+--- /dev/null
++++ b/p2p/conn/send_shutdown_bound_test.go
+@@ -0,0 +1,29 @@
++package conn
++
++import (
++	"testing"
++	"time"
++)
++
++// Verify the original real queue operation's bound without lowering its timeout
++// or replacing it with a fake send. The lifecycle patch relies on joining it.
++func TestShutdownInFlightQueueSendKeepsOriginalBound(t *testing.T) {
++	ch := &Channel{sendQueue: make(chan []byte, 1)}
++	if !ch.sendBytes([]byte{1}) {
++		t.Fatal("initial queue admission failed")
++	}
++	start := time.Now()
++	if ch.sendBytes([]byte{2}) {
++		t.Fatal("full unconsumed queue accepted another send")
++	}
++	elapsed := time.Since(start)
++	if elapsed < defaultSendTimeout {
++		t.Fatalf("original timeout shortened: %v", elapsed)
++	}
++	if elapsed > defaultSendTimeout+5*time.Second {
++		t.Fatalf("send failed to respect its bounded operation: %v", elapsed)
++	}
++	if len(ch.sendQueue) != 1 {
++		t.Fatal("timeout changed queued message")
++	}
++}
+--- /dev/null
++++ b/consensus/byzantine_test.go
+@@ -0,0 +1,693 @@
++package consensus
++
++import (
++	"context"
++	"fmt"
++	"os"
++	"path"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	dbm "github.com/cometbft/cometbft-db"
++
++	abcicli "github.com/cometbft/cometbft/abci/client"
++	abci "github.com/cometbft/cometbft/abci/types"
++	"github.com/cometbft/cometbft/evidence"
++	"github.com/cometbft/cometbft/libs/log"
++	"github.com/cometbft/cometbft/libs/service"
++	cmtsync "github.com/cometbft/cometbft/libs/sync"
++	mempl "github.com/cometbft/cometbft/mempool"
++	"github.com/cometbft/cometbft/proxy"
++
++	"github.com/cometbft/cometbft/p2p"
++	cmtcons "github.com/cometbft/cometbft/proto/tendermint/consensus"
++	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
++	sm "github.com/cometbft/cometbft/state"
++	"github.com/cometbft/cometbft/store"
++	"github.com/cometbft/cometbft/types"
++)
++
++//----------------------------------------------
++// byzantine failures
++
++// Byzantine node sends two different prevotes (nil and blockID) to the same validator
++func TestByzantinePrevoteEquivocation(t *testing.T) {
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++
++	const nValidators = 4
++	const byzantineNode = 0
++	const prevoteHeight = int64(2)
++	testName := "consensus_byzantine_test"
++	tickerFunc := newMockTickerFunc(true)
++	appFunc := newKVStore
++
++	genDoc, privVals := randGenesisDoc(nValidators, false, 30, nil)
++	css := make([]*State, nValidators)
++
++	for i := 0; i < nValidators; i++ {
++		logger := consensusLogger().With("test", "byzantine", "validator", i)
++		stateDB := dbm.NewMemDB() // each state needs its own db
++		stateStore := sm.NewStore(stateDB, sm.StoreOptions{
++			DiscardABCIResponses: false,
++		})
++		state, _ := stateStore.LoadFromDBOrGenesisDoc(genDoc)
++		thisConfig := ResetConfig(fmt.Sprintf("%s_%d", testName, i))
++		defer os.RemoveAll(thisConfig.RootDir)
++		ensureDir(path.Dir(thisConfig.Consensus.WalFile()), 0o700) // dir for wal
++		app := appFunc()
++		vals := types.TM2PB.ValidatorUpdates(state.Validators)
++		_, err := app.InitChain(context.Background(), &abci.RequestInitChain{Validators: vals})
++		require.NoError(t, err)
++
++		blockDB := dbm.NewMemDB()
++		blockStore := store.NewBlockStore(blockDB)
++
++		mtx := new(cmtsync.Mutex)
++		// one for mempool, one for consensus
++		proxyAppConnCon := proxy.NewAppConnConsensus(abcicli.NewLocalClient(mtx, app), proxy.NopMetrics())
++		proxyAppConnMem := proxy.NewAppConnMempool(abcicli.NewLocalClient(mtx, app), proxy.NopMetrics())
++
++		// Make Mempool
++		mempool := mempl.NewCListMempool(config.Mempool,
++			proxyAppConnMem,
++			state.LastBlockHeight,
++			mempl.WithPreCheck(sm.TxPreCheck(state)),
++			mempl.WithPostCheck(sm.TxPostCheck(state)))
++
++		if thisConfig.Consensus.WaitForTxs() {
++			mempool.EnableTxsAvailable()
++		}
++
++		// Make a full instance of the evidence pool
++		evidenceDB := dbm.NewMemDB()
++		evpool, err := evidence.NewPool(evidenceDB, stateStore, blockStore)
++		require.NoError(t, err)
++		evpool.SetLogger(logger.With("module", "evidence"))
++
++		// Make State
++		blockExec := sm.NewBlockExecutor(stateStore, log.TestingLogger(), proxyAppConnCon, mempool, evpool, blockStore)
++		cs := NewState(thisConfig.Consensus, state, blockExec, blockStore, mempool, evpool)
++		cs.SetLogger(cs.Logger)
++		// set private validator
++		pv := privVals[i]
++		cs.SetPrivValidator(pv)
++
++		eventBus := types.NewEventBus()
++		eventBus.SetLogger(log.TestingLogger().With("module", "events"))
++		err = eventBus.Start()
++		require.NoError(t, err)
++		cs.SetEventBus(eventBus)
++
++		cs.SetTimeoutTicker(tickerFunc())
++		cs.SetLogger(logger)
++
++		css[i] = cs
++	}
++
++	// initialize the reactors for each of the validators
++	reactors := make([]*Reactor, nValidators)
++	blocksSubs := make([]types.Subscription, 0)
++	eventBuses := make([]*types.EventBus, nValidators)
++	for i := 0; i < nValidators; i++ {
++		reactors[i] = NewReactor(css[i], true) // so we dont start the consensus states
++		reactors[i].SetLogger(css[i].Logger)
++
++		// eventBus is already started with the cs
++		eventBuses[i] = css[i].eventBus
++		reactors[i].SetEventBus(eventBuses[i])
++
++		blocksSub, err := eventBuses[i].Subscribe(context.Background(), testSubscriber, types.EventQueryNewBlock, 100)
++		require.NoError(t, err)
++		blocksSubs = append(blocksSubs, blocksSub)
++
++		if css[i].state.LastBlockHeight == 0 { // simulate handle initChain in handshake
++			err = css[i].blockExec.Store().Save(css[i].state)
++			require.NoError(t, err)
++		}
++	}
++	// make connected switches and start all reactors
++	p2p.MakeConnectedSwitches(config.P2P, nValidators, func(i int, s *p2p.Switch) *p2p.Switch {
++		s.AddReactor("CONSENSUS", reactors[i])
++		s.SetLogger(reactors[i].conS.Logger.With("module", "p2p"))
++		return s
++	}, p2p.Connect2Switches)
++
++	// create byzantine validator
++	bcs := css[byzantineNode]
++
++	// alter prevote so that the byzantine node double votes when height is 2
++	bcs.doPrevote = func(height int64, round int32) {
++		// allow first height to happen normally so that byzantine validator is no longer proposer
++		if height == prevoteHeight {
++			bcs.Logger.Info("Sending two votes")
++			prevote1, err := bcs.signVote(cmtproto.PrevoteType, bcs.ProposalBlock.Hash(), bcs.ProposalBlockParts.Header(), nil)
++			require.NoError(t, err)
++			prevote2, err := bcs.signVote(cmtproto.PrevoteType, nil, types.PartSetHeader{}, nil)
++			require.NoError(t, err)
++			peerList := reactors[byzantineNode].Switch.Peers().List()
++			bcs.Logger.Info("Getting peer list", "peers", peerList)
++			// Send both conflicting votes to every peer. This makes each honest
++			// validator observe the equivocation directly, instead of relying on
++			// vote gossip reaching it before height 2 advances.
++			for _, peer := range peerList {
++				bcs.Logger.Info("Signed and pushed votes", "vote1", prevote1, "vote2", prevote2, "peer", peer)
++				peer.Send(p2p.Envelope{
++					Message:   &cmtcons.Vote{Vote: prevote1.ToProto()},
++					ChannelID: VoteChannel,
++				})
++				peer.Send(p2p.Envelope{
++					Message:   &cmtcons.Vote{Vote: prevote2.ToProto()},
++					ChannelID: VoteChannel,
++				})
++			}
++		} else {
++			bcs.Logger.Info("Behaving normally")
++			bcs.defaultDoPrevote(height, round)
++		}
++	}
++
++	// introducing a lazy proposer means that the time of the block committed is different to the
++	// timestamp that the other nodes have. This tests to ensure that the evidence that finally gets
++	// proposed will have a valid timestamp
++	lazyProposer := css[1]
++
++	lazyProposer.decideProposal = func(height int64, round int32) {
++		lazyProposer.Logger.Info("Lazy Proposer proposing condensed commit")
++		if lazyProposer.privValidator == nil {
++			panic("entered createProposalBlock with privValidator being nil")
++		}
++
++		var extCommit *types.ExtendedCommit
++		switch {
++		case lazyProposer.Height == lazyProposer.state.InitialHeight:
++			// We're creating a proposal for the first block.
++			// The commit is empty, but not nil.
++			extCommit = &types.ExtendedCommit{}
++		case lazyProposer.LastCommit.HasTwoThirdsMajority():
++			// Make the commit from LastCommit
++			veHeightParam := types.ABCIParams{VoteExtensionsEnableHeight: height}
++			extCommit = lazyProposer.LastCommit.MakeExtendedCommit(veHeightParam)
++		default: // This shouldn't happen.
++			lazyProposer.Logger.Error("enterPropose: Cannot propose anything: No commit for the previous block")
++			return
++		}
++
++		// omit the last signature in the commit
++		extCommit.ExtendedSignatures[len(extCommit.ExtendedSignatures)-1] = types.NewExtendedCommitSigAbsent()
++
++		if lazyProposer.privValidatorPubKey == nil {
++			// If this node is a validator & proposer in the current round, it will
++			// miss the opportunity to create a block.
++			lazyProposer.Logger.Error(fmt.Sprintf("enterPropose: %v", errPubKeyIsNotSet))
++			return
++		}
++		proposerAddr := lazyProposer.privValidatorPubKey.Address()
++
++		block, err := lazyProposer.blockExec.CreateProposalBlock(
++			ctx, lazyProposer.Height, lazyProposer.state, extCommit, proposerAddr)
++		require.NoError(t, err)
++		blockParts, err := block.MakePartSet(types.BlockPartSizeBytes)
++		require.NoError(t, err)
++
++		// Flush the WAL. Otherwise, we may not recompute the same proposal to sign,
++		// and the privValidator will refuse to sign anything.
++		if err := lazyProposer.wal.FlushAndSync(); err != nil {
++			lazyProposer.Logger.Error("Error flushing to disk")
++		}
++
++		// Make proposal
++		propBlockID := types.BlockID{Hash: block.Hash(), PartSetHeader: blockParts.Header()}
++		proposal := types.NewProposal(height, round, lazyProposer.ValidRound, propBlockID)
++		p := proposal.ToProto()
++		if err := lazyProposer.privValidator.SignProposal(lazyProposer.state.ChainID, p); err == nil {
++			proposal.Signature = p.Signature
++
++			// send proposal and block parts on internal msg queue
++			lazyProposer.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
++			for i := 0; i < int(blockParts.Total()); i++ {
++				part := blockParts.GetPart(i)
++				lazyProposer.sendInternalMessage(msgInfo{&BlockPartMessage{lazyProposer.Height, lazyProposer.Round, part}, ""})
++			}
++			lazyProposer.Logger.Info("Signed proposal", "height", height, "round", round, "proposal", proposal)
++			lazyProposer.Logger.Debug(fmt.Sprintf("Signed proposal block: %v", block))
++		} else if !lazyProposer.replayMode {
++			lazyProposer.Logger.Error("enterPropose: Error signing proposal", "height", height, "round", round, "err", err)
++		}
++	}
++
++	// start the consensus reactors
++	for i := 0; i < nValidators; i++ {
++		s := reactors[i].conS.GetState()
++		reactors[i].SwitchToConsensus(s, false)
++	}
++	defer stopConsensusNet(log.TestingLogger(), reactors, eventBuses)
++
++	// Evidence should be submitted and committed at the third height but
++	// we will check the first six just in case
++	evidenceFromEachValidator := make([]types.Evidence, nValidators)
++	subErrCh := make(chan error, nValidators)
++
++	wg := new(sync.WaitGroup)
++	for i := 0; i < nValidators; i++ {
++		wg.Add(1)
++		go func(i int) {
++			defer wg.Done()
++			sub := blocksSubs[i]
++			for {
++				select {
++				case msg := <-sub.Out():
++					block := msg.Data().(types.EventDataNewBlock).Block
++					if len(block.Evidence.Evidence) != 0 {
++						evidenceFromEachValidator[i] = block.Evidence.Evidence[0]
++						return
++					}
++				case <-sub.Canceled():
++					if err := sub.Err(); err != nil {
++						subErrCh <- err
++					}
++					return
++				}
++			}
++		}(i)
++	}
++
++	done := make(chan struct{})
++	go func() {
++		wg.Wait()
++		close(done)
++	}()
++
++	pubkey, err := bcs.privValidator.GetPubKey()
++	require.NoError(t, err)
++
++	select {
++	case <-done:
++		select {
++		case err := <-subErrCh:
++			t.Fatalf("subscription unexpectedly canceled: %v", err)
++		default:
++		}
++		for idx, ev := range evidenceFromEachValidator {
++			if assert.NotNil(t, ev, idx) {
++				ev, ok := ev.(*types.DuplicateVoteEvidence)
++				assert.True(t, ok)
++				assert.Equal(t, pubkey.Address(), ev.VoteA.ValidatorAddress)
++				assert.Equal(t, prevoteHeight, ev.Height())
++			}
++		}
++	case <-time.After(20 * time.Second):
++		t.Fatalf("Timed out waiting for validators to commit evidence")
++	}
++}
++
++// 4 validators. 1 is byzantine. The other three are partitioned into A (1 val) and B (2 vals).
++// byzantine validator sends conflicting proposals into A and B,
++// and prevotes/precommits on both of them.
++// B sees a commit, A doesn't.
++// Heal partition and ensure A sees the commit
++func TestByzantineConflictingProposalsWithPartition(t *testing.T) {
++	N := 4
++	logger := consensusLogger().With("test", "byzantine")
++
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++
++	app := newKVStore
++	css, cleanup := randConsensusNet(t, N, "consensus_byzantine_test", newMockTickerFunc(false), app)
++	defer cleanup()
++
++	// give the byzantine validator a normal ticker
++	ticker := NewTimeoutTicker()
++	ticker.SetLogger(css[0].Logger)
++	css[0].SetTimeoutTicker(ticker)
++
++	switches := make([]*p2p.Switch, N)
++	p2pLogger := logger.With("module", "p2p")
++	for i := 0; i < N; i++ {
++		switches[i] = p2p.MakeSwitch(
++			config.P2P,
++			i,
++			func(i int, sw *p2p.Switch) *p2p.Switch {
++				return sw
++			})
++		switches[i].SetLogger(p2pLogger.With("validator", i))
++	}
++
++	blocksSubs := make([]types.Subscription, N)
++	reactors := make([]p2p.Reactor, N)
++	for i := 0; i < N; i++ {
++
++		// enable txs so we can create different proposals
++		assertMempool(css[i].txNotifier).EnableTxsAvailable()
++		// make first val byzantine
++		if i == 0 {
++			// NOTE: Now, test validators are MockPV, which by default doesn't
++			// do any safety checks.
++			css[i].privValidator.(types.MockPV).DisableChecks()
++			j := i
++			css[i].decideProposal = func(height int64, round int32) {
++				byzantineDecideProposalFunc(ctx, t, height, round, css[j], switches[j])
++			}
++			// We are setting the prevote function to do nothing because the prevoting
++			// and precommitting are done alongside the proposal.
++			css[i].doPrevote = func(height int64, round int32) {}
++		}
++
++		eventBus := css[i].eventBus
++		eventBus.SetLogger(logger.With("module", "events", "validator", i))
++
++		var err error
++		blocksSubs[i], err = eventBus.Subscribe(context.Background(), testSubscriber, types.EventQueryNewBlock)
++		require.NoError(t, err)
++
++		conR := NewReactor(css[i], true) // so we don't start the consensus states
++		conR.SetLogger(logger.With("validator", i))
++		conR.SetEventBus(eventBus)
++
++		var conRI p2p.Reactor = conR
++
++		// make first val byzantine
++		if i == 0 {
++			conRI = NewByzantineReactor(conR)
++		}
++
++		reactors[i] = conRI
++		err = css[i].blockExec.Store().Save(css[i].state) // for save height 1's validators info
++		require.NoError(t, err)
++	}
++
++	defer func() {
++		for _, r := range reactors {
++			if rr, ok := r.(*ByzantineReactor); ok {
++				err := rr.reactor.Switch.Stop()
++				require.NoError(t, err)
++			} else {
++				err := r.(*Reactor).Switch.Stop()
++				require.NoError(t, err)
++			}
++		}
++	}()
++
++	p2p.MakeConnectedSwitches(config.P2P, N, func(i int, s *p2p.Switch) *p2p.Switch {
++		// ignore new switch s, we already made ours
++		switches[i].AddReactor("CONSENSUS", reactors[i])
++		return switches[i]
++	}, func(sws []*p2p.Switch, i, j int) {
++		// the network starts partitioned with globally active adversary
++		if i != 0 {
++			return
++		}
++		p2p.Connect2Switches(sws, i, j)
++	})
++
++	// start the non-byz state machines.
++	// note these must be started before the byz
++	for i := 1; i < N; i++ {
++		cr := reactors[i].(*Reactor)
++		cr.SwitchToConsensus(cr.conS.GetState(), false)
++	}
++
++	// start the byzantine state machine
++	byzR := reactors[0].(*ByzantineReactor)
++	s := byzR.reactor.conS.GetState()
++	byzR.reactor.SwitchToConsensus(s, false)
++
++	// byz proposer sends one block to peers[0]
++	// and the other block to peers[1] and peers[2].
++	// note peers and switches order don't match.
++	peers := switches[0].Peers().List()
++
++	// partition A
++	ind0 := getSwitchIndex(switches, peers[0])
++
++	// partition B
++	ind1 := getSwitchIndex(switches, peers[1])
++	ind2 := getSwitchIndex(switches, peers[2])
++	p2p.Connect2Switches(switches, ind1, ind2)
++
++	// wait for someone in the big partition (B) to make a block
++	<-blocksSubs[ind2].Out()
++
++	t.Log("A block has been committed. Healing partition")
++	p2p.Connect2Switches(switches, ind0, ind1)
++	p2p.Connect2Switches(switches, ind0, ind2)
++
++	// wait till everyone makes the first new block
++	// (one of them already has)
++	wg := new(sync.WaitGroup)
++	for i := 1; i < N-1; i++ {
++		wg.Add(1)
++		go func(j int) {
++			<-blocksSubs[j].Out()
++			wg.Done()
++		}(i)
++	}
++
++	done := make(chan struct{})
++	go func() {
++		wg.Wait()
++		close(done)
++	}()
++
++	tick := time.NewTicker(time.Second * 10)
++	select {
++	case <-done:
++	case <-tick.C:
++		for i, reactor := range reactors {
++			t.Logf("Consensus Reactor %v", i)
++			t.Logf("%v", reactor)
++		}
++		t.Fatalf("Timed out waiting for all validators to commit first block")
++	}
++}
++
++//-------------------------------
++// byzantine consensus functions
++
++func byzantineDecideProposalFunc(ctx context.Context, t *testing.T, height int64, round int32, cs *State, sw *p2p.Switch) {
++	// byzantine user should create two proposals and try to split the vote.
++	// Avoid sending on internalMsgQueue and running consensus state.
++
++	// Create a new proposal block from state/txs from the mempool.
++	block1, err := cs.createProposalBlock(ctx)
++	require.NoError(t, err)
++	blockParts1, err := block1.MakePartSet(types.BlockPartSizeBytes)
++	require.NoError(t, err)
++	polRound, propBlockID := cs.ValidRound, types.BlockID{Hash: block1.Hash(), PartSetHeader: blockParts1.Header()}
++	proposal1 := types.NewProposal(height, round, polRound, propBlockID)
++	p1 := proposal1.ToProto()
++	if err := cs.privValidator.SignProposal(cs.state.ChainID, p1); err != nil {
++		t.Error(err)
++	}
++
++	proposal1.Signature = p1.Signature
++
++	// some new transactions come in (this ensures that the proposals are different)
++	deliverTxsRange(t, cs, 0, 1)
++
++	// Create a new proposal block from state/txs from the mempool.
++	block2, err := cs.createProposalBlock(ctx)
++	require.NoError(t, err)
++	blockParts2, err := block2.MakePartSet(types.BlockPartSizeBytes)
++	require.NoError(t, err)
++	polRound, propBlockID = cs.ValidRound, types.BlockID{Hash: block2.Hash(), PartSetHeader: blockParts2.Header()}
++	proposal2 := types.NewProposal(height, round, polRound, propBlockID)
++	p2 := proposal2.ToProto()
++	if err := cs.privValidator.SignProposal(cs.state.ChainID, p2); err != nil {
++		t.Error(err)
++	}
++
++	proposal2.Signature = p2.Signature
++
++	block1Hash := block1.Hash()
++	block2Hash := block2.Hash()
++
++	// broadcast conflicting proposals/block parts to peers
++	peers := sw.Peers().List()
++	t.Logf("Byzantine: broadcasting conflicting proposals to %d peers", len(peers))
++	for i, peer := range peers {
++		if i < len(peers)/2 {
++			go sendProposalAndParts(height, round, cs, peer, proposal1, block1Hash, blockParts1)
++		} else {
++			go sendProposalAndParts(height, round, cs, peer, proposal2, block2Hash, blockParts2)
++		}
++	}
++}
++
++func sendProposalAndParts(
++	height int64,
++	round int32,
++	cs *State,
++	peer p2p.Peer,
++	proposal *types.Proposal,
++	blockHash []byte,
++	parts *types.PartSet,
++) {
++	// proposal
++	peer.Send(p2p.Envelope{
++		ChannelID: DataChannel,
++		Message:   &cmtcons.Proposal{Proposal: *proposal.ToProto()},
++	})
++
++	// parts
++	for i := 0; i < int(parts.Total()); i++ {
++		part := parts.GetPart(i)
++		pp, err := part.ToProto()
++		if err != nil {
++			panic(err) // TODO: wbanfield better error handling
++		}
++		peer.Send(p2p.Envelope{
++			ChannelID: DataChannel,
++			Message: &cmtcons.BlockPart{
++				Height: height, // This tells peer that this part applies to us.
++				Round:  round,  // This tells peer that this part applies to us.
++				Part:   *pp,
++			},
++		})
++	}
++
++	// votes
++	cs.mtx.Lock()
++	prevote, _ := cs.signVote(cmtproto.PrevoteType, blockHash, parts.Header(), nil)
++	precommit, _ := cs.signVote(cmtproto.PrecommitType, blockHash, parts.Header(), nil)
++	cs.mtx.Unlock()
++	peer.Send(p2p.Envelope{
++		ChannelID: VoteChannel,
++		Message:   &cmtcons.Vote{Vote: prevote.ToProto()},
++	})
++	peer.Send(p2p.Envelope{
++		ChannelID: VoteChannel,
++		Message:   &cmtcons.Vote{Vote: precommit.ToProto()},
++	})
++}
++
++//----------------------------------------
++// byzantine consensus reactor
++
++type ByzantineReactor struct {
++	service.Service
++	reactor *Reactor
++}
++
++func NewByzantineReactor(conR *Reactor) *ByzantineReactor {
++	return &ByzantineReactor{
++		Service: conR,
++		reactor: conR,
++	}
++}
++
++func (br *ByzantineReactor) SetSwitch(s *p2p.Switch)               { br.reactor.SetSwitch(s) }
++func (br *ByzantineReactor) GetChannels() []*p2p.ChannelDescriptor { return br.reactor.GetChannels() }
++func (br *ByzantineReactor) AddPeer(peer p2p.Peer) {
++	if !br.reactor.IsRunning() {
++		return
++	}
++
++	// Create peerState for peer
++	peerState := NewPeerState(peer).SetLogger(br.reactor.Logger)
++	peer.Set(types.PeerStateKey, peerState)
++
++	// Send our state to peer.
++	// If we're syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
++	if !br.reactor.waitSync {
++		br.reactor.sendNewRoundStepMessage(peer)
++	}
++}
++
++func (br *ByzantineReactor) RemovePeer(peer p2p.Peer, reason interface{}) {
++	br.reactor.RemovePeer(peer, reason)
++}
++
++func (br *ByzantineReactor) Receive(e p2p.Envelope) {
++	br.reactor.Receive(e)
++}
++
++func (br *ByzantineReactor) InitPeer(peer p2p.Peer) p2p.Peer { return peer }
++
++// Large/oversized proposals should be rejected
++func TestRejectOversizedProposals(t *testing.T) {
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++
++	n := 2
++	css, cleanup := randConsensusNet(t, n, "consensus_reactor_test", newMockTickerFunc(false), newKVStore)
++	defer cleanup()
++
++	switches := make([]*p2p.Switch, n)
++	p2pLogger := consensusLogger().With("module", "p2p")
++	for i := 0; i < n; i++ {
++		switches[i] = p2p.MakeSwitch(
++			config.P2P,
++			i,
++			func(_ int, sw *p2p.Switch) *p2p.Switch {
++				return sw
++			})
++		switches[i].SetLogger(p2pLogger.With("validator", i))
++	}
++
++	reactors := make([]p2p.Reactor, n)
++	for i := 0; i < n; i++ {
++		conR := NewReactor(css[i], false)
++		defer func() { require.NoError(t, conR.Stop()) }()
++
++		conR.SetLogger(consensusLogger().With("validator", i))
++		reactors[i] = conR
++	}
++
++	p2p.MakeConnectedSwitches(config.P2P, n, func(i int, _ *p2p.Switch) *p2p.Switch {
++		switches[i].AddReactor("CONSENSUS", reactors[i])
++		return switches[i]
++	}, p2p.Connect2Switches)
++
++	peers := switches[0].Peers().List()
++	targetPeer := peers[0]
++
++	height := int64(1)
++	round := int32(0)
++	cs := css[0]
++
++	block, err := cs.createProposalBlock(ctx)
++	require.NoError(t, err)
++
++	blockParts, err := block.MakePartSet(types.BlockPartSizeBytes)
++	require.NoError(t, err)
++
++	// create oversized proposal
++	propBlockID := types.BlockID{Hash: block.Hash(), PartSetHeader: blockParts.Header()}
++	propBlockID.PartSetHeader.Total = 4294967295
++
++	proposal := types.NewProposal(height, round, -1, propBlockID)
++	p := proposal.ToProto()
++	if err := cs.privValidator.SignProposal(cs.state.ChainID, p); err != nil {
++		t.Error(err)
++	}
++	proposal.Signature = p.Signature
++
++	success := targetPeer.Send(p2p.Envelope{
++		ChannelID: DataChannel,
++		Message:   &cmtcons.Proposal{Proposal: *proposal.ToProto()},
++	})
++	require.True(t, success)
++
++	select {
++	case e := <-css[1].peerMsgQueue:
++		// if we receive a message here, the peer incorrectly accepted the
++		// oversized proposal
++		if _, receivedProposal := e.Msg.(*ProposalMessage); receivedProposal {
++			assert.Fail(t, "peer incorrectly accepted oversized proposal")
++			return
++		}
++		// invalid state, we received some other unexpected message type, fail
++		// the test
++		assert.Fail(t, "received unexpected message type on peer msg queue, expected *ProposalMessage")
++	case <-ctx.Done():
++	case <-time.After(500 * time.Millisecond):
++		// timeout after 500ms if nothing has happened and assume peer rejected
++		// the proposal
++	}
++}
