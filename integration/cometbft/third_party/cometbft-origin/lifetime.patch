@@ -804,3 +804,39 @@
 +		t.Fatal("timeout changed queued message")
 +	}
 +}
+--- a/consensus/byzantine_test.go
++++ b/consensus/byzantine_test.go
+@@ -150,21 +150,19 @@
+ 			require.NoError(t, err)
+ 			peerList := reactors[byzantineNode].Switch.Peers().List()
+ 			bcs.Logger.Info("Getting peer list", "peers", peerList)
+-			// send two votes to all peers (1st to one half, 2nd to another half)
+-			for i, peer := range peerList {
+-				if i < len(peerList)/2 {
+-					bcs.Logger.Info("Signed and pushed vote", "vote", prevote1, "peer", peer)
+-					peer.Send(p2p.Envelope{
+-						Message:   &cmtcons.Vote{Vote: prevote1.ToProto()},
+-						ChannelID: VoteChannel,
+-					})
+-				} else {
+-					bcs.Logger.Info("Signed and pushed vote", "vote", prevote2, "peer", peer)
+-					peer.Send(p2p.Envelope{
+-						Message:   &cmtcons.Vote{Vote: prevote2.ToProto()},
+-						ChannelID: VoteChannel,
+-					})
+-				}
++			// Send both conflicting votes to every peer. This makes each honest
++			// validator observe the equivocation directly, instead of relying on
++			// vote gossip reaching it before height 2 advances.
++			for _, peer := range peerList {
++				bcs.Logger.Info("Signed and pushed votes", "vote1", prevote1, "vote2", prevote2, "peer", peer)
++				peer.Send(p2p.Envelope{
++					Message:   &cmtcons.Vote{Vote: prevote1.ToProto()},
++					ChannelID: VoteChannel,
++				})
++				peer.Send(p2p.Envelope{
++					Message:   &cmtcons.Vote{Vote: prevote2.ToProto()},
++					ChannelID: VoteChannel,
++				})
+ 			}
+ 		} else {
