@@ -186,3 +186,15 @@ C门槛：独立协议/密码学集成及实现审查覆盖最终版本，关键
 - Zcash wallet threat model：https://zcash.readthedocs.io/en/latest/rtd_pages/wallet_threat_model.html 。链上隐私不能自动消除网络活动、时序与服务提供者关联；保证应按对手能力逐项表述。
 
 原2026-09-13提交只交付项目计划；2026-09-17同步此前P2增量，2026-09-18补充持久增量包与新目录恢复的实际验收。对应运行代码与CI以各自链接报告为准，八个工作包并未全部完成。
+
+## 8. 2026-10-19 最新候选与交付增量
+
+本节是对原计划的带日期状态增量，不改八工作包范围、预算、4真实机器/30天/外审门槛与资金/部署权限。原历史段落继续保留；接手时以[2026-10-19完整交接](../reports/project-handoff-2026-10-19.md)和[文档索引](INDEX.md)查最新候选。
+
+- 已合入阶段更新：PR36/C32工具恢复阶段、PR38六份当前规范重建、PR39显式onion/auth-only SOCKS客户端。main观察为 `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6`。六份路径已存在，历史原稿仍未找回。
+- 正在评估的运行候选为PR48 `5540cd494ad8a3655e8aa2dd77ed7fc91817de46`，tree `0a287892cfa97347e496b25a334f919847daecca`；draft / 未合并。它继承PR41检查点重扫和PR47生命周期候选，未包含PR40、PR42—46各自最新head；这些未合并进展在交接内分别固定，不混算成一个完成产品。
+- 关联49个Actions runs为47成功、2 Windows retained lifecycle失败。Linux/race成功不免除Windows资格；WAL/replay、签名状态文件rename和Unix-socket bind表现及未执行步骤见[CI证据](../reports/project-ci-2026-10-19.md)。统计包含push/PR重复事件，不是49套独立验收。
+- PROJECT_COMPLETION的评估候选更新为上述head；24类别保持3 implemented、9 in_progress、6 not_implemented、6 evidence_missing、0 accepted。规范重建来源基线与历史PROJECT_STATUS保持，不把重建路径存在解释为找回原稿。
+- 下一步先闭合Windows lifecycle与准确候选独立复审，再核对分叉依赖接入P4/P5；随后继续P1/P6规则、P2/P3完整基础和真实Tor/四机/长期/外审条件。Issue23仍open，Issue37仍closed；本次无运行时代码改动或阶段合入。
+
+机器可读分支与run列表见[状态快照](../reports/project-state-2026-10-19.json)。发布这组文档不代表蓝图已实现或项目已验收。
