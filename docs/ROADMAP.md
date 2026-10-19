@@ -45,3 +45,17 @@ PR36/C32 was merged as `ae04190a57bff9ccfbeb056e749f30a9a62c2e02` with the exact
 Six previously absent document paths are now being supplied as newly reconstructed current specifications. The unpublished historical originals have not been recovered. Their historical absence, prior contradictory claims and original version records remain separate from present file availability.
 
 No completion date, project percentage, continuous background development or thirty-day evidence is implied by this roadmap. Work not implemented or tested stays explicit; actual infrastructure and external review must exist before their acceptance claims can be made.
+
+## 2026-10-19 current-candidate addendum
+
+The original roadmap and its reconstructed C32 provenance above remain historical context. For the current handoff, read [the complete 2026-10-19 record](../reports/project-handoff-2026-10-19.md), [CI evidence](../reports/project-ci-2026-10-19.md), and [document index](INDEX.md).
+
+PR38 supplied the six reconstructed documents; PR39's onion-only/auth-only SOCKS client is merged into main at `0e5fd16abfebec3cc5a3db6bb99d1e4e7335c2f6`. Actual Tor service/traffic acceptance and full P5 privacy are still missing. PR40 is an unmerged gateway candidate.
+
+The assessed runtime is PR48 head `5540cd494ad8a3655e8aa2dd77ed7fc91817de46`, tree `0a287892cfa97347e496b25a334f919847daecca`, still open and draft. It contains PR41 and PR47 heads, but not current PR40 or PR42–46 heads. Their online-wallet preparation/recovery/submission work is separately preserved in the handoff; do not combine different source candidates into one passing product.
+
+All 49 head-associated Actions runs were read: 47 success and two Windows retained lifecycle failures, including duplicate push/PR events. Linux/race jobs passed; Windows WAL/replay, signing-state rename and Unix-socket bind failures remain explicit. See the CI report for actual checkout commit/tree identities and skipped downstream steps. This is not full qualification.
+
+The ledger now names the assessed runtime head rather than stale C32. All 24 statuses and evidence lists remain unchanged: 3 implemented, 9 in_progress, 6 not_implemented, 6 evidence_missing, zero accepted. The six specifications' original reconstruction baseline and unrecovered historical-original flags are preserved; PROJECT_STATUS.json is unchanged.
+
+First close the Windows lifecycle blocker and get exact-candidate independent nonauthor review; then reconcile draft dependency branches and integrate P4/P5 without changing the frozen scope. Four real machines, actual privacy-path measurements, 30 continuous days, economic/validator implementation, license/distribution work and specialist security review remain required. Issue23 is open; Issue37 remains closed. No runtime edit, merge, deployment or real-funds authorization is made here.

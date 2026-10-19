@@ -127,20 +127,22 @@
         {
           "id": "integrated_online_payment",
           "status": "not_implemented",
-          "reason": "普通用户付款仍需分开的本地准备与网络提交；不是完整在线钱包。",
+          "reason": "当前评估源码5540cd49仅包含检查点重扫前置能力；网络准备、pending恢复与提交另在未合并PR42—46，且其head不在本候选祖先链；完整在线钱包仍未交付。",
           "sources": [
             "docs/LOCAL_WALLET_CONSOLE.zh-CN.md",
-            "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md"
+            "docs/LOCAL_NETWORK_OPERATOR.zh-CN.md",
+            "reports/project-handoff-2026-10-19.md"
           ],
           "evidence": []
         },
         {
           "id": "restart_and_confirmation",
           "status": "in_progress",
-          "reason": "局部对账/历史查询已有；在线支付状态机、伪节点回复及重启端到端验收未完成。",
+          "reason": "本候选继承PR41的准确检查点钱包重扫；在线支付状态机、伪节点回复及重启端到端验收仍未完成，后续草稿分支不能计作已集成。",
           "sources": [
             "docs/WALLET_RECONCILE.zh-CN.md",
-            "docs/INTEGRATION_ACCEPTANCE.zh-CN.md"
+            "docs/INTEGRATION_ACCEPTANCE.zh-CN.md",
+            "reports/project-handoff-2026-10-19.md"
           ],
           "evidence": []
         }
@@ -164,12 +166,13 @@
         {
           "id": "private_transport",
           "status": "in_progress",
-          "reason": "新增显式onion-v3/auth-only SOCKS的sync/submit客户端候选，拒绝DNS/直连回退；尚无实际Tor服务和流量验收，未接受P5。",
+          "reason": "PR39显式onion-v3/auth-only SOCKS sync/submit客户端已合入main；PR40网关仍为独立草稿且不在本候选祖先链。实际Tor服务、流量与完整查询隐私验收仍缺失，未接受整个P5。",
           "sources": [
             "docs/PRIVATE_RPC_V1.zh-CN.md",
             "integration/cometbft/labnet/private_rpc.go",
             "integration/cometbft/labnet/private_socks.go",
-            "integration/cometbft/labnet/sync.go"
+            "integration/cometbft/labnet/sync.go",
+            "reports/project-handoff-2026-10-19.md"
           ],
           "evidence": []
         },
@@ -242,10 +245,11 @@
         {
           "id": "failure_closure",
           "status": "in_progress",
-          "reason": "Issue37已有C9修复并在2026-09-29整合验收关闭；Issue23同步调用延迟根因仍未知。",
+          "reason": "截至2026-10-19，Issue37仍关闭、Issue23仍开放；5540cd49关联49个Actions runs为47成功2失败，Windows retained lifecycle存在WAL/replay、签名状态文件rename与Unix-socket bind失败，尚未闭合。",
           "sources": [
             "scripts/tests/test_ledger_restore.py",
-            "docs/ACTIVE_COMMIT_TIMING.zh-CN.md"
+            "docs/ACTIVE_COMMIT_TIMING.zh-CN.md",
+            "reports/project-handoff-2026-10-19.md"
           ],
           "evidence": []
         }
@@ -258,11 +262,12 @@
         {
           "id": "source_and_distribution",
           "status": "in_progress",
-          "reason": "当前规范已补建，源码和工具有固定来源；完整依赖许可与可信制品分发尚未完成。",
+          "reason": "六份核心规范已按源码重建并上传，未找回历史原稿；本候选包含CometBFT原始来源清单和显式lifetime/Byzantine补丁。完整依赖许可、可信分发与最终整体验收仍未完成。",
           "sources": [
             "docs/SOURCES.md",
             "LICENSE-STATUS.md",
-            "scripts/build_local_lab.py"
+            "scripts/build_local_lab.py",
+            "reports/project-handoff-2026-10-19.md"
           ],
           "evidence": []
         },
@@ -288,7 +293,7 @@
       ]
     }
   ],
-  "candidate_commit": "ae04190a57bff9ccfbeb056e749f30a9a62c2e02",
+  "candidate_commit": "5540cd494ad8a3655e8aa2dd77ed7fc91817de46",
   "specifications": {
     "origin": "new_current_source_reconstruction_not_historical_originals",
     "runtime_base_commit": "ae04190a57bff9ccfbeb056e749f30a9a62c2e02",
